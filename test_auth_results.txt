@@ -1,0 +1,6 @@
+PASS: bcrypt hashing + verification
+PASS: JWT encode + decode
+PASS: all new modules import cleanly
+PASS: full security flow (hash -> verify -> token)
+
+ALL TESTS PASSED ✅

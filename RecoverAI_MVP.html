@@ -1,0 +1,3655 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RecoverAI — MSME Invoice Recovery Platform</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    tailwind.config = { corePlugins: { preflight: false } }
+  </script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    :root {
+      --bg: #F7F6F2;
+      --surface: #FFFFFF;
+      --surface2: #F1EFE8;
+      --surface3: #E8E6DC;
+      --text: #1A1916;
+      --text2: #5F5E5A;
+      --text3: #888780;
+      --border: #E0DED5;
+      --border2: #C8C6BC;
+      --amber: #BA7517;
+      --amber-bg: #FAEEDA;
+      --amber-light: #FAC775;
+      --amber-dark: #633806;
+      --green: #3B6D11;
+      --green-bg: #EAF3DE;
+      --green-light: #97C459;
+      --red: #A32D2D;
+      --red-bg: #FCEBEB;
+      --red-light: #F09595;
+      --blue: #185FA5;
+      --blue-bg: #E6F1FB;
+      --blue-light: #85B7EB;
+      --purple: #534AB7;
+      --purple-bg: #EEEDFE;
+      --purple-light: #AFA9EC;
+      --radius: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+      --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh
+    }
+
+    /* Layout */
+    .layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: 100vh
+    }
+
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto
+    }
+
+    .main {
+      overflow-x: hidden
+    }
+
+    /* Sidebar */
+    .sidebar-brand {
+      padding: 20px 16px 16px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--amber);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--amber-bg);
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 10px
+    }
+
+    .brand-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text)
+    }
+
+    .brand-tagline {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 1px
+    }
+
+    .nav {
+      padding: 12px 8px;
+      flex: 1
+    }
+
+    .nav-section {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 4px 8px 8px;
+      margin-top: 8px
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      color: var(--text2);
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.15s;
+      margin-bottom: 2px;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-family: 'DM Sans', sans-serif
+    }
+
+    .nav-item:hover {
+      background: var(--surface2);
+      color: var(--text)
+    }
+
+    .nav-item.active {
+      background: var(--amber-bg);
+      color: var(--amber-dark);
+      font-weight: 600
+    }
+
+    .nav-item .icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      opacity: 0.7
+    }
+
+    .nav-item.active .icon {
+      opacity: 1
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      background: var(--red);
+      color: #fff;
+      border-radius: 10px;
+      font-size: 10px;
+      padding: 1px 6px;
+      font-weight: 600
+    }
+
+    .nav-badge-amber {
+      background: var(--amber);
+      color: #fff
+    }
+
+    .sidebar-bottom {
+      padding: 12px 8px;
+      border-top: 1px solid var(--border)
+    }
+
+    .user-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius)
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--purple-bg);
+      color: var(--purple);
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0
+    }
+
+    .user-name {
+      font-size: 12px;
+      font-weight: 600
+    }
+
+    .user-plan {
+      font-size: 10px;
+      color: var(--text3)
+    }
+
+    /* Topbar */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10
+    }
+
+    .page-title {
+      font-size: 17px;
+      font-weight: 700
+    }
+
+    .page-sub {
+      font-size: 12px;
+      color: var(--text3);
+      margin-top: 1px
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    /* Content */
+    .content {
+      padding: 20px 24px
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border2);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.15s;
+      white-space: nowrap
+    }
+
+    .btn:hover {
+      background: var(--surface2);
+      border-color: var(--border2)
+    }
+
+    .btn:active {
+      transform: scale(0.98)
+    }
+
+    .btn-primary {
+      background: var(--amber);
+      color: var(--amber-bg);
+      border-color: var(--amber-dark)
+    }
+
+    .btn-primary:hover {
+      background: var(--amber-dark);
+      color: var(--amber-bg)
+    }
+
+    .btn-danger {
+      background: var(--red-bg);
+      color: var(--red);
+      border-color: var(--red-light)
+    }
+
+    .btn-danger:hover {
+      background: var(--red-light);
+      color: var(--red)
+    }
+
+    .btn-success {
+      background: var(--green-bg);
+      color: var(--green);
+      border-color: var(--green-light)
+    }
+
+    .btn-success:hover {
+      background: var(--green-light);
+      color: var(--green)
+    }
+
+    .btn-ghost {
+      border-color: transparent;
+      background: transparent
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface2)
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px
+    }
+
+    .btn-lg {
+      padding: 11px 20px;
+      font-size: 14px
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 16px
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text)
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 2px
+    }
+
+    /* Metric cards */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px
+    }
+
+    .metric-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 16px 18px
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--text3);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px
+    }
+
+    .metric-value {
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1
+    }
+
+    .metric-change {
+      font-size: 11px;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 3px
+    }
+
+    .change-up {
+      color: var(--green)
+    }
+
+    .change-down {
+      color: var(--red)
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+      white-space: nowrap
+    }
+
+    .badge-amber {
+      background: var(--amber-bg);
+      color: var(--amber-dark)
+    }
+
+    .badge-green {
+      background: var(--green-bg);
+      color: var(--green)
+    }
+
+    .badge-red {
+      background: var(--red-bg);
+      color: var(--red)
+    }
+
+    .badge-blue {
+      background: var(--blue-bg);
+      color: var(--blue)
+    }
+
+    .badge-purple {
+      background: var(--purple-bg);
+      color: var(--purple)
+    }
+
+    .badge-gray {
+      background: var(--surface2);
+      color: var(--text2)
+    }
+
+    /* Table */
+    .table-wrap {
+      overflow-x: auto
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    th {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      white-space: nowrap
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      vertical-align: middle
+    }
+
+    tr:last-child td {
+      border-bottom: none
+    }
+
+    tr:hover td {
+      background: var(--bg)
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 14px
+    }
+
+    .form-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 5px;
+      display: block
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: border-color 0.15s
+    }
+
+    .form-input:focus {
+      border-color: var(--amber)
+    }
+
+    .form-input::placeholder {
+      color: var(--text3)
+    }
+
+    select.form-input {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px
+    }
+
+    .form-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px
+    }
+
+    .form-full {
+      grid-column: 1/-1
+    }
+
+    /* Modal */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-md)
+    }
+
+    .modal-lg {
+      max-width: 720px
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 20px
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700
+    }
+
+    .modal-sub {
+      font-size: 12px;
+      color: var(--text3);
+      margin-top: 2px
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text3);
+      font-size: 20px;
+      line-height: 1;
+      padding: 2px;
+      margin-left: 12px;
+      flex-shrink: 0
+    }
+
+    .close-btn:hover {
+      color: var(--text)
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface2);
+      padding: 4px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+      width: fit-content
+    }
+
+    .tab-btn {
+      padding: 6px 14px;
+      border: none;
+      background: none;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      transition: all 0.15s
+    }
+
+    .tab-btn.active {
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 600;
+      box-shadow: var(--shadow)
+    }
+
+    /* Timeline */
+    .timeline {
+      position: relative
+    }
+
+    .timeline-item {
+      display: flex;
+      gap: 12px;
+      padding-bottom: 16px
+    }
+
+    .timeline-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 20px;
+      flex-shrink: 0
+    }
+
+    .timeline-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--border2);
+      background: var(--surface);
+      flex-shrink: 0;
+      margin-top: 3px
+    }
+
+    .timeline-dot.done {
+      background: var(--green);
+      border-color: var(--green)
+    }
+
+    .timeline-dot.active {
+      background: var(--amber);
+      border-color: var(--amber);
+      box-shadow: 0 0 0 3px var(--amber-bg)
+    }
+
+    .timeline-dot.legal {
+      background: var(--red);
+      border-color: var(--red)
+    }
+
+    .timeline-line {
+      flex: 1;
+      width: 1px;
+      background: var(--border);
+      margin-top: 4px
+    }
+
+    .timeline-content {
+      flex: 1;
+      padding-bottom: 4px
+    }
+
+    .timeline-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text)
+    }
+
+    .timeline-desc {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 2px;
+      line-height: 1.5
+    }
+
+    .timeline-date {
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 3px
+    }
+
+    /* Progress */
+    .progress {
+      height: 5px;
+      background: var(--surface3);
+      border-radius: 3px;
+      overflow: hidden
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.4s
+    }
+
+    .progress-amber {
+      background: var(--amber)
+    }
+
+    .progress-green {
+      background: var(--green-light)
+    }
+
+    .progress-red {
+      background: var(--red-light)
+    }
+
+    /* AI Message area */
+    .ai-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      font-size: 12px;
+      line-height: 1.75;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 80px;
+      max-height: 300px;
+      overflow-y: auto
+    }
+
+    .ai-loading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text3);
+      font-family: 'DM Sans', sans-serif
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border2);
+      border-top-color: var(--amber);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    /* Chart containers */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px
+    }
+
+    .chart-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px
+    }
+
+    /* Activity feed */
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .activity-item:last-child {
+      border-bottom: none
+    }
+
+    .activity-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+      margin-top: 1px
+    }
+
+    .activity-body {
+      flex: 1;
+      min-width: 0
+    }
+
+    .activity-text {
+      font-size: 12px;
+      color: var(--text);
+      line-height: 1.5
+    }
+
+    .activity-text strong {
+      font-weight: 600
+    }
+
+    .activity-time {
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 3px
+    }
+
+    /* Campaign cards */
+    .campaign-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s
+    }
+
+    .campaign-card:hover {
+      box-shadow: var(--shadow);
+      border-color: var(--border2)
+    }
+
+    .campaign-card.active-campaign {
+      border-color: var(--amber);
+      border-width: 2px
+    }
+
+    /* Step sequence */
+    .step-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border-radius: var(--radius);
+      margin-bottom: 6px
+    }
+
+    .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--amber-bg);
+      color: var(--amber-dark);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0
+    }
+
+    .step-info {
+      flex: 1
+    }
+
+    .step-title {
+      font-size: 12px;
+      font-weight: 600
+    }
+
+    .step-detail {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 1px
+    }
+
+    /* Search & filter bar */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 200px
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 12px 8px 34px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      outline: none
+    }
+
+    .search-input:focus {
+      border-color: var(--amber)
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text3);
+      font-size: 14px
+    }
+
+    .filter-select {
+      padding: 8px 28px 8px 10px;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center
+    }
+
+    /* Empty states */
+    .empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text3)
+    }
+
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 12px
+    }
+
+    .empty-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text2);
+      margin-bottom: 4px
+    }
+
+    .empty-sub {
+      font-size: 12px
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0
+    }
+
+    /* Chips */
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap
+    }
+
+    .chip.selected {
+      background: var(--amber-bg);
+      border-color: var(--amber-light);
+      color: var(--amber-dark)
+    }
+
+    /* Tooltip-like notice */
+    .info-box {
+      background: var(--blue-bg);
+      border: 1px solid var(--blue-light);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--blue);
+      line-height: 1.6;
+      margin-bottom: 14px
+    }
+
+    .warn-box {
+      background: var(--amber-bg);
+      border: 1px solid var(--amber-light);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--amber-dark);
+      line-height: 1.6;
+      margin-bottom: 14px
+    }
+
+    .danger-box {
+      background: var(--red-bg);
+      border: 1px solid var(--red-light);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--red);
+      line-height: 1.6;
+      margin-bottom: 14px
+    }
+
+    /* Tag */
+    .tag {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      color: var(--text2);
+      font-family: 'DM Mono', monospace
+    }
+
+    /* Invoice detail panel */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px
+    }
+
+    .detail-item {
+      background: var(--surface2);
+      border-radius: var(--radius);
+      padding: 10px 12px
+    }
+
+    .detail-label {
+      font-size: 10px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 4px
+    }
+
+    .detail-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text)
+    }
+
+    /* Score ring */
+    .score-ring {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    /* Notification dot */
+    .notif-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      display: inline-block;
+      margin-left: 4px
+    }
+
+    /* Copy indicator */
+    .copy-flash {
+      background: var(--green-bg);
+      color: var(--green);
+      border-color: var(--green-light)
+    }
+
+    /* Section header */
+    .section-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px
+    }
+
+    .section-hd-title {
+      font-size: 14px;
+      font-weight: 700
+    }
+
+    /* Responsive */
+    @media(max-width:900px) {
+      .layout {
+        grid-template-columns: 1fr
+      }
+
+      .sidebar {
+        display: none
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .chart-grid {
+        grid-template-columns: 1fr
+      }
+
+      .chart-grid-3 {
+        grid-template-columns: 1fr
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr
+      }
+
+      .form-grid-3 {
+        grid-template-columns: 1fr
+      }
+
+      .detail-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    /* Pill toggle */
+    .pill-toggle {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px
+    }
+
+    .pill-btn {
+      padding: 5px 14px;
+      border: none;
+      background: none;
+      border-radius: 16px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--text2);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      transition: all 0.15s
+    }
+
+    .pill-btn.active {
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08)
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 3px
+    }
+
+    /* Settings */
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .settings-row:last-child {
+      border-bottom: none
+    }
+
+    .toggle {
+      width: 36px;
+      height: 20px;
+      background: var(--border2);
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0
+    }
+
+    .toggle.on {
+      background: var(--amber)
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      transition: left 0.2s;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15)
+    }
+
+    .toggle.on .toggle-thumb {
+      left: 19px
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    /* ─── DATA ─── */
+    const INVOICES_INIT = [
+      { id: 1, company: 'Sharma Traders', contact: 'Rajesh Sharma', phone: '+91 98765 43210', email: 'rajesh@sharmatraders.in', gstin: '27AABCS1429B1Z1', amount: 85000, invoiceNo: 'INV-2024-041', issueDate: '2024-10-01', dueDate: '2024-11-15', daysOverdue: 134, status: 'legal', reminders: 4, recovered: false, channel: 'WhatsApp', industry: 'Manufacturing', notes: 'Follow up on call. Owner claims cash flow issues.', city: 'Mumbai' },
+      { id: 2, company: 'Pune Digital Agency', contact: 'Priya Joshi', phone: '+91 87654 32109', email: 'priya@punedigital.in', gstin: '27AABCS9999B1Z2', amount: 42000, invoiceNo: 'INV-2025-018', issueDate: '2024-12-01', dueDate: '2025-01-10', daysOverdue: 77, status: 'escalated', reminders: 3, recovered: false, channel: 'Email', industry: 'Services', notes: 'Third reminder sent. Disputed service quality.', city: 'Pune' },
+      { id: 3, company: 'Navi Mumbai Exports', contact: 'Suresh Nair', phone: '+91 76543 21098', email: 'suresh@nmexports.in', gstin: '27AABCS7777B1Z3', amount: 120000, invoiceNo: 'INV-2025-007', issueDate: '2024-11-20', dueDate: '2024-12-20', daysOverdue: 99, status: 'legal', reminders: 4, recovered: false, channel: 'WhatsApp', industry: 'Trade', notes: 'Legal notice drafted. Pending owner signature.', city: 'Navi Mumbai' },
+      { id: 4, company: 'Koregaon Textiles', contact: 'Anita Patil', phone: '+91 65432 10987', email: 'anita@koregtex.in', gstin: '27AABCS5555B1Z4', amount: 28500, invoiceNo: 'INV-2025-031', issueDate: '2024-12-20', dueDate: '2025-02-01', daysOverdue: 55, status: 'reminded', reminders: 2, recovered: false, channel: 'WhatsApp', industry: 'Textiles', notes: '', city: 'Pune' },
+      { id: 5, company: 'Bandra Café Co.', contact: 'Farhan Sheikh', phone: '+91 99887 76655', email: 'farhan@bandracafe.in', gstin: '27AABCS3333B1Z5', amount: 15000, invoiceNo: 'INV-2025-044', issueDate: '2025-01-20', dueDate: '2025-02-20', daysOverdue: 36, status: 'sent', reminders: 1, recovered: false, channel: 'Email', industry: 'F&B', notes: '', city: 'Mumbai' },
+      { id: 6, company: 'Thane IT Solutions', contact: 'Vikram Mehta', phone: '+91 88776 65544', email: 'vikram@thaneit.in', gstin: '27AABCS1111B1Z6', amount: 67000, invoiceNo: 'INV-2024-089', issueDate: '2024-09-01', dueDate: '2024-10-05', daysOverdue: 174, status: 'recovered', reminders: 4, recovered: true, channel: 'WhatsApp', industry: 'IT', notes: 'Recovered after legal notice sent.', city: 'Thane' },
+      { id: 7, company: 'Nagpur Steel Works', contact: 'Ramesh Gupta', phone: '+91 77665 54433', email: 'ramesh@nagpursteel.in', gstin: '27AABCS2222B1Z7', amount: 195000, invoiceNo: 'INV-2024-055', issueDate: '2024-08-15', dueDate: '2024-09-30', daysOverdue: 180, status: 'recovered', reminders: 4, recovered: true, channel: 'WhatsApp', industry: 'Manufacturing', notes: 'Partial payment received after 3 months.', city: 'Nagpur' },
+      { id: 8, company: 'Deccan Pharma Dist.', contact: 'Kavita Rao', phone: '+91 66554 43322', email: 'kavita@deccanpharma.in', gstin: '27AABCS8888B1Z8', amount: 55000, invoiceNo: 'INV-2025-052', issueDate: '2025-01-05', dueDate: '2025-02-05', daysOverdue: 51, status: 'escalated', reminders: 3, recovered: false, channel: 'Email', industry: 'Pharma', notes: '', city: 'Hyderabad' },
+    ];
+
+    const ACTIVITY_LOG = [
+      { id: 1, type: 'legal', icon: '⚖️', text: '<strong>Legal notice generated</strong> for Navi Mumbai Exports (₹1,20,000)', time: '2 hours ago', color: '#FCEBEB' },
+      { id: 2, type: 'recovery', icon: '✓', text: '<strong>Invoice recovered</strong> — Thane IT Solutions paid ₹67,000', time: 'Yesterday, 3:42 PM', color: '#EAF3DE' },
+      { id: 3, type: 'reminder', icon: '💬', text: '<strong>WhatsApp reminder sent</strong> to Sharma Traders for INV-2024-041', time: 'Yesterday, 10:00 AM', color: '#FAEEDA' },
+      { id: 4, type: 'new', icon: '+', text: '<strong>New invoice added</strong> — Bandra Café Co. ₹15,000 (INV-2025-044)', time: '2 days ago', color: '#E6F1FB' },
+      { id: 5, type: 'reminder', icon: '💬', text: '<strong>Email reminder sent</strong> to Pune Digital Agency for INV-2025-018', time: '3 days ago', color: '#FAEEDA' },
+      { id: 6, type: 'recovery', icon: '✓', text: '<strong>Invoice recovered</strong> — Nagpur Steel Works paid ₹1,95,000', time: '5 days ago', color: '#EAF3DE' },
+    ];
+
+    const MONTHLY_DATA = {
+      labels: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
+      sent: [0, 12000, 85000, 42000, 55000, 28500],
+      recovered: [0, 0, 67000, 0, 195000, 0],
+    };
+
+    const STATUS_META = {
+      sent: { label: '1st Reminder Sent', color: 'badge-blue', days: '0–14d overdue' },
+      reminded: { label: 'Follow-up Sent', color: 'badge-amber', days: '15–34d overdue' },
+      escalated: { label: 'Final Notice', color: 'badge-amber', days: '35–44d overdue' },
+      legal: { label: 'Legal Draft Ready', color: 'badge-red', days: '45d+ overdue' },
+      recovered: { label: 'Recovered', color: 'badge-green', days: '' },
+    };
+
+    function fmtINR(n) { return '₹' + Number(n).toLocaleString('en-IN') }
+    function getInitials(n) { return n.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() }
+    function daysBadge(d, rec) {
+      if (rec) return 'badge-green';
+      if (d >= 45) return 'badge-red';
+      if (d >= 21) return 'badge-amber';
+      return 'badge-blue';
+    }
+
+    /* ─── WhatsApp Deep Link ─── */
+    function sendViaWhatsApp(phone, messageText) {
+      const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+      const encoded = encodeURIComponent(messageText || '');
+      const url = cleanPhone
+        ? `https://wa.me/${cleanPhone}?text=${encoded}`
+        : `https://wa.me/?text=${encoded}`;
+      window.open(url, '_blank');
+    }
+
+    /* ─── PDF Legal Notice Generator ─── */
+    async function generateLegalPDF(inv, settings) {
+      const id = inv.interest_data || {};
+      const penalty = id.interest_accrued || 0;
+      const totalClaim = id.total_claim || inv.amount;
+      const days = id.days_overdue || inv.daysOverdue || 0;
+      const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      const el = document.createElement('div');
+      el.innerHTML = `
+        <div style="font-family: 'Times New Roman', Georgia, serif; padding: 48px 56px; color: #1a1a1a; font-size: 13px; line-height: 1.8; max-width: 210mm;">
+          <!-- Letterhead -->
+          <div style="text-align: center; border-bottom: 3px double #8B0000; padding-bottom: 16px; margin-bottom: 24px;">
+            <div style="font-size: 20px; font-weight: bold; color: #8B0000; letter-spacing: 1px; text-transform: uppercase;">${settings?.businessName || 'RecoverAI Legal Services'}</div>
+            <div style="font-size: 11px; color: #555; margin-top: 4px;">${settings?.ownerName || ''} &nbsp;|&nbsp; ${settings?.phone || ''} &nbsp;|&nbsp; ${settings?.email || ''}</div>
+            ${settings?.gstin ? `<div style="font-size: 10px; color: #777; margin-top: 2px;">GSTIN: ${settings.gstin}</div>` : ''}
+          </div>
+
+          <!-- Title & Date -->
+          <div style="text-align: right; font-size: 12px; color: #555; margin-bottom: 20px;">Date: <strong>${today}</strong></div>
+          <div style="text-align: center; font-size: 16px; font-weight: bold; color: #8B0000; margin-bottom: 4px; text-decoration: underline;">LEGAL NOTICE</div>
+          <div style="text-align: center; font-size: 11px; color: #555; margin-bottom: 24px;">Under the Micro, Small and Medium Enterprises Development Act, 2006</div>
+
+          <!-- Addressee -->
+          <div style="margin-bottom: 20px;">
+            <strong>To,</strong><br/>
+            <strong>${inv.company}</strong><br/>
+            Attn: ${inv.contact || 'The Proprietor / Director'}<br/>
+            ${inv.gstin ? 'GSTIN: ' + inv.gstin + '<br/>' : ''}
+            ${inv.email ? 'Email: ' + inv.email + '<br/>' : ''}
+            ${inv.phone ? 'Phone: ' + inv.phone : ''}
+          </div>
+
+          <!-- Subject -->
+          <div style="margin-bottom: 16px;">
+            <strong>Subject: Demand for Payment of Invoice No. ${inv.invoiceNo} and Accrued Interest under MSMED Act, 2006</strong>
+          </div>
+
+          <!-- Body -->
+          <div style="margin-bottom: 14px;">Dear Sir/Madam,</div>
+
+          <div style="margin-bottom: 14px; text-align: justify;">Under instructions from my client, <strong>${settings?.businessName || '[Creditor Business Name]'}</strong>${settings?.gstin ? ' (GSTIN: ' + settings.gstin + ')' : ''}, I hereby serve this Legal Notice upon you as required under the <strong>Micro, Small and Medium Enterprises Development Act, 2006</strong> ("MSMED Act").</div>
+
+          <div style="margin-bottom: 14px; text-align: justify;">My client supplied goods/services to your company as evidenced by <strong>Invoice No. ${inv.invoiceNo}</strong>, dated <strong>${inv.issueDate || 'N/A'}</strong>, for an amount of <strong>₹${Number(inv.amount).toLocaleString('en-IN')}</strong>. The said amount became due and payable on <strong>${inv.dueDate || 'N/A'}</strong>. As of the date of this notice, the payment is overdue by <strong>${days} days</strong>.</div>
+
+          <!-- Financial Breakdown -->
+          <div style="margin: 20px 0; border: 1.5px solid #8B0000; border-radius: 4px; overflow: hidden;">
+            <div style="background: #8B0000; color: white; padding: 8px 16px; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Statement of Claim</div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #ddd;">
+              <span>Base Invoice Amount</span>
+              <strong>₹${Number(inv.amount).toLocaleString('en-IN')}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #ddd; background: #fff5f5; color: #8B0000;">
+              <span>Interest under MSMED Act §15 (19.5% p.a. compound with monthly rests × ${days} days)</span>
+              <strong>+ ₹${Number(penalty).toLocaleString('en-IN')}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 16px; font-size: 14px; font-weight: bold; background: #fafafa;">
+              <span>Total Amount Payable</span>
+              <span style="color: #8B0000; font-size: 15px;">₹${Number(totalClaim).toLocaleString('en-IN')}</span>
+            </div>
+          </div>
+
+          <!-- Legal Citations -->
+          <div style="margin-bottom: 14px; text-align: justify;">Under <strong>Section 15</strong> of the MSMED Act, 2006, any buyer who fails to make payment to a micro or small enterprise for goods or services supplied is liable to pay compound interest with monthly rests at <strong>three times the bank rate</strong> notified by the Reserve Bank of India. The current applicable rate is <strong>19.5% per annum</strong> (3 × 6.5% RBI bank rate).</div>
+
+          <div style="margin-bottom: 14px; text-align: justify;">Under <strong>Section 16</strong>, the buyer is obligated to make payment on or before the date agreed upon, and in no case beyond <strong>45 days</strong> from the date of acceptance or deemed acceptance of goods or services.</div>
+
+          <div style="margin-bottom: 14px; text-align: justify;">Under <strong>Section 17</strong>, for any goods or services supplied by the supplier, the buyer shall be liable to pay the agreed amount along with interest as prescribed.</div>
+
+          <!-- Demand -->
+          <div style="margin: 20px 0; padding: 14px 16px; background: #fff5f5; border-left: 4px solid #8B0000; font-weight: bold;">You are hereby called upon to pay the total sum of ₹${Number(totalClaim).toLocaleString('en-IN')} (Rupees ${numberToWords(totalClaim)} Only) within <strong>15 (Fifteen) days</strong> from the date of receipt of this notice, failing which my client shall be constrained to:</div>
+
+          <div style="margin-bottom: 14px; padding-left: 20px;">
+            1. File a reference before the <strong>Micro and Small Enterprise Facilitation Council</strong> under Section 18 of the MSMED Act, 2006.<br/>
+            2. File a case on the <strong>MSME Samadhaan Portal</strong> (Government of India) for delayed payment monitoring.<br/>
+            3. Initiate appropriate <strong>civil and/or criminal proceedings</strong> before the competent court of law.
+          </div>
+
+          <div style="margin-bottom: 20px; text-align: justify;">Please treat this notice as a final opportunity to settle the matter amicably. All costs, charges, and consequences arising from your failure to comply shall be entirely at your risk and expense.</div>
+
+          <!-- Closing -->
+          <div style="margin-bottom: 8px;">Yours faithfully,</div>
+          <div style="margin-top: 36px;">
+            <strong>${settings?.ownerName || '[Authorised Signatory]'}</strong><br/>
+            ${settings?.businessName || '[Business Name]'}<br/>
+            ${settings?.phone ? 'Phone: ' + settings.phone + '<br/>' : ''}
+            ${settings?.email ? 'Email: ' + settings.email : ''}
+          </div>
+
+          <!-- Footer -->
+          <div style="margin-top: 40px; padding-top: 12px; border-top: 1px solid #ccc; font-size: 9px; color: #999; text-align: center;">
+            This notice has been issued under the provisions of the MSMED Act, 2006 and is without prejudice to all other rights and remedies available to the creditor under applicable laws.
+            <br/>Generated by RecoverAI — MSME Invoice Recovery Platform
+          </div>
+        </div>
+      `;
+
+      const opt = {
+        margin: 0,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      const filename = `Legal_Notice_${inv.invoiceNo || 'Draft'}.pdf`;
+      const blob = await html2pdf().set(opt).from(el).outputPdf('blob');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    /* ─── Number to Words (Indian system — for legal notice) ─── */
+    function numberToWords(num) {
+      if (num === 0) return 'Zero';
+      const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+        'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+      const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+      const n = Math.round(num);
+      if (n < 20) return ones[n];
+      if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+      if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' and ' + numberToWords(n % 100) : '');
+      if (n < 100000) return numberToWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + numberToWords(n % 1000) : '');
+      if (n < 10000000) return numberToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + numberToWords(n % 100000) : '');
+      return numberToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + numberToWords(n % 10000000) : '');
+    }
+
+    /* ─── Auth helpers ─── */
+    function getToken() { return localStorage.getItem('recoverai_token'); }
+    function setToken(t) { t ? localStorage.setItem('recoverai_token', t) : localStorage.removeItem('recoverai_token'); }
+    
+    function getIsAdmin() { return localStorage.getItem('recoverai_is_admin') === 'true'; }
+    function setIsAdmin(a) { a ? localStorage.setItem('recoverai_is_admin', 'true') : localStorage.removeItem('recoverai_is_admin'); }
+
+    async function authFetch(url, opts = {}) {
+      const token = getToken();
+      const headers = { ...(opts.headers || {}) };
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      const res = await fetch(url, { ...opts, headers });
+      if (res.status === 401) {
+        setToken(null);
+        window.location.reload();
+      }
+      return res;
+    }
+
+    /* ─── AI Backend call ─── */
+    async function callAI(systemPrompt, userPrompt, invoice_data = {}, tone = "Firm Warning") {
+      const prompt = systemPrompt + "\n\n" + userPrompt;
+      const res = await authFetch('http://localhost:8000/api/generate-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt, invoice_data: invoice_data, tone: tone })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'API Error');
+      return data.message || '';
+    }
+
+    const SYSTEM_PROMPT = `You are RecoverAI's intelligent recovery agent for Indian MSME businesses. 
+You draft professional, contextually appropriate debt-recovery messages for Indian businesses.
+Key rules:
+- WhatsApp messages: conversational, warm but firm, 3-5 lines, can use "ji", "sir/madam"
+- Emails: professional format with Subject line, opening, body, closing signature
+- Legal notices: formal, cite MSMED Act 2006 Sections 15-17, give 15-day ultimatum, formal language
+- NEVER be aggressive or threatening; always offer a payment arrangement path
+- Include specific invoice number, amount, and due date in every message
+- Sign off messages as "[Business Name] Collections Team"`;
+
+    /* ─── COMPONENTS ─── */
+
+    function LoginScreen({ onLogin }) {
+      const [tab, setTab] = useState('login');
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [bizName, setBizName] = useState('');
+      const [err, setErr] = useState('');
+      const [loading, setLoading] = useState(false);
+
+      // Initialize Google OAuth Button
+      useEffect(() => {
+        // We use a global callback so the Google library can find it
+        window.handleGoogleCredentialResponse = async (response) => {
+          setErr(''); setLoading(true);
+          try {
+            const res = await fetch('http://localhost:8000/api/auth/google', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ credential: response.credential })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Google Login failed');
+            setToken(data.access_token);
+            setIsAdmin(data.is_admin);
+            onLogin(data.access_token, data.is_admin);
+          } catch (e) {
+            setErr(e.message);
+          }
+          setLoading(false);
+        };
+
+        // Render button if library is loaded (setTimeout is a hacky way to wait for external script)
+        const renderGoogleBtn = () => {
+          if (window.google && document.getElementById('google-signin-btn-container')) {
+            // Empty the container first
+            document.getElementById('google-signin-btn-container').innerHTML = '';
+            
+            // Your Client ID must be fetched from backend or injected here.
+            // Since we serve static HTML, we use a placeholder or require the user to paste it.
+            const clientId = "your-google-client-id-here"; // <--- USER MUST REPLACE THIS
+
+            if (clientId && clientId !== "your-google-client-id-here") {
+              window.google.accounts.id.initialize({
+                client_id: clientId,
+                callback: window.handleGoogleCredentialResponse
+              });
+              window.google.accounts.id.renderButton(
+                document.getElementById('google-signin-btn-container'),
+                { theme: "outline", size: "large", width: "100%", text: "continue_with" }
+              );
+            } else {
+              // Show fallback button if no client id
+              document.getElementById('google-signin-btn-container').innerHTML = `
+                <button type="button" class="btn btn-outline btn-lg" style="width: 100%; justify-content: center" onclick="alert('Google Client ID not configured. You need to create an OAuth app in Google Cloud Console and paste the Client ID into the code.')">
+                   <svg style="width: 18px; height: 18px; margin-right: 8px" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                   Sign in with Google
+                </button>
+              `;
+            }
+          } else {
+            setTimeout(renderGoogleBtn, 300);
+          }
+        };
+        
+        if (tab === 'login') {
+          renderGoogleBtn();
+        }
+      }, [tab]);
+
+      async function handleLogin(e) {
+        e.preventDefault(); setErr(''); setLoading(true);
+        try {
+          const fd = new FormData();
+          fd.append('username', email);
+          fd.append('password', password);
+          const res = await fetch('http://localhost:8000/api/auth/login', { method: 'POST', body: fd });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || 'Login failed');
+          setToken(data.access_token);
+          setIsAdmin(data.is_admin);
+          onLogin(data.access_token, data.is_admin);
+        } catch (e) { setErr(e.message); }
+        setLoading(false);
+      }
+
+      async function handleRegister(e) {
+        e.preventDefault(); setErr(''); setLoading(true);
+        try {
+          const res = await fetch('http://localhost:8000/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ business_name: bizName, email, password })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || 'Registration failed');
+          setTab('login');
+          setErr('');
+          alert('Account created! Please log in.');
+        } catch (e) { setErr(e.message); }
+        setLoading(false);
+      }
+
+      return (
+        <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ width: '100%', maxWidth: 420 }}>
+            <div style={{ textAlign: 'center', marginBottom: 32 }}>
+              <div style={{ width: 52, height: 52, background: 'var(--amber)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 700, color: 'var(--amber-bg)', margin: '0 auto 14px' }}>R</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>RecoverAI</div>
+              <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 4 }}>MSME Invoice Recovery Platform</div>
+            </div>
+            <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-xl)', border: '1px solid var(--border)', padding: 28, boxShadow: 'var(--shadow-md)' }}>
+              <div className="tabs" style={{ marginBottom: 22 }}>
+                {[['login', 'Sign In'], ['register', 'Create Account']].map(([v, l]) => (
+                  <button key={v} className={`tab-btn${tab === v ? ' active' : ''}`} onClick={() => { setTab(v); setErr(''); }}>{l}</button>
+                ))}
+              </div>
+              {tab === 'login' ? (
+                <form onSubmit={handleLogin}>
+                  <div className="form-group">
+                    <label className="form-label">Email</label>
+                    <input className="form-input" type="email" placeholder="you@business.in" value={email} onChange={e => setEmail(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Password</label>
+                    <input className="form-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
+                  </div>
+                  {err && <div className="danger-box" style={{ marginBottom: 14 }}>{err}</div>}
+                  <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center', marginTop: 4 }} disabled={loading}>
+                    {loading ? <><span className="spinner"></span> Signing in...</> : 'Sign In →'}
+                  </button>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', margin: '24px 0', color: 'var(--text3)', fontSize: 12 }}>
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }}></div>
+                    <span style={{ padding: '0 12px' }}>OR</span>
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }}></div>
+                  </div>
+                  
+                  <div id="google-signin-btn-container" style={{ display: 'flex', justifyContent: 'center' }}>
+                    {/* Google button renders here */}
+                    <button type="button" className="btn btn-outline btn-lg" style={{ width: '100%', justifyContent: 'center' }} onClick={() => alert("Google Client ID not configured. Please add it to your backend settings!")}>
+                      <svg style={{ width: 18, height: 18, marginRight: 8 }} viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                      Sign in with Google
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleRegister}>
+                  <div className="form-group">
+                    <label className="form-label">Business Name</label>
+                    <input className="form-input" placeholder="Krishna Enterprises" value={bizName} onChange={e => setBizName(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Email</label>
+                    <input className="form-input" type="email" placeholder="you@business.in" value={email} onChange={e => setEmail(e.target.value)} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Password</label>
+                    <input className="form-input" type="password" placeholder="Min. 6 characters" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+                  </div>
+                  {err && <div className="danger-box" style={{ marginBottom: 14 }}>{err}</div>}
+                  <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center', marginTop: 4 }} disabled={loading}>
+                    {loading ? <><span className="spinner"></span> Creating account...</> : 'Create Account →'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── ADMIN DASHBOARD ─── */
+    function AdminDashboard() {
+      const [stats, setStats] = useState(null);
+      const [users, setUsers] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState('');
+
+      useEffect(() => {
+        Promise.all([
+          authFetch('http://localhost:8000/api/admin/dashboard-stats').then(res => res.json()),
+          authFetch('http://localhost:8000/api/admin/users').then(res => res.json())
+        ])
+          .then(([statsData, usersData]) => {
+            setStats(statsData);
+            setUsers(usersData);
+            setLoading(false);
+          })
+          .catch(err => { setError(err.message); setLoading(false); });
+      }, []);
+
+      if (loading) return <div className="p-8 text-center text-gray-500">Loading platform stats...</div>;
+      if (error) return <div className="p-8 text-center text-red-500">Error: {error}</div>;
+
+      return (
+        <div className="p-6">
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">Platform Overview</h1>
+            <p className="text-gray-500 text-sm">God Mode — System-wide analytics across all users</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {/* Card 1 */}
+            <div className="bg-white rounded-xl border-l-4 border-blue-500 shadow-sm p-5 border border-gray-100">
+              <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Value Tracked</div>
+              <div className="text-3xl font-bold text-gray-900">₹{Number(stats.total_tracked_value).toLocaleString('en-IN')}</div>
+              <div className="text-xs text-gray-400 mt-2">Across {stats.total_invoices} invoices globally</div>
+            </div>
+
+            {/* Card 2 */}
+            <div className="bg-white rounded-xl border-l-4 border-green-500 shadow-sm p-5 border border-gray-100">
+              <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Recovered</div>
+              <div className="text-3xl font-bold text-gray-900">₹{Number(stats.total_recovered_value).toLocaleString('en-IN')}</div>
+              <div className="text-xs text-gray-400 mt-2">Successfully processed system-wide</div>
+            </div>
+
+            {/* Card 3 */}
+            <div className="bg-white rounded-xl border-l-4 border-orange-500 shadow-sm p-5 border border-gray-100">
+              <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">Active Pending Invoices</div>
+              <div className="text-3xl font-bold text-gray-900">{stats.active_invoices} <span className="text-lg text-gray-400 font-normal">/ {stats.total_invoices} total</span></div>
+              <div className="text-xs text-orange-500 font-medium mt-2">⚠ {stats.legal_queue_count} in MSME legal queue</div>
+            </div>
+          </div>
+          
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Platform Users</h2>
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200 text-gray-600">
+                  <tr>
+                    <th className="px-5 py-3 font-medium">Business / Email</th>
+                    <th className="px-5 py-3 font-medium">Joined</th>
+                    <th className="px-5 py-3 font-medium text-right">Invoices</th>
+                    <th className="px-5 py-3 font-medium text-right">Total ₹ Tracked</th>
+                    <th className="px-5 py-3 font-medium text-right">Total ₹ Recovered</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {users.map(u => (
+                    <tr key={u._id} className="hover:bg-gray-50">
+                      <td className="px-5 py-3">
+                        <div className="font-semibold text-gray-900">{u.business_name}</div>
+                        <div className="text-gray-500 text-xs">{u.email}</div>
+                      </td>
+                      <td className="px-5 py-3 text-gray-600">{new Date(u.created_at).toLocaleDateString('en-IN')}</td>
+                      <td className="px-5 py-3 text-right font-medium text-gray-900">{u.invoice_count}</td>
+                      <td className="px-5 py-3 text-right font-mono text-gray-600">₹{Number(u.total_tracked_value).toLocaleString('en-IN')}</td>
+                      <td className="px-5 py-3 text-right font-mono text-green-600 font-semibold">₹{Number(u.total_recovered_value).toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))}
+                  {users.length === 0 && (
+                    <tr>
+                      <td colSpan="5" className="px-5 py-8 text-center text-gray-500">No users found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── MAIN APP ─── */
+    function App() {
+      const [token, setTokenState] = useState(() => getToken());
+      const [isAdmin, setIsAdminState] = useState(() => getIsAdmin());
+      const [page, setPage] = useState('dashboard');
+      const [invoices, setInvoices] = useState([]);
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [selectedInv, setSelectedInv] = useState(null);
+      const [showDetailModal, setShowDetailModal] = useState(false);
+      const [settings, setSettings] = useState(() => {
+        const local = localStorage.getItem('recoverai_settings');
+        return local ? JSON.parse(local) : {
+          businessName: 'Krishna Enterprises',
+          ownerName: 'Anil Kumar',
+          phone: '+91 98765 00001',
+          email: 'anil@krishnaent.in',
+          gstin: '27AABCK0000B1Z9',
+          city: 'Mumbai',
+          autoReminder: true,
+          whatsappEnabled: true,
+          emailEnabled: true,
+          legalAtDays: 45,
+          reminderDays: [7, 21, 35],
+          commissionRate: 2,
+        };
+      });
+
+      function handleLogin(tok, adminStatus) { 
+        setToken(tok); 
+        setTokenState(tok); 
+        setIsAdmin(adminStatus); 
+        setIsAdminState(adminStatus); 
+      }
+      
+      function handleLogout() { 
+        setToken(null); 
+        setTokenState(null); 
+        setIsAdmin(false); 
+        setIsAdminState(false); 
+        setInvoices([]); 
+        if (page === 'admin') setPage('dashboard');
+      }
+
+      useEffect(() => {
+        localStorage.setItem('recoverai_settings', JSON.stringify(settings));
+      }, [settings]);
+
+      const fetchInvoices = useCallback(() => {
+        if (!getToken()) return;
+        authFetch('http://localhost:8000/api/invoices')
+          .then(r => r.json())
+          .then(data => { if (Array.isArray(data)) setInvoices(data); })
+          .catch(e => console.error('Error loading invoices:', e));
+      }, []);
+
+      useEffect(() => { if (token) fetchInvoices(); }, [token, fetchInvoices]);
+
+      if (!token) return <LoginScreen onLogin={handleLogin} />;
+
+      const outstanding = invoices.filter(i => !i.recovered).reduce((s, i) => s + i.amount, 0);
+      const recovered = invoices.filter(i => i.recovered).reduce((s, i) => s + i.amount, 0);
+      const legalQueue = invoices.filter(i => !i.recovered && i.daysOverdue >= 45);
+      const activeCount = invoices.filter(i => !i.recovered).length;
+      const recoveryRate = Math.round((recovered / (outstanding + recovered)) * 100) || 0;
+
+      async function addInvoice(inv) {
+        const due = new Date(inv.dueDate);
+        const days = Math.max(0, Math.floor((Date.now() - due.getTime()) / (86400000)));
+        let status = 'sent';
+        if (days >= 45) status = 'legal';
+        else if (days >= 35) status = 'escalated';
+        else if (days >= 15) status = 'reminded';
+
+        const payload = { ...inv, daysOverdue: days, status, reminders: 0, recovered: false };
+        try {
+          const res = await authFetch('http://localhost:8000/api/invoices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const created = await res.json();
+          if (res.ok) setInvoices(p => [created, ...p]);
+        } catch (e) { console.error('Error adding invoice:', e); }
+      }
+
+      async function markRecovered(id) {
+        try {
+          const res = await authFetch(`http://localhost:8000/api/invoices/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recovered: true, status: 'recovered' })
+          });
+          if (res.ok) {
+            setInvoices(p => p.map(i => i.id === id ? { ...i, recovered: true, status: 'recovered' } : i));
+          }
+        } catch (e) { console.error('Error marking recovered:', e) }
+        setShowDetailModal(false);
+      }
+
+      async function deleteInvoice(id) {
+        try {
+          await authFetch(`http://localhost:8000/api/invoices/${id}`, { method: 'DELETE' });
+          setInvoices(p => p.filter(i => i.id !== id));
+        } catch (e) { console.error('Error deleting invoice:', e) }
+        setShowDetailModal(false);
+      }
+
+      function openDetail(inv) {
+        setSelectedInv(inv);
+        setShowDetailModal(true);
+      }
+
+      const pages = {
+        dashboard: <Dashboard invoices={invoices} outstanding={outstanding} recovered={recovered} legalQueue={legalQueue} activeCount={activeCount} recoveryRate={recoveryRate} openDetail={openDetail} />,
+        inbox: <DebtorInbox invoices={invoices} openDetail={openDetail} fetchInvoices={fetchInvoices} />,
+        invoices: <Invoices invoices={invoices} openDetail={openDetail} onAdd={() => setShowAddModal(true)} />,
+        recovery: <RecoveryHub invoices={invoices} openDetail={openDetail} settings={settings} />,
+        legal: <LegalQueue invoices={legalQueue} openDetail={openDetail} settings={settings} />,
+        campaigns: <Campaigns invoices={invoices} settings={settings} />,
+        admin: <AdminDashboard />,
+        settings: <Settings settings={settings} setSettings={setSettings} />,
+      };
+
+      const navItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: '▦' },
+        { id: 'inbox', label: 'Debtor Inbox', icon: '📥', badge: invoices.filter(i => i.communication_log?.length).length || null, badgeType: 'blue' },
+        { id: 'invoices', label: 'All Invoices', icon: '≡', badge: activeCount > 0 ? activeCount : null, badgeType: 'amber' },
+        { id: 'recovery', label: 'Recovery Hub', icon: '↺' },
+        { id: 'legal', label: 'Legal Queue', icon: '⚖', badge: legalQueue.length > 0 ? legalQueue.length : null, badgeType: 'red' },
+        { id: 'campaigns', label: 'Campaigns', icon: '◎' },
+      ];
+      
+      if (isAdmin) {
+        navItems.push({ id: 'admin', label: 'God Mode', icon: '👁', badge: 'Admin', badgeType: 'red' });
+      }
+
+      return (
+        <div className="layout">
+          {/* Sidebar */}
+          <aside className="sidebar">
+            <div className="sidebar-brand">
+              <div className="brand-icon">R</div>
+              <div className="brand-name">RecoverAI</div>
+              <div className="brand-tagline">MSME Invoice Recovery</div>
+            </div>
+            <nav className="nav">
+              <div className="nav-section">Main</div>
+              {navItems.map(n => (
+                <button key={n.id} className={`nav-item${page === n.id ? ' active' : ''}`} onClick={() => setPage(n.id)}>
+                  <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>{n.icon}</span>
+                  {n.label}
+                  {n.badge && <span className={`nav-badge${n.badgeType === 'amber' ? ' nav-badge-amber' : ''}`}>{n.badge}</span>}
+                </button>
+              ))}
+              <div className="nav-section" style={{ marginTop: 12 }}>Account</div>
+              <button className={`nav-item${page === 'settings' ? ' active' : ''}`} onClick={() => setPage('settings')}>
+                <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>⚙</span>
+                Settings
+              </button>
+              <button className="nav-item" onClick={handleLogout} style={{ color: 'var(--red)' }}>
+                <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>⏻</span>
+                Sign Out
+              </button>
+            </nav>
+            <div className="sidebar-bottom">
+              <div className="user-card">
+                <div className="user-avatar">{getInitials(settings.ownerName)}</div>
+                <div>
+                  <div className="user-name">{settings.businessName}</div>
+                  <div className="user-plan">Starter Plan · {settings.city}</div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main */}
+          <main className="main">
+            {pages[page]}
+          </main>
+
+          {/* Add Invoice Modal */}
+          {showAddModal && <AddInvoiceModal onClose={() => setShowAddModal(false)} onAdd={inv => { addInvoice(inv); setShowAddModal(false) }} />}
+
+          {/* Invoice Detail Modal */}
+          {showDetailModal && selectedInv && (
+            <InvoiceDetailModal
+              inv={invoices.find(i => i.id === selectedInv.id) || selectedInv}
+              settings={settings}
+              onClose={() => setShowDetailModal(false)}
+              onRecover={() => markRecovered(selectedInv.id)}
+              onDelete={() => deleteInvoice(selectedInv.id)}
+            />
+          )}
+        </div>
+      );
+    }
+
+    /* ─── DASHBOARD ─── */
+    function Dashboard({ invoices, outstanding, recovered, legalQueue, activeCount, recoveryRate, openDetail }) {
+      const chartRef = useRef(null);
+      const donutRef = useRef(null);
+      const chartObj = useRef(null);
+      const donutObj = useRef(null);
+
+      useEffect(() => {
+        if (!chartRef.current) return;
+        if (chartObj.current) chartObj.current.destroy();
+        const ctx = chartRef.current.getContext('2d');
+        chartObj.current = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: MONTHLY_DATA.labels,
+            datasets: [
+              { label: 'Outstanding', data: MONTHLY_DATA.sent, backgroundColor: '#FAEEDA', borderColor: '#BA7517', borderWidth: 1.5, borderRadius: 4 },
+              { label: 'Recovered', data: MONTHLY_DATA.recovered, backgroundColor: '#C0DD97', borderColor: '#3B6D11', borderWidth: 1.5, borderRadius: 4 },
+            ]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { font: { size: 11, family: 'DM Sans' }, boxWidth: 12, padding: 12 } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 11 } } }, y: { grid: { color: '#F1EFE8' }, ticks: { font: { size: 11 }, callback: v => '₹' + v.toLocaleString('en-IN') } } } }
+        });
+        return () => { if (chartObj.current) chartObj.current.destroy() };
+      }, []);
+
+      useEffect(() => {
+        if (!donutRef.current) return;
+        if (donutObj.current) donutObj.current.destroy();
+        const ctx2 = donutRef.current.getContext('2d');
+        const byStatus = { sent: 0, reminded: 0, escalated: 0, legal: 0 };
+        invoices.filter(i => !i.recovered).forEach(i => { byStatus[i.status] = (byStatus[i.status] || 0) + i.amount });
+        donutObj.current = new Chart(ctx2, {
+          type: 'doughnut',
+          data: {
+            labels: ['1st Reminder', 'Follow-up', 'Final Notice', 'Legal Ready'],
+            datasets: [{ data: Object.values(byStatus), backgroundColor: ['#E6F1FB', '#FAEEDA', '#FAC775', '#FCEBEB'], borderColor: ['#85B7EB', '#BA7517', '#BA7517', '#F09595'], borderWidth: 1.5 }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { position: 'bottom', labels: { font: { size: 11, family: 'DM Sans' }, boxWidth: 10, padding: 10 } } } }
+        });
+        return () => { if (donutObj.current) donutObj.current.destroy() };
+      }, [invoices]);
+
+      const topDebtors = invoices.filter(i => !i.recovered).sort((a, b) => b.amount - a.amount).slice(0, 5);
+
+      return (
+        <div>
+          <div className="topbar">
+            <div>
+              <div className="page-title">Dashboard</div>
+              <div className="page-sub">Overview of your recovery pipeline</div>
+            </div>
+            <div className="topbar-actions">
+              <span className="badge badge-green">● Live</span>
+              <span style={{ fontSize: 12, color: 'var(--text3)' }}>{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            </div>
+          </div>
+          <div className="content">
+
+            {/* Metrics */}
+            <div className="metric-grid">
+              <div className="metric-card">
+                <div className="metric-label">💰 Outstanding</div>
+                <div className="metric-value" style={{ color: '#BA7517' }}>{fmtINR(outstanding)}</div>
+                <div className="metric-change"><span className="change-down">▲</span><span style={{ fontSize: 11, color: 'var(--text3)' }}>{activeCount} invoices pending</span></div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">✓ Recovered</div>
+                <div className="metric-value" style={{ color: 'var(--green)' }}>{fmtINR(recovered)}</div>
+                <div className="metric-change"><span className="change-up">▲</span><span style={{ fontSize: 11, color: 'var(--text3)' }}>This cycle</span></div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">⚖ Legal Queue</div>
+                <div className="metric-value" style={{ color: 'var(--red)' }}>{legalQueue.length}</div>
+                <div className="metric-change"><span style={{ fontSize: 11, color: 'var(--text3)' }}>Invoices 45d+ overdue</span></div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">% Recovery Rate</div>
+                <div className="metric-value">{recoveryRate}%</div>
+                <div className="progress" style={{ marginTop: 8 }}><div className="progress-fill progress-green" style={{ width: recoveryRate + '%' }}></div></div>
+              </div>
+            </div>
+
+            {/* Charts */}
+            <div className="chart-grid">
+              <div className="card">
+                <div className="card-header">
+                  <div>
+                    <div className="card-title">Outstanding vs Recovered</div>
+                    <div className="card-sub">Monthly ₹ value breakdown</div>
+                  </div>
+                </div>
+                <div style={{ height: 220 }}><canvas ref={chartRef}></canvas></div>
+              </div>
+              <div className="card">
+                <div className="card-header">
+                  <div>
+                    <div className="card-title">Pipeline by Stage</div>
+                    <div className="card-sub">Current outstanding distribution</div>
+                  </div>
+                </div>
+                <div style={{ height: 220 }}><canvas ref={donutRef}></canvas></div>
+              </div>
+            </div>
+
+            {/* Bottom two panels */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16 }}>
+              <div className="card">
+                <div className="card-header">
+                  <div className="card-title">Top Debtors</div>
+                  <span className="badge badge-red">{legalQueue.length} legal ready</span>
+                </div>
+                {topDebtors.map(inv => (
+                  <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => openDetail(inv)}>
+                    <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--amber-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--amber-dark)', flexShrink: 0 }}>{getInitials(inv.company)}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{inv.company}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>{inv.invoiceNo} · {inv.city}</div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>{fmtINR(inv.amount)}</div>
+                      <span className={`badge ${daysBadge(inv.daysOverdue, inv.recovered)}`} style={{ fontSize: 10, marginTop: 3 }}>{inv.daysOverdue}d overdue</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="card">
+                <div className="card-header"><div className="card-title">Recent Activity</div></div>
+                {ACTIVITY_LOG.slice(0, 5).map(a => (
+                  <div key={a.id} className="activity-item">
+                    <div className="activity-icon" style={{ background: a.color }}>{a.icon}</div>
+                    <div className="activity-body">
+                      <div className="activity-text" dangerouslySetInnerHTML={{ __html: a.text }}></div>
+                      <div className="activity-time">{a.time}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── INVOICES PAGE ─── */
+    function Invoices({ invoices, openDetail, onAdd }) {
+      const [search, setSearch] = useState('');
+      const [statusFilter, setStatusFilter] = useState('all');
+      const [sort, setSort] = useState('days_desc');
+      const [selectedIds, setSelectedIds] = useState(new Set());
+      const [bulkModal, setBulkModal] = useState(false);
+      const [bulkLoading, setBulkLoading] = useState(false);
+      const [bulkResults, setBulkResults] = useState([]);
+
+      const filtered = invoices
+        .filter(i => {
+          const q = search.toLowerCase();
+          if (q && !i.company.toLowerCase().includes(q) && !i.invoiceNo.toLowerCase().includes(q) && !i.contact.toLowerCase().includes(q)) return false;
+          if (statusFilter !== 'all' && i.status !== statusFilter) return false;
+          return true;
+        })
+        .sort((a, b) => {
+          if (sort === 'days_desc') return b.daysOverdue - a.daysOverdue;
+          if (sort === 'days_asc') return a.daysOverdue - b.daysOverdue;
+          if (sort === 'amount_desc') return b.amount - a.amount;
+          if (sort === 'amount_asc') return a.amount - b.amount;
+          if (sort === 'company') return a.company.localeCompare(b.company);
+          return 0;
+        });
+
+      const totals = {
+        outstanding: invoices.filter(i => !i.recovered).reduce((s, i) => s + i.amount, 0),
+        recovered: invoices.filter(i => i.recovered).reduce((s, i) => s + i.amount, 0),
+      };
+
+      async function handleBulkGenerate() {
+        setBulkModal(true);
+        setBulkLoading(true);
+        const selInvs = invoices.filter(i => selectedIds.has(i.id));
+        const payloads = selInvs.map(inv => ({
+          prompt: `WhatsApp message for ${inv.contact} at ${inv.company} for invoice ${inv.invoiceNo} of ${fmtINR(inv.amount)}, ${inv.daysOverdue} days overdue. Polite but firm, 3-4 lines.`
+        }));
+        try {
+          const res = await fetch('http://localhost:8000/api/bulk-generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloads)
+          });
+          const data = await res.json();
+          setBulkResults(selInvs.map((inv, i) => ({ inv, msg: data[i].message })));
+        } catch (e) {
+          console.error('Bulk generate failed', e);
+        }
+        setBulkLoading(false);
+      }
+
+      return (
+        <div>
+          <div className="topbar">
+            <div>
+              <div className="page-title">All Invoices</div>
+              <div className="page-sub">{invoices.length} total · {invoices.filter(i => !i.recovered).length} active</div>
+            </div>
+            <div className="topbar-actions">
+              {selectedIds.size > 0 && <button className="btn btn-success" onClick={handleBulkGenerate}>Bulk Generate ({selectedIds.size})</button>}
+              <button className="btn btn-primary" onClick={onAdd}>+ Add Invoice</button>
+            </div>
+          </div>
+          <div className="content">
+
+            {/* Summary chips */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+              {[['all', 'All', invoices.length, 'badge-gray'], ['sent', '1st Reminder', invoices.filter(i => i.status === 'sent').length, 'badge-blue'],
+              ['reminded', 'Follow-up', invoices.filter(i => i.status === 'reminded').length, 'badge-amber'],
+              ['escalated', 'Final Notice', invoices.filter(i => i.status === 'escalated').length, 'badge-amber'],
+              ['legal', 'Legal Ready', invoices.filter(i => i.status === 'legal').length, 'badge-red'],
+              ['recovered', 'Recovered', invoices.filter(i => i.recovered).length, 'badge-green']
+              ].map(([val, lbl, cnt, cls]) => (
+                <div key={val} className={`chip${statusFilter === val ? ' selected' : ''}`} onClick={() => setStatusFilter(val)}>
+                  <span className={`badge ${cls}`} style={{ padding: '1px 6px', fontSize: 10 }}>{cnt}</span>
+                  {lbl}
+                </div>
+              ))}
+            </div>
+
+            <div className="filter-bar">
+              <div className="search-wrap">
+                <span className="search-icon">⌕</span>
+                <input className="search-input" placeholder="Search company, invoice no, contact..." value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+              <select className="filter-select" value={sort} onChange={e => setSort(e.target.value)}>
+                <option value="days_desc">Most overdue first</option>
+                <option value="days_asc">Least overdue first</option>
+                <option value="amount_desc">Highest amount first</option>
+                <option value="amount_asc">Lowest amount first</option>
+                <option value="company">Company A–Z</option>
+              </select>
+            </div>
+
+            <div className="card" style={{ padding: 0 }}>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 40 }}><input type="checkbox" onChange={e => {
+                        if (e.target.checked) setSelectedIds(new Set(filtered.map(i => i.id)));
+                        else setSelectedIds(new Set());
+                      }} checked={filtered.length > 0 && selectedIds.size === filtered.length} /></th>
+                      <th>Company</th>
+                      <th>Invoice</th>
+                      <th>Amount</th>
+                      <th>Due Date</th>
+                      <th>Overdue</th>
+                      <th>Status</th>
+                      <th>Channel</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length === 0 && (
+                      <tr><td colSpan={8}><div className="empty"><div className="empty-icon">◎</div><div className="empty-title">No invoices found</div></div></td></tr>
+                    )}
+                    {filtered.map(inv => (
+                      <tr key={inv.id} style={{ cursor: 'pointer' }} onClick={() => openDetail(inv)}>
+                        <td onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(inv.id)} onChange={e => {
+                          const next = new Set(selectedIds);
+                          if (e.target.checked) next.add(inv.id); else next.delete(inv.id);
+                          setSelectedIds(next);
+                        }} /></td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 30, height: 30, borderRadius: 6, background: 'var(--amber-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--amber-dark)', flexShrink: 0 }}>{getInitials(inv.company)}</div>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.company}</div>
+                              <div style={{ fontSize: 11, color: 'var(--text3)' }}>{inv.contact}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td><span className="tag">{inv.invoiceNo}</span></td>
+                        <td><strong>{fmtINR(inv.amount)}</strong></td>
+                        <td style={{ fontSize: 12, color: 'var(--text2)' }}>{inv.dueDate}</td>
+                        <td>
+                          <span className={`badge ${daysBadge(inv.daysOverdue, inv.recovered)}`}>
+                            {inv.recovered ? 'Paid' : inv.daysOverdue + 'd'}
+                          </span>
+                        </td>
+                        <td><span className={`badge ${STATUS_META[inv.status]?.color || 'badge-gray'}`}>{STATUS_META[inv.status]?.label || inv.status}</span></td>
+                        <td style={{ fontSize: 12 }}>{inv.channel === 'WhatsApp' ? '💬' : '📧'} {inv.channel}</td>
+                        <td onClick={e => e.stopPropagation()}>
+                          <button className="btn btn-sm" onClick={() => openDetail(inv)}>View →</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 16, fontSize: 12, color: 'var(--text3)' }}>
+                <span>Showing {filtered.length} of {invoices.length}</span>
+                <span style={{ marginLeft: 'auto' }}>Outstanding: <strong style={{ color: 'var(--amber)' }}>{fmtINR(totals.outstanding)}</strong></span>
+                <span>Recovered: <strong style={{ color: 'var(--green)' }}>{fmtINR(totals.recovered)}</strong></span>
+              </div>
+            </div>
+          </div>
+
+          {bulkModal && (
+            <div className="overlay" onClick={() => setBulkModal(false)}>
+              <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div>
+                    <div className="modal-title">Bulk Generate WhatsApp Links</div>
+                    <div className="modal-sub">AI is drafting unique, personalized links for {selectedIds.size} debtors</div>
+                  </div>
+                  <button className="close-btn" onClick={() => setBulkModal(false)}>×</button>
+                </div>
+                {bulkLoading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '40px 0' }}>
+                    <div className="spinner" style={{ width: 24, height: 24, borderTopColor: 'var(--amber)' }}></div>
+                    <div style={{ fontSize: 13, color: 'var(--text3)' }}>Drafting messages concurrently...</div>
+                  </div>
+                ) : (
+                  <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                    {bulkResults.map(({ inv, msg }, idx) => (
+                      <div key={idx} style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.company}</div>
+                          <button className="btn btn-sm btn-success" onClick={() => window.open(`https://wa.me/${inv.phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank')}>Send to {inv.contact} ↗</button>
+                        </div>
+                        <div className="ai-box" style={{ padding: 8, fontSize: 11, minHeight: 'auto' }}>{msg || 'Error generating message.'}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    /* ─── RECOVERY HUB ─── */
+    function RecoveryHub({ invoices, openDetail, settings }) {
+      const [selected, setSelected] = useState(null);
+      const [msgType, setMsgType] = useState('whatsapp');
+      const [aiMsg, setAiMsg] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [copied, setCopied] = useState(false);
+
+      const active = invoices.filter(i => !i.recovered).sort((a, b) => b.daysOverdue - a.daysOverdue);
+      const sel = selected ? (invoices.find(i => i.id === selected) || null) : null;
+
+      async function generate() {
+        if (!sel) return;
+        setLoading(true); setAiMsg(''); setCopied(false);
+        const idata = sel.interest_data || {};
+        const penalty = idata.interest_accrued || 0;
+        const totalClaim = idata.total_claim || sel.amount;
+        const prompts = {
+          whatsapp: sel.daysOverdue >= 45
+            ? `Draft a WhatsApp recovery message for:\nDebtor: ${sel.contact}, ${sel.company}\nPhone: ${sel.phone}\nInvoice: ${sel.invoiceNo}\nBase Amount: ${fmtINR(sel.amount)}\nMSMED Act Penalty (19.5% p.a. compound): ${fmtINR(penalty)}\nTotal Legal Claim: ${fmtINR(totalClaim)}\nDays Overdue: ${sel.daysOverdue}\nSender: ${settings.businessName} (${settings.ownerName})\nTone: firm, cite MSMED Act 2006. Max 5 lines. State exact penalty and total claim. Mention MSME Samadhaan filing as next step.`
+            : `Draft a WhatsApp recovery message for:\nDebtor: ${sel.contact}, ${sel.company}\nPhone: ${sel.phone}\nInvoice: ${sel.invoiceNo} for ${fmtINR(sel.amount)}\nDue: ${sel.dueDate} (${sel.daysOverdue} days overdue)\nSender: ${settings.businessName} (${settings.ownerName})\nTone: polite but firm. Max 5 lines. Include payment UPI request mention.`,
+          email: sel.daysOverdue >= 45
+            ? `Draft a professional recovery email:\nTo: ${sel.contact} <${sel.email}>\nCompany: ${sel.company}\nInvoice: ${sel.invoiceNo}\nBase Amount: ${fmtINR(sel.amount)}\nMSMED Act Penalty (19.5% p.a. compound): ${fmtINR(penalty)}\nTotal Legal Claim: ${fmtINR(totalClaim)}\nDays Overdue: ${sel.daysOverdue}\nSender: ${settings.businessName}\nInclude Subject line. Cite MSMED Act 2006 §15-17. State exact interest and total claim. Demand immediate payment to avoid MSME Samadhaan filing.`
+            : `Draft a professional recovery email:\nTo: ${sel.contact} <${sel.email}>\nCompany: ${sel.company}\nInvoice: ${sel.invoiceNo} for ${fmtINR(sel.amount)}\nDue: ${sel.dueDate} (${sel.daysOverdue} days overdue)\nSender: ${settings.businessName}\nInclude Subject line. Professional tone. Offer payment arrangement.`,
+          legal: `Draft a formal MSME Legal Notice:\nDebtor: ${sel.company}, Contact: ${sel.contact}\nInvoice: ${sel.invoiceNo}\nBase Amount: ${fmtINR(sel.amount)}\nMSMED Act Penalty (19.5% p.a. compound interest with monthly rests): ${fmtINR(penalty)}\nTotal Legal Claim: ${fmtINR(totalClaim)}\nOriginal due: ${sel.dueDate} (now ${sel.daysOverdue} days overdue)\nSender: ${settings.businessName}, ${settings.gstin}\nRequirements: Cite MSMED Act 2006 Sections 15-17, give 15-day ultimatum, state EXACT interest of ${fmtINR(penalty)} at 3x RBI bank rate (19.5% p.a.), demand total of ${fmtINR(totalClaim)}, mention MSME Samadhaan portal filing.`,
+        };
+        try {
+          const msg = await callAI(SYSTEM_PROMPT, prompts[msgType]);
+          setAiMsg(msg);
+        } catch (e) {
+          setAiMsg(`Error: ${e.message}`);
+        }
+        setLoading(false);
+      }
+
+      function copy() {
+        navigator.clipboard.writeText(aiMsg).catch(() => { });
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+
+      const getTimeline = (inv) => [
+        { label: 'Invoice Issued', desc: `${inv.invoiceNo} sent for ${fmtINR(inv.amount)}`, done: true, dot: 'done', date: inv.issueDate },
+        { label: '1st Reminder (Day 7)', desc: 'Polite WhatsApp/Email reminder', done: inv.reminders >= 1, dot: inv.reminders >= 1 ? 'done' : inv.daysOverdue >= 7 ? 'active' : 'pending', date: '' },
+        { label: 'Follow-up (Day 21)', desc: 'Second reminder with payment link', done: inv.reminders >= 2, dot: inv.reminders >= 2 ? 'done' : inv.daysOverdue >= 21 ? 'active' : 'pending', date: '' },
+        { label: 'Final Notice (Day 35)', desc: 'Strongly worded escalation message', done: inv.reminders >= 3, dot: inv.reminders >= 3 ? 'done' : inv.daysOverdue >= 35 ? 'active' : 'pending', date: '' },
+        { label: 'Legal Draft (Day 45+)', desc: 'MSME Samadhaan / Letter Before Action', done: inv.daysOverdue >= 45, dot: inv.daysOverdue >= 45 ? 'legal' : 'pending', date: '' },
+        { label: 'Payment Recovered', desc: 'Invoice closed and marked recovered', done: inv.recovered, dot: inv.recovered ? 'done' : 'pending', date: '' },
+      ];
+
+      return (
+        <div>
+          <div className="topbar">
+            <div>
+              <div className="page-title">Recovery Hub</div>
+              <div className="page-sub">Generate AI-powered recovery messages for each invoice</div>
+            </div>
+          </div>
+          <div className="content">
+            <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16, alignItems: 'start' }}>
+
+              {/* Invoice list */}
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text3)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Active Invoices ({active.length})</div>
+                {active.map(inv => (
+                  <div key={inv.id} onClick={() => { setSelected(inv.id); setAiMsg(''); setCopied(false); }}
+                    style={{ padding: '10px 12px', border: `1.5px solid ${selected === inv.id ? 'var(--amber)' : 'var(--border)'}`, borderRadius: 'var(--radius-lg)', marginBottom: 8, cursor: 'pointer', background: selected === inv.id ? '#FAEEDA' : 'var(--surface)', transition: 'all 0.15s' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.company}</div>
+                      <span className={`badge ${daysBadge(inv.daysOverdue, false)}`} style={{ fontSize: 10 }}>{inv.daysOverdue}d</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{inv.invoiceNo}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, marginTop: 4, color: 'var(--amber)' }}>{fmtINR(inv.amount)}</div>
+                  </div>
+                ))}
+                {active.length === 0 && <div className="empty" style={{ padding: 24 }}><div className="empty-icon">🎉</div><div className="empty-title">All clear!</div><div className="empty-sub">No active invoices</div></div>}
+              </div>
+
+              {/* Right panel */}
+              {sel ? (
+                <div>
+                  {/* Header */}
+                  <div className="card" style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 700 }}>{sel.company}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{sel.contact} · {sel.phone} · {sel.email}</div>
+                      </div>
+                      <span className={`badge ${daysBadge(sel.daysOverdue, false)}`}>{STATUS_META[sel.status]?.label}</span>
+                    </div>
+                    <div className="detail-grid">
+                      {[['Invoice', sel.invoiceNo], ['Amount', fmtINR(sel.amount)], ['Due Date', sel.dueDate], ['Days Overdue', sel.daysOverdue + 'd overdue'], ['Channel', sel.channel], ['Industry', sel.industry]].map(([l, v]) => (
+                        <div key={l} className="detail-item"><div className="detail-label">{l}</div><div className="detail-value">{v}</div></div>
+                      ))}
+                    </div>
+                    {sel.notes && <div className="info-box" style={{ marginBottom: 0 }}>📝 <strong>Notes:</strong> {sel.notes}</div>}
+                  </div>
+
+                  {/* Timeline */}
+                  <div className="card" style={{ marginBottom: 12 }}>
+                    <div className="card-header"><div className="card-title">Recovery Timeline</div></div>
+                    <div className="timeline">
+                      {getTimeline(sel).map((t, i, arr) => (
+                        <div key={i} className="timeline-item">
+                          <div className="timeline-left">
+                            <div className={`timeline-dot ${t.dot}`}></div>
+                            {i < arr.length - 1 && <div className="timeline-line"></div>}
+                          </div>
+                          <div className="timeline-content">
+                            <div className="timeline-title" style={{ color: t.done ? 'var(--text)' : 'var(--text3)' }}>{t.label}</div>
+                            <div className="timeline-desc">{t.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* AI Generator */}
+                  <div className="card">
+                    <div className="card-header">
+                      <div className="card-title">AI Message Generator</div>
+                      <span className="badge badge-purple">Claude AI</span>
+                    </div>
+
+                    <div className="tabs" style={{ marginBottom: 12 }}>
+                      {[['whatsapp', '💬 WhatsApp'], ['email', '📧 Email'], ['legal', '⚖ Legal Notice']].map(([v, l]) => (
+                        <button key={v} className={`tab-btn${msgType === v ? ' active' : ''}`} onClick={() => { setMsgType(v); setAiMsg(''); setCopied(false) }}
+                          style={{ color: v === 'legal' && msgType === v ? 'var(--red)' : undefined }}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+
+                    {msgType === 'legal' && sel.daysOverdue < 45 && (
+                      <div className="warn-box">⚠ Legal notices are most effective after 45 days. This invoice is only {sel.daysOverdue} days overdue. Consider sending a final reminder first.</div>
+                    )}
+                    {msgType === 'legal' && sel.daysOverdue >= 45 && (
+                      <div className="danger-box">📋 This invoice qualifies for MSME Samadhaan filing (45+ days overdue). The generated notice will reference the MSMED Act 2006.</div>
+                    )}
+
+                    <button className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center', marginBottom: 12 }} onClick={generate} disabled={loading}>
+                      {loading ? <><span className="spinner"></span>Generating...</> : `Generate ${msgType === 'whatsapp' ? 'WhatsApp Message' : msgType === 'email' ? 'Email Draft' : 'Legal Notice'}`}
+                    </button>
+
+                    {loading && <div className="ai-loading"><span className="spinner"></span>AI is drafting your message...</div>}
+
+                    {aiMsg && !loading && (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Generated Message</span>
+                          <button className={`btn btn-sm${copied ? ' copy-flash' : ''}`} onClick={copy}>{copied ? '✓ Copied' : 'Copy'}</button>
+                        </div>
+                        <div className="ai-box">{aiMsg}</div>
+                        <div style={{ display: 'flex', gap: 6, marginTop: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                          <button className="btn btn-sm" onClick={() => setAiMsg('')}>Clear</button>
+                          <button className="btn btn-sm" onClick={generate}>Regenerate</button>
+                          {msgType === 'whatsapp' && <button className="btn btn-sm btn-success" onClick={() => window.open(`https://wa.me/${sel.phone.replace(/\D/g, '')}?text=${encodeURIComponent(aiMsg)}`, '_blank')}>Send via WhatsApp ↗</button>}
+                          {msgType === 'legal' && <button className="btn btn-sm btn-danger">Download PDF Notice</button>}
+                        </div>
+                      </div>
+                    )}
+
+                    {!aiMsg && !loading && (
+                      <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text3)', fontSize: 12 }}>
+                        Click the button above to generate a contextual AI message for {sel.company}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, textAlign: 'center' }}>
+                  <div style={{ fontSize: 36, marginBottom: 12 }}>←</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Select an invoice to begin</div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', maxWidth: 240 }}>Pick any overdue invoice from the left panel to generate AI-powered recovery messages</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── LEGAL QUEUE ─── */
+    function LegalQueue({ invoices, openDetail, settings }) {
+      const [selected, setSelected] = useState(null);
+      const [aiNotice, setAiNotice] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [copied, setCopied] = useState(false);
+      const sel = selected ? invoices.find(i => i.id === selected) : null;
+
+      // Compute totals using live interest_data from backend
+      const totalPrincipal = invoices.reduce((s, i) => s + i.amount, 0);
+      const totalClaim = invoices.reduce((s, i) => s + (i.interest_data?.total_claim || i.amount), 0);
+      const totalInterest = invoices.reduce((s, i) => s + (i.interest_data?.interest_accrued || 0), 0);
+
+      // Helper to safely read interest_data with fallbacks
+      function idata(inv) {
+        const d = inv.interest_data || {};
+        return {
+          interest: d.interest_accrued || 0,
+          claim: d.total_claim || inv.amount,
+          days: d.days_overdue || inv.daysOverdue || 0,
+          rate: d.annual_rate_pct || 19.5,
+          basis: d.legal_basis || 'MSMED Act 2006, §15–17',
+        };
+      }
+
+      async function generateNotice() {
+        if (!sel) return;
+        setLoading(true); setAiNotice(''); setCopied(false);
+        const id = idata(sel);
+        try {
+          const msg = await callAI(SYSTEM_PROMPT,
+            `Draft a complete formal MSME Legal Notice / Letter Before Action for:\n\nSENDER:\nBusiness: ${settings.businessName}\nOwner: ${settings.ownerName}\nPhone: ${settings.phone}\nEmail: ${settings.email}\nGSTIN: ${settings.gstin}\n\nDEBTOR:\nCompany: ${sel.company}\nContact: ${sel.contact}\nPhone: ${sel.phone}\nGSTIN: ${sel.gstin || 'N/A'}\n\nINVOICE DETAILS:\nInvoice No: ${sel.invoiceNo}\nIssue Date: ${sel.issueDate}\nDue Date: ${sel.dueDate}\nBase Amount: ${fmtINR(sel.amount)}\nDays Overdue: ${id.days}\nMSMED Act Penalty (19.5% p.a. compound with monthly rests): ${fmtINR(id.interest)}\nTotal Legal Claim: ${fmtINR(id.claim)}\n\nRequirements:\n1. Formal legal notice header with date\n2. Cite MSMED Act 2006, Sections 15, 16, 17\n3. State EXACT interest of ${fmtINR(id.interest)} accrued at 3x Reserve Bank rate (19.5% p.a.)\n4. Demand TOTAL payment of ${fmtINR(id.claim)} within 15 days of this notice\n5. Mention filing with MSME Samadhaan portal as next step\n6. Professional legal closing\n7. Signature block for ${settings.ownerName}, ${settings.businessName}`
+          );
+          setAiNotice(msg);
+        } catch (e) { setAiNotice(`Error: ${e.message}`); }
+        setLoading(false);
+      }
+
+      return (
+        <div>
+          <div className="topbar">
+            <div>
+              <div className="page-title">Legal Queue</div>
+              <div className="page-sub">{invoices.length} invoices qualify for legal action (45+ days overdue)</div>
+            </div>
+            <div className="topbar-actions" style={{ display: 'flex', gap: 8 }}>
+              <span className="badge badge-amber" style={{ fontSize: 11 }}>Principal: {fmtINR(totalPrincipal)}</span>
+              <span className="badge badge-red" style={{ fontSize: 12 }}>Total Claim: {fmtINR(totalClaim)}</span>
+            </div>
+          </div>
+          <div className="content">
+
+            {invoices.length === 0 && <div className="empty"><div className="empty-icon">⚖</div><div className="empty-title">No invoices in legal queue</div><div className="empty-sub">Invoices 45+ days overdue will appear here</div></div>}
+
+            <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 16, alignItems: 'start' }}>
+              <div>
+                <div className="danger-box">
+                  <strong>⚠ Action Required</strong><br />
+                  These invoices are eligible for MSME Samadhaan filing under the MSMED Act 2006. Compound interest at 3× RBI bank rate (19.5% p.a.) has accrued <strong>{fmtINR(totalInterest)}</strong> in penalties.
+                </div>
+                {invoices.map(inv => {
+                  const id = idata(inv);
+                  return (
+                    <div key={inv.id} onClick={() => { setSelected(inv.id); setAiNotice(''); setCopied(false); }}
+                      style={{ padding: '12px', border: `1.5px solid ${selected === inv.id ? 'var(--red)' : 'var(--border)'}`, borderRadius: 'var(--radius-lg)', marginBottom: 8, cursor: 'pointer', background: selected === inv.id ? 'var(--red-bg)' : 'var(--surface)', transition: 'all 0.15s' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>{inv.company}</div>
+                        <span className="badge badge-red">{id.days}d overdue</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{inv.contact} · {inv.invoiceNo}</div>
+                      <div style={{ marginTop: 8, background: 'var(--red-bg)', borderRadius: 'var(--radius)', padding: '8px 10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text2)', marginBottom: 4 }}>
+                          <span>Base: {fmtINR(inv.amount)}</span>
+                          <span style={{ color: 'var(--red)', fontWeight: 600 }}>+{fmtINR(id.interest)} penalty</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--red)' }}>{fmtINR(id.claim)}</div>
+                          <span className="badge badge-red" style={{ fontSize: 9 }}>Total Claim</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {sel ? (
+                <div>
+                  {/* ── Legal Claim Breakdown Card ── */}
+                  <div className="card" style={{ marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 700 }}>{sel.company}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{sel.contact} · {sel.phone}</div>
+                      </div>
+                      <button className="btn btn-sm" onClick={() => openDetail(sel)}>Full Details →</button>
+                    </div>
+
+                    {/* Financial breakdown */}
+                    {(() => {
+                      const id = idata(sel);
+                      return (
+                        <div style={{ marginBottom: 14 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>⚖ Legal Claim Breakdown</div>
+                          <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+                              <span style={{ fontSize: 12, color: 'var(--text2)' }}>Base Invoice Amount</span>
+                              <span style={{ fontSize: 13, fontWeight: 600 }}>{fmtINR(sel.amount)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border)', background: 'var(--red-bg)' }}>
+                              <span style={{ fontSize: 12, color: 'var(--red)' }}>MSMED Penalty ({id.rate}% p.a. × {id.days}d)</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--red)' }}>+{fmtINR(id.interest)}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--surface)' }}>
+                              <span style={{ fontSize: 13, fontWeight: 700 }}>Total Legal Claim</span>
+                              <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--red)' }}>{fmtINR(id.claim)}</span>
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 6, textAlign: 'right' }}>{id.basis}</div>
+                        </div>
+                      );
+                    })()}
+
+                    <div className="info-box" style={{ marginBottom: 0 }}>
+                      <strong>MSME Samadhaan Eligibility:</strong> This invoice has been overdue for {idata(sel).days} days. Under MSMED Act Section 15, payment was due within 45 days of delivery. You are entitled to compound interest at 3× the Reserve Bank of India's notified rate (19.5% p.a.).
+                    </div>
+                  </div>
+
+                  {/* ── Legal Notice Generator ── */}
+                  <div className="card">
+                    <div className="card-header">
+                      <div>
+                        <div className="card-title">Legal Notice Generator</div>
+                        <div className="card-sub">AI-drafted formal Letter Before Action</div>
+                      </div>
+                      <span className="badge badge-red">MSMED Act 2006</span>
+                    </div>
+
+                    <button className="btn btn-danger btn-lg" style={{ width: '100%', justifyContent: 'center', marginBottom: 12 }} onClick={generateNotice} disabled={loading}>
+                      {loading ? <><span className="spinner"></span>Drafting Legal Notice...</> : '⚖ Generate Legal Notice'}
+                    </button>
+
+                    {loading && <div className="ai-loading"><span className="spinner"></span>Drafting formal legal notice with MSME Act references...</div>}
+
+                    {aiNotice && !loading && (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Legal Notice Draft</span>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button className={`btn btn-sm${copied ? ' copy-flash' : ''}`} onClick={() => { navigator.clipboard.writeText(aiNotice).catch(() => { }); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>{copied ? '✓ Copied' : 'Copy'}</button>
+                          </div>
+                        </div>
+                        <div className="ai-box" style={{ fontFamily: 'Georgia,serif', fontSize: 11, lineHeight: 1.9 }}>{aiNotice}</div>
+                        <div style={{ marginTop: 10, display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                          <button className="btn btn-sm" onClick={generateNotice}>Regenerate</button>
+                          <button className="btn btn-sm btn-success" onClick={() => sendViaWhatsApp(sel.phone, aiNotice)}>💬 Send via WhatsApp</button>
+                          <button className="btn btn-sm btn-danger" onClick={() => generateLegalPDF(sel, settings)}>📄 Download PDF Notice</button>
+                          <button className="btn btn-sm" style={{ color: 'var(--red)', borderColor: 'var(--red-light)' }}>File MSME Samadhaan →</button>
+                        </div>
+                      </div>
+                    )}
+                    {!aiNotice && !loading && <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text3)', fontSize: 12 }}>Click above to generate a court-ready legal notice for {sel.company}</div>}
+                  </div>
+                </div>
+              ) : (
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 350, textAlign: 'center' }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>⚖</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Select a debtor</div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', maxWidth: 220 }}>Choose an invoice from the left to generate a formal MSME legal notice</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── DEBTOR INBOX ─── */
+    function DebtorInbox({ invoices, openDetail, fetchInvoices }) {
+      const [showSimModal, setShowSimModal] = useState(false);
+      const [simInvoiceId, setSimInvoiceId] = useState('');
+      const [simMessage, setSimMessage] = useState('');
+      const [simLoading, setSimLoading] = useState(false);
+      const [simResult, setSimResult] = useState(null);
+      const [simError, setSimError] = useState('');
+
+      const msgs = invoices.flatMap(inv =>
+        (inv.communication_log || []).map(log => ({ ...log, inv }))
+      ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      // Active (non-recovered) invoices for the simulator dropdown
+      const activeInvoices = invoices.filter(i => !i.recovered);
+
+      async function handleSimSubmit(e) {
+        e.preventDefault();
+        if (!simInvoiceId || !simMessage.trim()) return;
+        setSimLoading(true);
+        setSimResult(null);
+        setSimError('');
+        try {
+          const res = await fetch('http://localhost:8000/api/debtor-reply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ invoice_id: simInvoiceId, message: simMessage.trim() }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || 'Request failed');
+          setSimResult(data);
+          // CRITICAL: Refresh the invoice list so the inbox shows the new log entry
+          fetchInvoices();
+        } catch (err) {
+          setSimError(err.message);
+        }
+        setSimLoading(false);
+      }
+
+      function closeModal() {
+        setShowSimModal(false);
+        setSimMessage('');
+        setSimInvoiceId('');
+        setSimResult(null);
+        setSimError('');
+      }
+
+      const intentBadge = intent =>
+        intent === 'promise_to_pay' ? 'badge-green' :
+          intent === 'dispute' ? 'badge-red' :
+            intent === 'stall' ? 'badge-amber' : 'badge-gray';
+
+      return (
+        <div>
+          <div className="topbar">
+            <div>
+              <div className="page-title">Debtor Inbox</div>
+              <div className="page-sub">{msgs.length} message{msgs.length !== 1 ? 's' : ''} · AI-classified replies</div>
+            </div>
+            <div className="topbar-actions">
+              <button
+                id="btn-simulate-reply"
+                className="btn btn-primary"
+                onClick={() => setShowSimModal(true)}
+                title="Simulate an incoming debtor reply to test the NLP pipeline"
+              >
+                ⚡ Simulate Incoming Reply
+              </button>
+            </div>
+          </div>
+
+          <div className="content">
+            {msgs.length === 0 ? (
+              <div className="empty" style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <div className="empty-icon" style={{ fontSize: 40, marginBottom: 16 }}>📥</div>
+                <div className="empty-title" style={{ fontSize: 18, fontWeight: 700 }}>Inbox Zero</div>
+                <div className="empty-sub" style={{ color: 'var(--text3)', marginBottom: 20 }}>
+                  No debtor replies yet. Use the ⚡ button above to simulate one!
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {msgs.map((msg, i) => (
+                  <div key={i} className="card" style={{ display: 'grid', gridTemplateColumns: '180px 1fr 200px', gap: 16, cursor: 'pointer', alignItems: 'center' }} onClick={() => openDetail(msg.inv)}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{msg.inv.company}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>{msg.inv.contact}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>{new Date(msg.timestamp).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 2 }}>Original: "{msg.raw_message}"</div>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>{msg.translated_text}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span className={`badge ${intentBadge(msg.intent)}`}>
+                        {(msg.intent || 'unknown').replace(/_/g, ' ').toUpperCase()}
+                      </span>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>Conf: {msg.confidence}</div>
+                      <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>{msg.suggested_action}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── Simulate Incoming Reply Modal ── */}
+          {showSimModal && (
+            <div className="overlay" onClick={closeModal}>
+              <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+                <div className="modal-header">
+                  <div>
+                    <div className="modal-title">⚡ Simulate Incoming Reply</div>
+                    <div className="modal-sub">Test the NLP pipeline — select an invoice and type a debtor message</div>
+                  </div>
+                  <button className="close-btn" onClick={closeModal}>×</button>
+                </div>
+
+                {!simResult ? (
+                  <form onSubmit={handleSimSubmit}>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="sim-invoice-select">Invoice / Debtor</label>
+                      <select
+                        id="sim-invoice-select"
+                        className="form-input"
+                        value={simInvoiceId}
+                        onChange={e => setSimInvoiceId(e.target.value)}
+                        required
+                      >
+                        <option value="">— Select an invoice —</option>
+                        {activeInvoices.map(inv => (
+                          <option key={inv.id} value={inv.id}>
+                            {inv.company} · {inv.invoiceNo} · ₹{Number(inv.amount).toLocaleString('en-IN')}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="sim-message-input">Debtor Message</label>
+                      <textarea
+                        id="sim-message-input"
+                        className="form-input"
+                        rows={4}
+                        placeholder='e.g. "Kal payment bhej deta hoon sir" or "Wrong amount hai, dispute karna chahta hoon"'
+                        value={simMessage}
+                        onChange={e => setSimMessage(e.target.value)}
+                        style={{ resize: 'vertical', fontFamily: 'DM Sans, sans-serif' }}
+                        required
+                      />
+                      <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>
+                        💡 Try Hindi/Hinglish: "kal bhej dunga", "galat invoice hai", "boss nahi hain abhi"
+                      </div>
+                    </div>
+
+                    {simError && (
+                      <div className="danger-box" style={{ marginBottom: 12 }}>❌ {simError}</div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button type="button" className="btn" onClick={closeModal}>Cancel</button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={simLoading || !simInvoiceId || !simMessage.trim()}
+                        id="btn-simulate-submit"
+                      >
+                        {simLoading
+                          ? <><span className="spinner" />&nbsp;Processing NLP...
+                          </>
+                          : '⚡ Send & Analyse'}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div>
+                    <div className="info-box" style={{ marginBottom: 16 }}>
+                      ✅ Reply processed! The Inbox has been refreshed with the new AI analysis.
+                    </div>
+
+                    {simResult.fallback_mode && (
+                      <div className="warn-box" style={{ marginBottom: 12 }}>
+                        ⚡ <strong>Heuristic Fallback Active</strong> — Gemini API quota reached.
+                        Intent was classified using keyword matching on your message.
+                      </div>
+                    )}
+
+                    <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius)', padding: 14, marginBottom: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px', color: 'var(--text3)' }}>AI Analysis Result</span>
+                        <span className={`badge ${intentBadge(simResult.intent)}`} style={{ fontSize: 12 }}>
+                          {(simResult.intent || 'unknown').replace(/_/g, ' ').toUpperCase()}
+                        </span>
+                      </div>
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        {[['Translation', simResult.translated_text], ['Confidence', simResult.confidence?.toUpperCase()], ['Suggested Action', simResult.suggested_action]].map(([lbl, val]) => (
+                          <div key={lbl}>
+                            <div style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>{lbl}</div>
+                            <div style={{ fontSize: 12, fontWeight: 500 }}>{val}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button className="btn" onClick={() => { setSimResult(null); setSimMessage(''); setSimInvoiceId(''); setSimError(''); }}>
+                        ← Send Another
+                      </button>
+                      <button className="btn btn-primary" onClick={closeModal}>Done</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ─── CAMPAIGNS ─── */
+
+    function Campaigns({ invoices, settings }) {
+      const [showRunner, setShowRunner] = useState(false);
+      const [sort, setSort] = useState('days_desc');
+
+      // Filter: only active, overdue, non-recovered invoices
+      const targets = invoices
+        .filter(i => !i.recovered && i.daysOverdue > 0)
+        .sort((a, b) => {
+          if (sort === 'days_desc') return b.daysOverdue - a.daysOverdue;
+          if (sort === 'days_asc') return a.daysOverdue - b.daysOverdue;
+          if (sort === 'amount_desc') return (b.interest_data?.total_claim || b.amount) - (a.interest_data?.total_claim || a.amount);
+          if (sort === 'amount_asc') return (a.interest_data?.total_claim || a.amount) - (b.interest_data?.total_claim || b.amount);
+          return 0;
+        });
+
+      const totalClaim = targets.reduce((s, i) => s + (i.interest_data?.total_claim || i.amount), 0);
+      const avgDays = targets.length ? Math.round(targets.reduce((s, i) => s + i.daysOverdue, 0) / targets.length) : 0;
+
+      return (
+        <div>
+          <div className="topbar">
+            <div>
+              <div className="page-title">Campaigns</div>
+              <div className="page-sub">{targets.length} active overdue invoices ready for bulk recovery</div>
+            </div>
+            <div className="topbar-actions">
+              <span className="badge badge-amber" style={{ fontSize: 11 }}>Total Claim: {fmtINR(totalClaim)}</span>
+            </div>
+          </div>
+          <div className="content">
+
+            {/* Hero Action */}
+            <div style={{ background: 'linear-gradient(135deg, var(--amber-bg) 0%, var(--surface) 100%)', border: '2px solid var(--amber-light)', borderRadius: 'var(--radius-xl)', padding: '28px 32px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--amber-dark)', marginBottom: 4 }}>🚀 Rapid Fire WhatsApp Campaign</div>
+                <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
+                  Process <strong>{targets.length} debtors</strong> one‑by‑one without triggering popup blockers.<br />
+                  AI drafts each message → you review → click Send & Next → repeat.
+                </div>
+              </div>
+              <button
+                className="btn btn-primary btn-lg"
+                id="btn-start-whatsapp-campaign"
+                style={{ padding: '14px 32px', fontSize: 16, fontWeight: 700, borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 16px rgba(186,117,23,0.3)' }}
+                onClick={() => setShowRunner(true)}
+                disabled={targets.length === 0}
+              >
+                💬 Start WhatsApp Campaign
+              </button>
+            </div>
+
+            {/* Summary Metrics */}
+            <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 20 }}>
+              <div className="metric-card">
+                <div className="metric-label">🎯 Campaign Targets</div>
+                <div className="metric-value" style={{ color: 'var(--amber)' }}>{targets.length}</div>
+                <div className="metric-change"><span style={{ fontSize: 11, color: 'var(--text3)' }}>Active overdue invoices</span></div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">💰 Total Claim Value</div>
+                <div className="metric-value" style={{ color: 'var(--red)' }}>{fmtINR(totalClaim)}</div>
+                <div className="metric-change"><span style={{ fontSize: 11, color: 'var(--text3)' }}>Including MSMED penalties</span></div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-label">📅 Avg Days Overdue</div>
+                <div className="metric-value">{avgDays}d</div>
+                <div className="metric-change"><span style={{ fontSize: 11, color: 'var(--text3)' }}>Across all targets</span></div>
+              </div>
+            </div>
+
+            {/* Campaign Target List */}
+            <div className="card" style={{ padding: 0 }}>
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>Campaign Target List</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Overdue invoices eligible for WhatsApp recovery blitz</div>
+                </div>
+                <select className="filter-select" value={sort} onChange={e => setSort(e.target.value)}>
+                  <option value="days_desc">Most overdue first</option>
+                  <option value="days_asc">Least overdue first</option>
+                  <option value="amount_desc">Highest claim first</option>
+                  <option value="amount_asc">Lowest claim first</option>
+                </select>
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 40, textAlign: 'center' }}>#</th>
+                      <th>Company</th>
+                      <th>Contact</th>
+                      <th>Invoice</th>
+                      <th>Days Overdue</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Total Claim</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {targets.length === 0 && (
+                      <tr><td colSpan={7}>
+                        <div className="empty">
+                          <div className="empty-icon">🎉</div>
+                          <div className="empty-title">No overdue invoices</div>
+                          <div className="empty-sub">All invoices are recovered or current!</div>
+                        </div>
+                      </td></tr>
+                    )}
+                    {targets.map((inv, idx) => {
+                      const claim = inv.interest_data?.total_claim || inv.amount;
+                      return (
+                        <tr key={inv.id}>
+                          <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text3)', fontSize: 12 }}>{idx + 1}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--amber-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--amber-dark)', flexShrink: 0 }}>{getInitials(inv.company)}</div>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.company}</div>
+                            </div>
+                          </td>
+                          <td style={{ fontSize: 12, color: 'var(--text2)' }}>{inv.contact}</td>
+                          <td><span className="tag">{inv.invoiceNo}</span></td>
+                          <td><span className={`badge ${daysBadge(inv.daysOverdue, false)}`}>{inv.daysOverdue}d</span></td>
+                          <td><span className={`badge ${STATUS_META[inv.status]?.color || 'badge-gray'}`}>{STATUS_META[inv.status]?.label || inv.status}</span></td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 700, fontSize: 13 }}>{fmtINR(claim)}</div>
+                            {inv.interest_data?.interest_accrued > 0 && (
+                              <div style={{ fontSize: 10, color: 'var(--red)', marginTop: 2 }}>+{fmtINR(inv.interest_data.interest_accrued)} penalty</div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {targets.length > 0 && (
+                <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text3)' }}>
+                  <span>{targets.length} invoice{targets.length !== 1 ? 's' : ''} in campaign queue</span>
+                  <span>Total: <strong style={{ color: 'var(--amber)' }}>{fmtINR(totalClaim)}</strong></span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Campaign Runner Modal */}
+          {showRunner && <CampaignRunnerModal targets={targets} settings={settings} onClose={() => setShowRunner(false)} />}
+        </div>
+      );
+    }
+
+    /* ─── CAMPAIGN RUNNER MODAL (Rapid Fire WhatsApp Engine) ─── */
+    function CampaignRunnerModal({ targets, settings, onClose }) {
+      const [currentIdx, setCurrentIdx] = useState(0);
+      const [aiMsg, setAiMsg] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [sentCount, setSentCount] = useState(0);
+      const [finished, setFinished] = useState(false);
+      const [skippedIds, setSkippedIds] = useState(new Set());
+
+      const inv = targets[currentIdx] || null;
+      const total = targets.length;
+      const progressPct = total > 0 ? Math.round(((sentCount + skippedIds.size) / total) * 100) : 0;
+
+      // Auto-generate message for the current invoice
+      useEffect(() => {
+        if (!inv || finished) return;
+        let cancelled = false;
+        async function generate() {
+          setLoading(true);
+          setAiMsg('');
+          const idata = inv.interest_data || {};
+          const penalty = idata.interest_accrued || 0;
+          const totalClaim = idata.total_claim || inv.amount;
+          const prompt = inv.daysOverdue >= 45
+            ? `Draft a WhatsApp recovery message for:\nDebtor: ${inv.contact}, ${inv.company}\nPhone: ${inv.phone}\nInvoice: ${inv.invoiceNo}\nBase Amount: ${fmtINR(inv.amount)}\nMSMED Act Penalty: ${fmtINR(penalty)}\nTotal Legal Claim: ${fmtINR(totalClaim)}\nDays Overdue: ${inv.daysOverdue}\nSender: ${settings.businessName} (${settings.ownerName})\nTone: firm, cite MSMED Act 2006. Max 5 lines. State exact penalty and total claim.`
+            : `Draft a WhatsApp recovery message for:\nDebtor: ${inv.contact}, ${inv.company}\nPhone: ${inv.phone}\nInvoice: ${inv.invoiceNo} for ${fmtINR(inv.amount)}\nDue: ${inv.dueDate} (${inv.daysOverdue} days overdue)\nSender: ${settings.businessName} (${settings.ownerName})\nTone: polite but firm. Max 5 lines. Include payment UPI request mention.`;
+          try {
+            const msg = await callAI(SYSTEM_PROMPT, prompt);
+            if (!cancelled) setAiMsg(msg);
+          } catch (e) {
+            if (!cancelled) setAiMsg(`Error generating message: ${e.message}`);
+          }
+          if (!cancelled) setLoading(false);
+        }
+        generate();
+        return () => { cancelled = true; };
+      }, [currentIdx, finished]);
+
+      function sendAndNext() {
+        if (!inv || !aiMsg) return;
+        // Open WhatsApp for the current debtor
+        sendViaWhatsApp(inv.phone, aiMsg);
+        setSentCount(c => c + 1);
+        advanceToNext();
+      }
+
+      function skipAndNext() {
+        if (!inv) return;
+        setSkippedIds(prev => { const s = new Set(prev); s.add(inv.id); return s; });
+        advanceToNext();
+      }
+
+      function advanceToNext() {
+        if (currentIdx + 1 >= total) {
+          setFinished(true);
+        } else {
+          setCurrentIdx(i => i + 1);
+        }
+      }
+
+      if (finished) {
+        return (
+          <div className="overlay" onClick={onClose}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, textAlign: 'center' }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
+              <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: 'var(--green)' }}>Campaign Complete!</div>
+              <div style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 20, lineHeight: 1.6 }}>
+                You processed <strong>{total}</strong> debtor{total !== 1 ? 's' : ''}.<br />
+                <span style={{ color: 'var(--green)' }}><strong>{sentCount}</strong> sent via WhatsApp</span>
+                {skippedIds.size > 0 && <span> · <span style={{ color: 'var(--text3)' }}>{skippedIds.size} skipped</span></span>}
+              </div>
+              <div className="progress" style={{ height: 8, marginBottom: 20 }}>
+                <div className="progress-fill progress-green" style={{ width: '100%' }}></div>
+              </div>
+              <button className="btn btn-primary btn-lg" onClick={onClose} style={{ padding: '12px 40px' }}>Done</button>
+            </div>
+          </div>
+        );
+      }
+
+      if (!inv) return null;
+
+      const claim = inv.interest_data?.total_claim || inv.amount;
+
+      return (
+        <div className="overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+          <div className="modal modal-lg" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
+            {/* Header with progress */}
+            <div className="modal-header">
+              <div>
+                <div className="modal-title">💬 WhatsApp Campaign Runner</div>
+                <div className="modal-sub">Process each debtor one at a time — no popup blockers!</div>
+              </div>
+              <button className="close-btn" onClick={onClose}>×</button>
+            </div>
+
+            {/* Progress Bar */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--amber-dark)' }}>Sending {currentIdx + 1} of {total}</span>
+                <span style={{ fontSize: 12, color: 'var(--text3)' }}>{sentCount} sent · {skippedIds.size} skipped</span>
+              </div>
+              <div className="progress" style={{ height: 8 }}>
+                <div className="progress-fill progress-amber" style={{ width: progressPct + '%', transition: 'width 0.4s ease' }}></div>
+              </div>
+            </div>
+
+            {/* Current Debtor Card */}
+            <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius-lg)', padding: '16px 18px', marginBottom: 16, border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--amber-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: 'var(--amber-dark)' }}>{getInitials(inv.company)}</div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{inv.company}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>{inv.contact} · {inv.phone}</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span className={`badge ${daysBadge(inv.daysOverdue, false)}`}>{inv.daysOverdue}d overdue</span>
+                  <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4, color: 'var(--amber)' }}>{fmtINR(claim)}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <span className="tag">{inv.invoiceNo}</span>
+                <span className={`badge ${STATUS_META[inv.status]?.color || 'badge-gray'}`} style={{ fontSize: 10 }}>{STATUS_META[inv.status]?.label}</span>
+                {inv.interest_data?.interest_accrued > 0 && (
+                  <span className="badge badge-red" style={{ fontSize: 10 }}>+{fmtINR(inv.interest_data.interest_accrued)} penalty</span>
+                )}
+              </div>
+            </div>
+
+            {/* Drafted Message */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Drafted WhatsApp Message</div>
+              {loading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '32px 0' }}>
+                  <div className="spinner" style={{ width: 20, height: 20 }}></div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)' }}>AI is drafting message for {inv.company}...</div>
+                </div>
+              ) : (
+                <div className="ai-box" style={{ minHeight: 90, maxHeight: 200 }}>{aiMsg}</div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button className="btn" onClick={skipAndNext} style={{ fontSize: 13 }} disabled={loading}>
+                Skip →
+              </button>
+              <button
+                id="btn-send-and-next"
+                className="btn btn-primary btn-lg"
+                onClick={sendAndNext}
+                disabled={loading || !aiMsg}
+                style={{ flex: 1, justifyContent: 'center', padding: '14px 24px', fontSize: 16, fontWeight: 700, borderRadius: 'var(--radius-lg)', boxShadow: '0 4px 16px rgba(186,117,23,0.25)' }}
+              >
+                💬 Send & Next
+              </button>
+              <button className="btn" onClick={onClose} style={{ fontSize: 13, color: 'var(--text3)' }}>
+                Stop
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── SETTINGS ─── */
+    function Settings({ settings, setSettings }) {
+      const [local, setLocal] = useState(settings);
+      const [saved, setSaved] = useState(false);
+
+      function save() {
+        setSettings(local);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+
+      function upd(k, v) { setLocal(p => ({ ...p, [k]: v })) }
+
+      return (
+        <div>
+          <div className="topbar">
+            <div>
+              <div className="page-title">Settings</div>
+              <div className="page-sub">Configure your business profile and recovery preferences</div>
+            </div>
+            <div className="topbar-actions">
+              <button className={`btn btn-primary${saved ? ' btn-success' : ''}`} onClick={save}>{saved ? '✓ Saved!' : 'Save Changes'}</button>
+            </div>
+          </div>
+          <div className="content">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+              {/* Business Profile */}
+              <div className="card">
+                <div className="card-header"><div className="card-title">Business Profile</div></div>
+                <div className="form-group">
+                  <label className="form-label">Business Name</label>
+                  <input className="form-input" value={local.businessName} onChange={e => upd('businessName', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Owner / Contact Name</label>
+                  <input className="form-input" value={local.ownerName} onChange={e => upd('ownerName', e.target.value)} />
+                </div>
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label className="form-label">Phone</label>
+                    <input className="form-input" value={local.phone} onChange={e => upd('phone', e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">City</label>
+                    <input className="form-input" value={local.city} onChange={e => upd('city', e.target.value)} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Email</label>
+                  <input className="form-input" value={local.email} onChange={e => upd('email', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">GSTIN</label>
+                  <input className="form-input" value={local.gstin} onChange={e => upd('gstin', e.target.value)} placeholder="27AAAAA0000A1Z5" />
+                </div>
+              </div>
+
+              {/* Recovery Settings */}
+              <div>
+                <div className="card" style={{ marginBottom: 16 }}>
+                  <div className="card-header"><div className="card-title">Recovery Settings</div></div>
+                  <div className="settings-row">
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>Auto Reminders</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Send reminders automatically on schedule</div>
+                    </div>
+                    <div className={`toggle${local.autoReminder ? ' on' : ''}`} onClick={() => upd('autoReminder', !local.autoReminder)}><div className="toggle-thumb"></div></div>
+                  </div>
+                  <div className="settings-row">
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>WhatsApp Channel</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Send via WhatsApp Business API</div>
+                    </div>
+                    <div className={`toggle${local.whatsappEnabled ? ' on' : ''}`} onClick={() => upd('whatsappEnabled', !local.whatsappEnabled)}><div className="toggle-thumb"></div></div>
+                  </div>
+                  <div className="settings-row">
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>Email Channel</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Send follow-ups via email</div>
+                    </div>
+                    <div className={`toggle${local.emailEnabled ? ' on' : ''}`} onClick={() => upd('emailEnabled', !local.emailEnabled)}><div className="toggle-thumb"></div></div>
+                  </div>
+                  <div className="form-group" style={{ marginTop: 12, marginBottom: 0 }}>
+                    <label className="form-label">Legal Action Threshold (Days Overdue)</label>
+                    <input className="form-input" type="number" value={local.legalAtDays} onChange={e => upd('legalAtDays', parseInt(e.target.value))} min={30} max={90} />
+                  </div>
+                </div>
+
+                <div className="card" style={{ marginBottom: 16 }}>
+                  <div className="card-header"><div className="card-title">Commission Model</div></div>
+                  <div className="info-box" style={{ marginBottom: 12 }}>Your 2% commission is automatically calculated on recovered invoice amounts. Track your earnings below.</div>
+                  <div className="form-group" style={{ marginBottom: 8 }}>
+                    <label className="form-label">Commission Rate (%)</label>
+                    <input className="form-input" type="number" value={local.commissionRate} onChange={e => upd('commissionRate', parseFloat(e.target.value))} min={0} max={10} step={0.5} />
+                  </div>
+                  <div style={{ background: 'var(--green-bg)', border: '1px solid var(--green-light)', borderRadius: 'var(--radius)', padding: '10px 12px', fontSize: 12, color: 'var(--green)' }}>
+                    Estimated earnings this cycle: <strong>₹{Math.round((195000 + 67000) * local.commissionRate / 100).toLocaleString('en-IN')}</strong> ({local.commissionRate}% of ₹2,62,000 recovered)
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card-header"><div className="card-title">Integrations</div></div>
+                  {[['WhatsApp Business API', 'Connect to send real messages', 'badge-amber', 'Not Connected'],
+                  ['Zoho Books / Tally', 'Auto-import invoices', 'badge-amber', 'Not Connected'],
+                  ['Razorpay / PhonePe', 'Add payment links in messages', 'badge-green', 'Connected'],
+                  ['MSME Samadhaan Portal', 'Direct filing integration', 'badge-gray', 'Available'],
+                  ].map(([name, desc, cls, status]) => (
+                    <div key={name} className="settings-row">
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>{desc}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className={`badge ${cls}`} style={{ fontSize: 10 }}>{status}</span>
+                        <button className="btn btn-sm">{status === 'Connected' ? 'Disconnect' : 'Connect'}</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── ADD INVOICE MODAL ─── */
+    function AddInvoiceModal({ onClose, onAdd }) {
+      const [form, setForm] = useState({ company: '', contact: '', phone: '', email: '', gstin: '', amount: '', invoiceNo: '', issueDate: '', dueDate: '', channel: 'WhatsApp', industry: 'Services', notes: '', city: '', proof_url: '' });
+      const [uploading, setUploading] = useState(false);
+      const [debtorUrl, setDebtorUrl] = useState('');
+      const [enriching, setEnriching] = useState(false);
+
+      const upd = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+      async function uploadFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        const fd = new FormData();
+        fd.append('file', file);
+        try {
+          const res = await authFetch('/api/invoices/upload-proof', { method: 'POST', body: fd });
+          const data = await res.json();
+          if (res.ok) upd('proof_url', data.proof_url);
+        } catch (e) { console.error('Upload error', e); }
+        setUploading(false);
+      }
+
+      async function handleEnrich() {
+        if (!debtorUrl) return alert('Enter a website URL first');
+        setEnriching(true);
+        try {
+          // ensure protocol
+          const urlToFetch = debtorUrl.startsWith('http') ? debtorUrl : `https://${debtorUrl}`;
+          const res = await authFetch('/api/enrich', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: urlToFetch })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || 'Failed to fetch data');
+
+          let updates = {};
+          if (data.email) updates.email = data.email;
+          if (data.phone) updates.phone = data.phone;
+
+          if (Object.keys(updates).length > 0) {
+            setForm(p => ({ ...p, ...updates }));
+            alert(`Auto-filled ${Object.keys(updates).join(' and ')}!`);
+          } else {
+            alert('No contact info found on that page.');
+          }
+        } catch (e) {
+          alert('Scraping error: ' + e.message);
+        }
+        setEnriching(false);
+      }
+
+      function submit() {
+        if (!form.company || !form.amount || !form.dueDate || !form.invoiceNo) return alert('Fill required fields (*)');
+        onAdd({ ...form, amount: parseInt(form.amount) || 0 });
+      }
+
+      return (
+        <div className="overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+          <div className="modal modal-lg">
+            <div className="modal-header">
+              <div>
+                <div className="modal-title">Add Overdue Invoice</div>
+                <div className="modal-sub">Enter debtor and invoice details to begin recovery</div>
+              </div>
+              <button className="close-btn" onClick={onClose}>×</button>
+            </div>
+
+            <div style={{ background: 'var(--surface2)', padding: '12px 16px', borderRadius: 'var(--radius)', marginBottom: 20, border: '1px dashed var(--border2)' }}>
+              <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>✨ Auto-Fill using AI Scraper</span>
+                <span className="badge badge-amber" style={{ fontSize: 9 }}>Beta</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input className="form-input" style={{ flex: 1, background: 'var(--surface)' }} placeholder="e.g. https://www.exampledebtor.in" value={debtorUrl} onChange={e => setDebtorUrl(e.target.value)} />
+                <button className="btn btn-primary" onClick={handleEnrich} disabled={enriching} style={{ padding: '0 16px' }}>
+                  {enriching ? <><span className="spinner"></span>Extracting...</> : 'Auto-Fill'}
+                </button>
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 8 }}>Extracts Email and Phone automatically</div>
+            </div>
+
+            <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Company Details</div>
+            <div className="form-grid">
+              <div className="form-group form-full">
+                <label className="form-label">Company Name *</label>
+                <input className="form-input" placeholder="e.g. Sharma Traders Pvt Ltd" value={form.company} onChange={e => upd('company', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Contact Person</label>
+                <input className="form-input" placeholder="Rajesh Sharma" value={form.contact} onChange={e => upd('contact', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Phone (WhatsApp)</label>
+                <input className="form-input" placeholder="+91 98765 43210" value={form.phone} onChange={e => upd('phone', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input className="form-input" placeholder="rajesh@company.in" value={form.email} onChange={e => upd('email', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">GSTIN</label>
+                <input className="form-input" placeholder="27AABCS1429B1Z1" value={form.gstin} onChange={e => upd('gstin', e.target.value)} />
+              </div>
+            </div>
+
+            <div className="divider"></div>
+            <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Invoice Details</div>
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Invoice Number *</label>
+                <input className="form-input" placeholder="INV-2025-001" value={form.invoiceNo} onChange={e => upd('invoiceNo', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Amount (₹) *</label>
+                <input className="form-input" type="number" placeholder="50000" value={form.amount} onChange={e => upd('amount', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Issue Date</label>
+                <input className="form-input" type="date" value={form.issueDate} onChange={e => upd('issueDate', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Due Date *</label>
+                <input className="form-input" type="date" value={form.dueDate} onChange={e => upd('dueDate', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Preferred Channel</label>
+                <select className="form-input" value={form.channel} onChange={e => upd('channel', e.target.value)}>
+                  {['WhatsApp', 'Email', 'Both'].map(v => <option key={v}>{v}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Industry</label>
+                <select className="form-input" value={form.industry} onChange={e => upd('industry', e.target.value)}>
+                  {['Services', 'Manufacturing', 'Trade', 'IT', 'F&B', 'Textiles', 'Pharma', 'Construction', 'Other'].map(v => <option key={v}>{v}</option>)}
+                </select>
+              </div>
+              <div className="form-group form-full">
+                <label className="form-label">Notes</label>
+                <input className="form-input" placeholder="Any context about this debtor..." value={form.notes} onChange={e => upd('notes', e.target.value)} />
+              </div>
+              <div className="form-group form-full">
+                <label className="form-label">Upload E-Way Bill / Delivery Challan</label>
+                <input type="file" className="form-input" onChange={uploadFile} />
+                {uploading && <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>Uploading proof...</div>}
+                {form.proof_url && !uploading && <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4 }}>✓ Proof attached successfully</div>}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+              <button className="btn" onClick={onClose}>Cancel</button>
+              <button className="btn btn-primary" onClick={submit}>Add Invoice →</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── INVOICE DETAIL MODAL ─── */
+    function InvoiceDetailModal({ inv, settings, onClose, onRecover, onDelete }) {
+      // Store a message per tab so switching tabs doesn't wipe the draft
+      const [aiMsgs, setAiMsgs] = useState({ whatsapp: '', email: '', legal: '' });
+      const [loading, setLoading] = useState(false);
+      const [msgType, setMsgType] = useState('whatsapp');
+      const [copied, setCopied] = useState(false);
+      const [confirm, setConfirm] = useState(false);
+      const [tone, setTone] = useState('Firm Warning');
+      const aiMsg = aiMsgs[msgType] || '';
+
+      // Safe interest_data access
+      const id = inv.interest_data || {};
+      const penalty = id.interest_accrued || 0;
+      const totalClaim = id.total_claim || inv.amount;
+      const hasInterest = !!(inv.interest_data && penalty > 0);
+      const isLegal = inv.daysOverdue >= 45 && !inv.recovered;
+
+      async function gen() {
+        setLoading(true); setCopied(false);
+        const prompts = {
+          whatsapp: isLegal
+            ? `WhatsApp message for ${inv.contact} at ${inv.company}.\nNotice: Your payment of ${fmtINR(inv.amount)} (Invoice ${inv.invoiceNo}) is ${inv.daysOverdue} days overdue. Under the MSMED Act 2006, a legal penalty of ${fmtINR(penalty)} has accrued. Your total payable amount is now ${fmtINR(totalClaim)}. Please clear this immediately to avoid formal legal proceedings.\nSender: ${settings.businessName}. Rewrite this in a professional WhatsApp format, 4-5 lines, firm tone.`
+            : `WhatsApp message for ${inv.contact} at ${inv.company} for invoice ${inv.invoiceNo} of ${fmtINR(inv.amount)}, ${inv.daysOverdue} days overdue. Sender: ${settings.businessName}. Polite but firm, 3-4 lines.`,
+          email: isLegal
+            ? `Professional email to ${inv.contact} <${inv.email}> at ${inv.company}.\nSubject should reference MSMED Act penalty.\nInvoice ${inv.invoiceNo}, Base Amount: ${fmtINR(inv.amount)}, Penalty: ${fmtINR(penalty)}, Total Claim: ${fmtINR(totalClaim)}, ${inv.daysOverdue} days overdue.\nSender: ${settings.businessName}. Cite MSMED Act 2006 §15-17. Demand immediate payment. Mention MSME Samadhaan filing.`
+            : `Professional follow-up email to ${inv.contact} <${inv.email}> at ${inv.company} for invoice ${inv.invoiceNo} of ${fmtINR(inv.amount)}, ${inv.daysOverdue} days overdue. Sender: ${settings.businessName}. Include Subject line.`,
+          legal: `Formal MSME legal notice for ${inv.company} (contact: ${inv.contact}).\nInvoice ${inv.invoiceNo}, Base Amount: ${fmtINR(inv.amount)}.\nMSMED Act Penalty: ${fmtINR(penalty)} (19.5% p.a. compound with monthly rests).\nTotal Legal Claim: ${fmtINR(totalClaim)}.\n${inv.daysOverdue} days overdue.\nSender: ${settings.businessName} (${settings.ownerName}).\nMSMED Act 2006, 15-day demand. Include exact penalty and total claim amounts.`,
+        };
+        const tab = msgType;
+        try { const m = await callAI(SYSTEM_PROMPT, prompts[tab], inv, tone); setAiMsgs(prev => ({ ...prev, [tab]: m })); }
+        catch (e) { setAiMsgs(prev => ({ ...prev, [tab]: `Error: ${e.message}` })); }
+        setLoading(false);
+      }
+
+      const tl = [
+        { l: 'Invoice Issued', d: `${inv.invoiceNo} for ${fmtINR(inv.amount)}`, done: true, dot: 'done' },
+        { l: '1st Reminder', d: 'Day 7 — Polite first reminder', done: inv.reminders >= 1, dot: inv.reminders >= 1 ? 'done' : inv.daysOverdue >= 7 ? 'active' : 'pending' },
+        { l: 'Follow-up', d: 'Day 21 — Second reminder', done: inv.reminders >= 2, dot: inv.reminders >= 2 ? 'done' : inv.daysOverdue >= 21 ? 'active' : 'pending' },
+        { l: 'Final Notice', d: 'Day 35 — Escalation message', done: inv.reminders >= 3, dot: inv.reminders >= 3 ? 'done' : inv.daysOverdue >= 35 ? 'active' : 'pending' },
+        { l: 'Legal Draft', d: 'Day 45+ — MSME notice', done: inv.daysOverdue >= 45, dot: inv.daysOverdue >= 45 ? 'legal' : 'pending' },
+        { l: 'Recovered', d: 'Invoice paid and closed', done: inv.recovered, dot: inv.recovered ? 'done' : 'pending' },
+      ];
+
+      return (
+        <div className="overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+          <div className="modal modal-lg" style={{ maxWidth: 780 }}>
+            <div className="modal-header">
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--amber-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: 'var(--amber-dark)' }}>{getInitials(inv.company)}</div>
+                  <div>
+                    <div className="modal-title">{inv.company}</div>
+                    <div className="modal-sub">{inv.contact} · {inv.phone} · {inv.city}</div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span className={`badge ${daysBadge(inv.daysOverdue, inv.recovered)}`}>{inv.recovered ? 'Recovered' : STATUS_META[inv.status]?.label}</span>
+                <button className="close-btn" onClick={onClose}>×</button>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {/* Left */}
+              <div>
+                <div className="detail-grid" style={{ marginBottom: 12 }}>
+                  {[['Invoice No', inv.invoiceNo], ['Amount', fmtINR(inv.amount)], ['Due Date', inv.dueDate], ['Days Overdue', inv.recovered ? '—' : inv.daysOverdue + 'd'], ['Channel', inv.channel], ['Industry', inv.industry], ['GSTIN', inv.gstin || '—'], ['Reminders Sent', inv.reminders + '/4']].map(([l, v]) => (
+                    <div key={l} className="detail-item"><div className="detail-label">{l}</div><div className="detail-value" style={{ fontSize: 12 }}>{v}</div></div>
+                  ))}
+                </div>
+
+                {/* ── Legal Claim Breakdown (shows when interest_data exists) ── */}
+                {hasInterest && (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>⚖ Legal Claim Breakdown</div>
+                    <div style={{ borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 12px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: 12, color: 'var(--text2)' }}>Base Invoice Amount</span>
+                        <span style={{ fontSize: 12, fontWeight: 600 }}>{fmtINR(inv.amount)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 12px', background: 'var(--red-bg)', borderBottom: '1px solid var(--border)' }}>
+                        <span style={{ fontSize: 12, color: 'var(--red)' }}>MSMED Penalty (19.5% p.a. compound)</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)' }}>+{fmtINR(penalty)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--surface)' }}>
+                        <span style={{ fontSize: 13, fontWeight: 700 }}>Total Legal Claim</span>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--red)' }}>{fmtINR(totalClaim)}</span>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4, textAlign: 'right' }}>{id.legal_basis || 'MSMED Act 2006, §15–17 @ 3× RBI Bank Rate'}</div>
+                  </div>
+                )}
+
+                {inv.notes && <div className="info-box" style={{ fontSize: 11, marginBottom: 12 }}><strong>Notes:</strong> {inv.notes}</div>}
+                {inv.proof_url && (
+                  <div style={{ marginBottom: 12 }}>
+                    <button className="btn btn-sm" onClick={() => window.open(inv.proof_url, '_blank')}>📄 View Proof of Delivery</button>
+                  </div>
+                )}
+
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Recovery Timeline</div>
+                  <div className="timeline">
+                    {tl.map((t, i, a) => (
+                      <div key={i} className="timeline-item">
+                        <div className="timeline-left">
+                          <div className={`timeline-dot ${t.dot}`}></div>
+                          {i < a.length - 1 && <div className="timeline-line"></div>}
+                        </div>
+                        <div className="timeline-content">
+                          <div className="timeline-title" style={{ color: t.done ? 'var(--text)' : 'var(--text3)', fontSize: 12 }}>{t.l}</div>
+                          <div className="timeline-desc">{t.d}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {!inv.recovered && (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {!confirm
+                      ? <button className="btn btn-success" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setConfirm(true)}>✓ Mark as Recovered</button>
+                      : <>
+                        <button className="btn btn-success" style={{ flex: 1, justifyContent: 'center' }} onClick={onRecover}>Confirm Recovery</button>
+                        <button className="btn" onClick={() => setConfirm(false)}>Cancel</button>
+                      </>
+                    }
+                    <button className="btn btn-danger btn-sm" title="Delete invoice" onClick={onDelete}>🗑</button>
+                  </div>
+                )}
+              </div>
+
+              {/* Right */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>AI Message Generator</div>
+                <div className="tabs">
+                  {[['whatsapp', '💬 WA'], ['email', '📧 Email'], ['legal', '⚖ Legal']].map(([v, l]) => (
+                    <button key={v} className={`tab-btn${msgType === v ? ' active' : ''}`} onClick={() => setMsgType(v)}>{l}</button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+                  <select value={tone} onChange={(e) => setTone(e.target.value)} style={{ padding: '8px', borderRadius: '4px', marginRight: '10px', border: '1px solid var(--border-color)', background: 'var(--surface)' }}><option value="Polite Reminder">Polite Reminder</option><option value="Firm Warning">Firm Warning</option><option value="Final Legal Threat">Final Legal Threat</option></select>
+                  <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={gen} disabled={loading}>
+                    {loading ? <><span className="spinner"></span>Generating...</> : `Generate ${msgType === 'whatsapp' ? 'WhatsApp' : msgType === 'email' ? 'Email' : 'Legal Notice'}`}
+                  </button>
+                </div>
+                {loading && <div className="ai-loading"><span className="spinner"></span>AI drafting...</div>}
+                {aiMsg && !loading && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                      <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Draft</span>
+                      <button className={`btn btn-sm${copied ? ' copy-flash' : ''}`} onClick={() => { navigator.clipboard.writeText(aiMsg).catch(() => { }); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>{copied ? '✓ Copied' : 'Copy'}</button>
+                    </div>
+                    <div className="ai-box" style={{ fontSize: 11, maxHeight: 260 }}>{aiMsg}</div>
+                    <div style={{ marginTop: 10, display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                      {msgType === 'whatsapp' && <button className="btn btn-sm btn-success" onClick={() => sendViaWhatsApp(inv.phone, aiMsg)} title="Open WhatsApp with this message pre-filled">💬 Send via WhatsApp</button>}
+                      {msgType === 'email' && <button className="btn btn-sm btn-success" onClick={() => { const subject = encodeURIComponent(`Overdue Invoice ${inv.invoiceNo} — Action Required`); const body = encodeURIComponent(aiMsg); window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(inv.email)}&su=${subject}&body=${body}`, '_blank'); }} title="Open Gmail compose window">📧 Send via Gmail</button>}
+                      {msgType === 'legal' && <button className="btn btn-sm btn-danger" onClick={() => generateLegalPDF(inv, settings)} title="Download a formal PDF Legal Notice">📄 Download PDF Notice</button>}
+                    </div>
+                  </div>
+                )}
+                {!aiMsg && !loading && (
+                  <div style={{ textAlign: 'center', padding: '30px 12px', color: 'var(--text3)', fontSize: 12, background: 'var(--surface2)', borderRadius: 'var(--radius)', border: '1px dashed var(--border)' }}>
+                    Select a message type and click Generate
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+
+</html>
