@@ -24,7 +24,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
@@ -174,13 +174,37 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "RecoveryAgent API"}
 
 
-# ── Root — Serve the React Frontend ──────────────────────────────────────────
-FRONTEND_HTML = Path(__file__).resolve().parent.parent / "RecoverAI_MVP.html"
+# ── Root — Serve the React Frontend ───────────────────────────────────────────────
+# Try multiple candidate paths so it works both locally and on Vercel
+_CANDIDATE_PATHS = [
+    Path(__file__).resolve().parent.parent / "RecoverAI_MVP.html",  # local: RecoveryAgent/
+    Path("/var/task/RecoverAI_MVP.html"),                            # Vercel lambda root
+    Path("/var/task/app/../RecoverAI_MVP.html"),
+]
+FRONTEND_HTML: Path | None = next((p for p in _CANDIDATE_PATHS if p.exists()), None)
+logger.info("📄  Frontend HTML resolved to: %s", FRONTEND_HTML)
 
 
 @app.get("/", tags=["System"], summary="Frontend", include_in_schema=False)
 async def root():
     """Serve the RecoverAI single-page frontend."""
-    if FRONTEND_HTML.exists():
-        return FileResponse(FRONTEND_HTML, media_type="text/html")
-    return {"status": "ok", "message": "RecoveryAgent API is running. Frontend UI deployed separately."}
+    try:
+        # Try each path at request time (Vercel may differ from import time)
+        for path in _CANDIDATE_PATHS:
+            if path.exists():
+                html_content = path.read_bytes()
+                return HTMLResponse(content=html_content, status_code=200)
+    except Exception as exc:
+        logger.error("❌  Failed to serve frontend: %s", exc)
+    # Fallback: API is running but frontend file not found
+    return JSONResponse(
+        status_code=200,
+        content={"status": "ok", "message": "RecoveryAgent API is running."},
+    )
+
+@app.get("/debug-error", tags=["System"], include_in_schema=False)
+async def debug_error():
+    """Endpoint to test error handling (only works in debug mode)."""
+    if not settings.debug:
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
+    raise RuntimeError("Simulated debug error")
