@@ -39,17 +39,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# ── Eagerly create upload directory at module load (before StaticFiles mount) ─
+# On Vercel, the root filesystem is read-only; /tmp is the only writable path.
+_IS_VERCEL = bool(os.environ.get("VERCEL"))
+_UPLOAD_DIR = "/tmp/uploads" if _IS_VERCEL else "uploads"
+os.makedirs(_UPLOAD_DIR, exist_ok=True)
+
+
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application startup / shutdown hooks."""
     logger.info("🚀  RecoveryAgent starting up…")
     try:
-        # Vercel's serverless filesystem is read-only except for /tmp
-        if os.environ.get("VERCEL"):
-            os.makedirs("/tmp/uploads", exist_ok=True)
-        else:
-            os.makedirs("uploads", exist_ok=True)
         await connect_db()
         logger.info("✅  MongoDB connected  →  db: %s", settings.db_name)
     except Exception as exc:
@@ -94,8 +96,10 @@ app.include_router(enrich_router)
 app.include_router(admin_router)
 
 # ── Static Files ──────────────────────────────────────────────────────────────
-upload_dir = "/tmp/uploads" if os.environ.get("VERCEL") else "uploads"
-app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
+# On Vercel, uploaded files are ephemeral (lost on each invocation), so we only
+# mount the static directory in non-serverless environments.
+if not _IS_VERCEL:
+    app.mount("/uploads", StaticFiles(directory=_UPLOAD_DIR), name="uploads")
 
 
 # ── Health Check ──────────────────────────────────────────────────────────────
