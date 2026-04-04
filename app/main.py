@@ -162,6 +162,17 @@ if not _IS_VERCEL:
     app.mount("/uploads", StaticFiles(directory=_UPLOAD_DIR), name="uploads")
 
 
+# ── Root HTML path candidates ──────────────────────────────────────────────────
+# Defined early so /api/startup-check and the root route both reference the same list.
+_CANDIDATE_PATHS = [
+    Path(__file__).resolve().parent.parent / "RecoverAI_MVP.html",  # local: RecoveryAgent/
+    Path("/var/task/RecoverAI_MVP.html"),                            # Vercel lambda root
+    Path("/var/task/app/../RecoverAI_MVP.html"),
+]
+FRONTEND_HTML: Path | None = next((p for p in _CANDIDATE_PATHS if p.exists()), None)
+logger.info("📄  Frontend HTML resolved to: %s", FRONTEND_HTML)
+
+
 # ── Health Check ──────────────────────────────────────────────────────────────
 @app.get(
     "/health",
@@ -174,15 +185,36 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "RecoveryAgent API"}
 
 
+@app.get("/api/startup-check", tags=["System"], include_in_schema=False)
+async def startup_check():
+    """Diagnostic endpoint — reports env var presence and import health."""
+    import os
+    checks = {
+        "python_version": __import__("sys").version,
+        "vercel": bool(os.environ.get("VERCEL")),
+        "env_vars": {
+            "GEMINI_API_KEY": "set" if os.environ.get("GEMINI_API_KEY") else "MISSING",
+            "MONGO_URI": "set" if os.environ.get("MONGO_URI") else "MISSING",
+            "SECRET_KEY": "set" if os.environ.get("SECRET_KEY") else "MISSING",
+            "DEBUG": os.environ.get("DEBUG", "not set"),
+        },
+        "imports": {},
+        "html_file": {},
+    }
+    # Check imports
+    for mod in ["fastapi", "motor", "jose", "passlib", "google.genai", "pymongo"]:
+        try:
+            __import__(mod)
+            checks["imports"][mod] = "ok"
+        except Exception as e:
+            checks["imports"][mod] = f"FAILED: {e}"
+    # Check HTML paths (using _CANDIDATE_PATHS defined at module level)
+    for p in _CANDIDATE_PATHS:
+        checks["html_file"][str(p)] = "exists" if p.exists() else "missing"
+    return checks
+
+
 # ── Root — Serve the React Frontend ───────────────────────────────────────────────
-# Try multiple candidate paths so it works both locally and on Vercel
-_CANDIDATE_PATHS = [
-    Path(__file__).resolve().parent.parent / "RecoverAI_MVP.html",  # local: RecoveryAgent/
-    Path("/var/task/RecoverAI_MVP.html"),                            # Vercel lambda root
-    Path("/var/task/app/../RecoverAI_MVP.html"),
-]
-FRONTEND_HTML: Path | None = next((p for p in _CANDIDATE_PATHS if p.exists()), None)
-logger.info("📄  Frontend HTML resolved to: %s", FRONTEND_HTML)
 
 
 @app.get("/", tags=["System"], summary="Frontend", include_in_schema=False)

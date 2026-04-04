@@ -23,9 +23,20 @@ from app.models.schemas import PromptRequest
 
 logger = logging.getLogger(__name__)
 
-# ── Gemini async client ───────────────────────────────────────────────────────
-_client = genai.Client(api_key=settings.gemini_api_key)
-MODEL = "gemini-2.5-flash"
+# ── Gemini model ────────────────────────────────────────────────────────────
+MODEL = "gemini-1.5-flash"  # stable model — 2.5-flash may not be GA yet
+
+# Lazy client — created on first use so a bad API key only breaks AI endpoints,
+# not the entire application startup (which would cause 500 on every route).
+_client = None
+
+
+def _get_client():
+    """Return the Gemini async client, initialising it on first call."""
+    global _client
+    if _client is None:
+        _client = genai.Client(api_key=settings.gemini_api_key)
+    return _client
 
 # ── Prompt templates ──────────────────────────────────────────────────────────
 _SYSTEM_INSTRUCTION = """\
@@ -53,15 +64,14 @@ CRITICAL: Output the entire complete letter/email from start to finish. Include 
     """
     
     try:
-        response = await _client.aio.models.generate_content(
+        client = _get_client()
+        response = await client.aio.models.generate_content(
             model=MODEL,
             contents=context_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=_SYSTEM_INSTRUCTION.format(tone=tone),
                 temperature=0.7,
-                max_output_tokens=8192,  # Large enough for full legal emails
-                thinking_config=types.ThinkingConfig(thinking_budget=0),  # Disable thinking to prevent token budget waste
-                # ⚡ NUCLEAR OPTION: TURN ALL HR SHIELDS OFF
+                max_output_tokens=8192,
                 safety_settings=[
                     types.SafetySetting(
                         category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
