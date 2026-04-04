@@ -52,6 +52,10 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     is_admin: bool = False
 
+class AuthConfigResponse(BaseModel):
+    """Public authentication configuration."""
+    google_client_id: str | None = None
+
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
@@ -194,3 +198,16 @@ async def google_login(payload: GoogleAuthRequest) -> TokenResponse:
         token_type="bearer",
         is_admin=is_admin
     )
+
+
+@router.get(
+    "/config",
+    response_model=AuthConfigResponse,
+    summary="Get public authentication settings"
+)
+async def get_auth_config() -> AuthConfigResponse:
+    """Returns public settings like Google Client ID for the frontend."""
+    cid = settings.google_client_id
+    if cid == "your-google-client-id-here":
+        cid = None
+    return AuthConfigResponse(google_client_id=cid)
