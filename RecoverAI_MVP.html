@@ -1507,22 +1507,33 @@ Key rules:
       useEffect(() => {
         // We use a global callback so the Google library can find it
         window.handleGoogleCredentialResponse = async (response) => {
+          console.log("[GoogleAuth] Credential received from Google popup");
           setErr(''); setLoading(true);
           try {
+            console.log("[GoogleAuth] Posting to backend...");
             const res = await fetch('/api/auth/google', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ credential: response.credential })
             });
+            
             const data = await res.json();
-            if (!res.ok) throw new Error(data.detail || 'Google Login failed');
+            console.log("[GoogleAuth] Backend response:", res.status, data);
+
+            if (!res.ok) {
+              throw new Error(data.detail || 'Google Login failed');
+            }
+
+            console.log("[GoogleAuth] Success! Redirecting...");
             setToken(data.access_token);
             setIsAdmin(data.is_admin);
             onLogin(data.access_token, data.is_admin);
           } catch (e) {
-            setErr(e.message);
+            console.error("[GoogleAuth] Error:", e);
+            setErr(e.message || 'An unexpected error occurred during Google Login');
+          } finally {
+            setLoading(false);
           }
-          setLoading(false);
         };
 
         // Render button if library is loaded

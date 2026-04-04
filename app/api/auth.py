@@ -143,30 +143,30 @@ async def google_login(payload: GoogleAuthRequest) -> TokenResponse:
     """
     Verifies the Google JWT credential. If the user doesn't exist, an account is automatically created.
     """
-    if not settings.google_client_id or settings.google_client_id == "your-google-client-id-here":
-        # Bypass for local dev / MVP if client ID isn't set yet (WARNING: Unsafe for prod without an ID)
-        # We'll just extract the email from the unsigned token if no Client ID is provided.
-        # But assuming the user WILL provide it, we still enforce verification.
-        pass
+    target_audience = None
+    if settings.google_client_id and settings.google_client_id != "your-google-client-id-here":
+        target_audience = settings.google_client_id
 
     try:
         # Verify the token Google sent us
         idinfo = id_token.verify_oauth2_token(
             payload.credential, 
             requests.Request(), 
-            settings.google_client_id if settings.google_client_id != "your-google-client-id-here" else None
+            target_audience
         )
         
         email = idinfo.get("email", "").lower()
         if not email:
             raise ValueError("No email provided in Google token.")
         
-        business_name = idinfo.get("name", email.split("@")[0])
+        # Claims vary; 'name' is standard for business/display name
+        business_name = idinfo.get("name") or idinfo.get("given_name") or email.split("@")[0]
 
-    except ValueError as e:
+    except Exception as e:
+        logger.error(f"Google Token Verification Failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid Google credential: {str(e)}"
+            detail=f"Google Authentication Error: {str(e)}"
         )
 
     col = get_collection(USERS_COLLECTION)
