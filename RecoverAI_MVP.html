@@ -1527,7 +1527,7 @@ Key rules:
             console.log("[GoogleAuth] Success! Redirecting...");
             setToken(data.access_token);
             setIsAdmin(data.is_admin);
-            onLogin(data.access_token, data.is_admin);
+            onLogin(data.access_token, data.is_admin, data.business_name);
           } catch (e) {
             console.error("[GoogleAuth] Error:", e);
             setErr(e.message || 'An unexpected error occurred during Google Login');
@@ -1591,7 +1591,7 @@ Key rules:
           if (!res.ok) throw new Error(data.detail || 'Login failed');
           setToken(data.access_token);
           setIsAdmin(data.is_admin);
-          onLogin(data.access_token, data.is_admin);
+          onLogin(data.access_token, data.is_admin, data.business_name);
         } catch (e) { setErr(e.message); }
         setLoading(false);
       }
@@ -1786,12 +1786,12 @@ Key rules:
       const [settings, setSettings] = useState(() => {
         const local = localStorage.getItem('recoverai_settings');
         return local ? JSON.parse(local) : {
-          businessName: 'Krishna Enterprises',
-          ownerName: 'Anil Kumar',
-          phone: '+91 98765 00001',
-          email: 'anil@krishnaent.in',
-          gstin: '27AABCK0000B1Z9',
-          city: 'Mumbai',
+          businessName: '',
+          ownerName: '',
+          phone: '',
+          email: '',
+          gstin: '',
+          city: '',
           autoReminder: true,
           whatsappEnabled: true,
           emailEnabled: true,
@@ -1801,11 +1801,12 @@ Key rules:
         };
       });
 
-      function handleLogin(tok, adminStatus) { 
+      function handleLogin(tok, adminStatus, bizName) { 
         setToken(tok); 
         setTokenState(tok); 
         setIsAdmin(adminStatus); 
         setIsAdminState(adminStatus); 
+        if (bizName) setSettings(prev => ({ ...prev, businessName: bizName, ownerName: bizName }));
       }
       
       function handleLogout() { 
@@ -1942,8 +1943,8 @@ Key rules:
               <div className="user-card">
                 <div className="user-avatar">{getInitials(settings.ownerName)}</div>
                 <div>
-                  <div className="user-name">{settings.businessName}</div>
-                  <div className="user-plan">Starter Plan · {settings.city}</div>
+                  <div className="user-name">{settings.businessName || 'Unnamed Business'}</div>
+                  <div className="user-plan">Starter Plan {settings.city ? `· ${settings.city}` : ''}</div>
                 </div>
               </div>
             </div>

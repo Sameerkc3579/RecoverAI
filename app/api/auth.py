@@ -51,6 +51,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     is_admin: bool = False
+    business_name: str | None = None
 
 class AuthConfigResponse(BaseModel):
     """Public authentication configuration."""
@@ -130,7 +131,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenRespon
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
-        is_admin=is_admin
+        is_admin=is_admin,
+        business_name=user.get("business_name")
     )
 
 
@@ -196,7 +198,8 @@ async def google_login(payload: GoogleAuthRequest) -> TokenResponse:
     return TokenResponse(
         access_token=access_token,
         token_type="bearer",
-        is_admin=is_admin
+        is_admin=is_admin,
+        business_name=user.get("business_name")
     )
 
 
