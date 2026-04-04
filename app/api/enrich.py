@@ -1,7 +1,18 @@
 import re
 import logging
-from curl_cffi import requests
 from bs4 import BeautifulSoup
+
+# Vercel Serverless compatibility fallback for curl_cffi
+try:
+    from curl_cffi import requests as web_client
+    def get_session(): return web_client.Session(impersonate="chrome110")
+    REQ_EXCEPTIONS = (web_client.errors.RequestsError, web_client.errors.CurlError)
+    REQ_TIMEOUT = web_client.errors.TimeoutError
+except Exception:
+    import requests as web_client
+    def get_session(): return web_client.Session()
+    REQ_EXCEPTIONS = (web_client.exceptions.RequestException,)
+    REQ_TIMEOUT = web_client.exceptions.Timeout
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, HttpUrl
 from urllib.parse import urlparse
@@ -46,7 +57,7 @@ _CHROME_HEADERS = {
 
 def _fetch_html(url_str: str) -> str:
     """Fetch HTML from a URL using a session with realistic browser headers."""
-    session = requests.Session(impersonate="chrome110")
+    session = get_session()
     session.headers.update(_CHROME_HEADERS)
     # Set a referer using the domain itself to appear as a direct visitor
     domain = url_str.split("/")[2] if "/" in url_str else url_str
@@ -97,13 +108,13 @@ async def enrich_contact_info(
     logger.info("Enriching contact data from: %s", url_str)
     try:
         html = _fetch_html(url_str)
-    except requests.errors.TimeoutError:
+    except REQ_TIMEOUT:
         logger.warning("Timeout fetching %s", url_str)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="The website took too long to respond. It may be offline or actively blocking automated access (Timeout)."
         )
-    except (requests.errors.RequestsError, requests.errors.CurlError) as e:
+    except REQ_EXCEPTIONS as e:
         logger.warning("Connection error or block for %s. Details: %s", url_str, e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

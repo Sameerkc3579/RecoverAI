@@ -45,7 +45,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application startup / shutdown hooks."""
     logger.info("🚀  RecoveryAgent starting up…")
     try:
-        os.makedirs("uploads", exist_ok=True)
+        # Vercel's serverless filesystem is read-only except for /tmp
+        if os.environ.get("VERCEL"):
+            os.makedirs("/tmp/uploads", exist_ok=True)
+        else:
+            os.makedirs("uploads", exist_ok=True)
         await connect_db()
         logger.info("✅  MongoDB connected  →  db: %s", settings.db_name)
     except Exception as exc:
@@ -90,7 +94,8 @@ app.include_router(enrich_router)
 app.include_router(admin_router)
 
 # ── Static Files ──────────────────────────────────────────────────────────────
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+upload_dir = "/tmp/uploads" if os.environ.get("VERCEL") else "uploads"
+app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
 
 
 # ── Health Check ──────────────────────────────────────────────────────────────
