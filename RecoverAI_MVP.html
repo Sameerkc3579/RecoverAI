@@ -1691,8 +1691,8 @@ Key rules:
 
       useEffect(() => {
         Promise.all([
-          authFetch('http://localhost:8000/api/admin/dashboard-stats').then(res => res.json()),
-          authFetch('http://localhost:8000/api/admin/users').then(res => res.json())
+          authFetch('/api/admin/dashboard-stats').then(res => res.json()),
+          authFetch('/api/admin/users').then(res => res.json())
         ])
           .then(([statsData, usersData]) => {
             setStats(statsData);
@@ -1823,7 +1823,7 @@ Key rules:
 
       const fetchInvoices = useCallback(() => {
         if (!getToken()) return;
-        authFetch('http://localhost:8000/api/invoices')
+        authFetch('/api/invoices')
           .then(r => r.json())
           .then(data => { if (Array.isArray(data)) setInvoices(data); })
           .catch(e => console.error('Error loading invoices:', e));
@@ -1849,7 +1849,7 @@ Key rules:
 
         const payload = { ...inv, daysOverdue: days, status, reminders: 0, recovered: false };
         try {
-          const res = await authFetch('http://localhost:8000/api/invoices', {
+          const res = await authFetch('/api/invoices', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -1861,7 +1861,7 @@ Key rules:
 
       async function markRecovered(id) {
         try {
-          const res = await authFetch(`http://localhost:8000/api/invoices/${id}`, {
+          const res = await authFetch(`/api/invoices/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ recovered: true, status: 'recovered' })
@@ -1875,7 +1875,7 @@ Key rules:
 
       async function deleteInvoice(id) {
         try {
-          await authFetch(`http://localhost:8000/api/invoices/${id}`, { method: 'DELETE' });
+          await authFetch(`/api/invoices/${id}`, { method: 'DELETE' });
           setInvoices(p => p.filter(i => i.id !== id));
         } catch (e) { console.error('Error deleting invoice:', e) }
         setShowDetailModal(false);
@@ -2155,7 +2155,7 @@ Key rules:
           prompt: `WhatsApp message for ${inv.contact} at ${inv.company} for invoice ${inv.invoiceNo} of ${fmtINR(inv.amount)}, ${inv.daysOverdue} days overdue. Polite but firm, 3-4 lines.`
         }));
         try {
-          const res = await fetch('http://localhost:8000/api/bulk-generate', {
+          const res = await fetch('/api/bulk-generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payloads)
