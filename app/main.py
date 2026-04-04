@@ -20,9 +20,7 @@ Startup order
 """
 import logging
 import os
-from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -56,33 +54,8 @@ _UPLOAD_DIR = "/tmp/uploads" if _IS_VERCEL else "uploads"
 os.makedirs(_UPLOAD_DIR, exist_ok=True)
 
 
-# ── Lifespan (replaces deprecated @app.on_event) ──────────────────────────────
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Manage startup and shutdown lifecycle."""
-    # --- Startup ---
-    logger.info("🚀  RecoveryAgent starting up…")
-    logger.info("🔒  Security mode: %s", "PRODUCTION" if settings.is_production else "DEBUG")
-    logger.info("🔒  CORS origins: %s", settings.origins_list)
-    logger.info("🔒  Admin accounts configured: %d", len(settings.admin_emails_list))
-    try:
-        await connect_db()
-        logger.info("✅  MongoDB connected  →  db: %s", settings.db_name)
-    except Exception as exc:
-        logger.warning("⚠️   MongoDB unavailable (%s) — continuing without DB", exc)
-
-    yield  # ← Application runs here
-
-    # --- Shutdown ---
-    logger.info("🛑  RecoveryAgent shutting down…")
-    try:
-        await close_db()
-        logger.info("✅  MongoDB connection closed")
-    except Exception as exc:
-        logger.warning("⚠️   Error closing MongoDB connection: %s", exc)
-
-
 # ── Application ───────────────────────────────────────────────────────────────
+# IMPORTANT: app must be created BEFORE @app.on_event decorators reference it.
 # API docs are gated behind debug mode:
 # - debug=True  → /docs, /redoc, /openapi.json accessible (local dev only)
 # - debug=False → all docs endpoints return 404 (production)
@@ -93,11 +66,36 @@ app = FastAPI(
         "Integrates Google Gemini, MongoDB, and WhatsApp messaging."
     ),
     version="0.1.0",
-    lifespan=lifespan,
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
     openapi_url="/openapi.json" if settings.debug else None,
 )
+
+
+# ── Startup / Shutdown ────────────────────────────────────────────────────────
+@app.on_event("startup")
+async def startup_event():
+    """Application startup hooks."""
+    logger.info("🚀  RecoveryAgent starting up…")
+    logger.info("🔒  Security mode: %s", "PRODUCTION" if settings.is_production else "DEBUG")
+    logger.info("🔒  CORS origins: %s", settings.origins_list)
+    logger.info("🔒  Admin accounts configured: %d", len(settings.admin_emails_list))
+    try:
+        await connect_db()
+        logger.info("✅  MongoDB connected  →  db: %s", settings.db_name)
+    except Exception as exc:
+        logger.warning("⚠️   MongoDB unavailable (%s) — continuing without DB", exc)
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Application shutdown hooks."""
+    logger.info("🛑  RecoveryAgent shutting down…")
+    try:
+        await close_db()
+        logger.info("✅  MongoDB connection closed")
+    except Exception as exc:
+        logger.warning("⚠️   Error closing MongoDB: %s", exc)
 
 
 # ── Global Error Handler ──────────────────────────────────────────────────────
