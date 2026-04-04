@@ -1,16 +1,21 @@
 """
-RecoveryAgent — Shared FastAPI dependencies.
+RecoverAI — Shared FastAPI dependencies (Security-Hardened).
 
-Provides `get_current_user` — a dependency that decodes the JWT Bearer token,
-looks up the user in MongoDB, and returns the user document.
-If the token is missing, expired, or the user doesn't exist → 401.
+Provides:
+  - get_current_user  : Validates JWT, checks revocation blacklist, returns user doc
+  - get_admin_user    : Ensures current user is in ADMIN_EMAILS list (from env, not hardcoded)
 """
+import logging
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 
 from app.core.config import settings
 from app.core.database import get_collection
+from app.core.security import is_token_revoked
+
+logger = logging.getLogger(__name__)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -21,7 +26,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     """
     Decode a JWT Bearer token and return the authenticated user document.
 
-    Raises HTTP 401 if the token is invalid, expired, or the user is missing.
+    Security checks performed (in order):
+    1. JWT cryptographic signature verification
+    2. Token expiry check (handled by jose)
+    3. Token type must be 'access' (rejects refresh tokens used as access tokens)
+    4. jti checked against revocation blacklist
+    5. User existence check in MongoDB
+    6. Account active status check
+
+    Raises HTTP 401 if any check fails.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -35,9 +48,22 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
             settings.secret_key,
             algorithms=[settings.algorithm],
         )
-        email: str | None = payload.get("sub")
-        if email is None:
+
+        # Enforce token type — refresh tokens cannot be used as access tokens
+        if payload.get("type") != "access":
             raise credentials_exception
+
+        email: str | None = payload.get("sub")
+        jti: str | None = payload.get("jti")
+
+        if email is None or jti is None:
+            raise credentials_exception
+
+        # Check if this specific token has been revoked (logout support)
+        if is_token_revoked(jti):
+            logger.warning("REVOKED_TOKEN_USED | email=%s | jti=%s", email, jti)
+            raise credentials_exception
+
     except JWTError:
         raise credentials_exception
 
@@ -49,7 +75,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     if not user.get("is_active", True):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is deactivated.",
+            detail="Account is deactivated. Please contact support.",
         )
 
     return user
@@ -57,11 +83,18 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
 
 async def get_admin_user(current_user: dict = Depends(get_current_user)) -> dict:
     """
-    Ensure the current user is an authorized admin.
+    Ensure the current user is an authorized administrator.
+
+    Admin emails are loaded from ADMIN_EMAILS environment variable — NOT hardcoded.
+    This prevents attackers from knowing the admin email by reading source code.
     """
-    if current_user.get("email") != "imexperiment4@gmail.com":
+    if current_user.get("email") not in settings.admin_emails_list:
+        logger.warning(
+            "UNAUTHORIZED_ADMIN_ACCESS | email=%s | ip=unknown",
+            current_user.get("email"),
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to access God Mode resources.",
+            detail="You do not have permission to access this resource.",
         )
     return current_user
