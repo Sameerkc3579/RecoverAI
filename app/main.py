@@ -56,10 +56,11 @@ _UPLOAD_DIR = "/tmp/uploads" if _IS_VERCEL else "uploads"
 os.makedirs(_UPLOAD_DIR, exist_ok=True)
 
 
-# ── Startup / Shutdown ────────────────────────────────────────────────────────
-@app.on_event("startup")
-async def startup_event():
-    """Application startup hooks."""
+# ── Lifespan (replaces deprecated @app.on_event) ──────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Manage startup and shutdown lifecycle."""
+    # --- Startup ---
     logger.info("🚀  RecoveryAgent starting up…")
     logger.info("🔒  Security mode: %s", "PRODUCTION" if settings.is_production else "DEBUG")
     logger.info("🔒  CORS origins: %s", settings.origins_list)
@@ -70,12 +71,15 @@ async def startup_event():
     except Exception as exc:
         logger.warning("⚠️   MongoDB unavailable (%s) — continuing without DB", exc)
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown hooks."""
+    yield  # ← Application runs here
+
+    # --- Shutdown ---
     logger.info("🛑  RecoveryAgent shutting down…")
-    await close_db()
-    logger.info("✅  MongoDB connection closed")
+    try:
+        await close_db()
+        logger.info("✅  MongoDB connection closed")
+    except Exception as exc:
+        logger.warning("⚠️   Error closing MongoDB connection: %s", exc)
 
 
 # ── Application ───────────────────────────────────────────────────────────────
@@ -89,6 +93,7 @@ app = FastAPI(
         "Integrates Google Gemini, MongoDB, and WhatsApp messaging."
     ),
     version="0.1.0",
+    lifespan=lifespan,
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
     openapi_url="/openapi.json" if settings.debug else None,
