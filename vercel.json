@@ -7,6 +7,10 @@
   ],
   "routes": [
     {
+      "src": "/",
+      "dest": "/RecoverAI_MVP.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "app/main.py"
     }

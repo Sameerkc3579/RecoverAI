@@ -178,4 +178,6 @@ FRONTEND_HTML = Path(__file__).resolve().parent.parent / "RecoverAI_MVP.html"
 @app.get("/", tags=["System"], summary="Frontend", include_in_schema=False)
 async def root():
     """Serve the RecoverAI single-page frontend."""
-    return FileResponse(FRONTEND_HTML, media_type="text/html")
+    if FRONTEND_HTML.exists():
+        return FileResponse(FRONTEND_HTML, media_type="text/html")
+    return {"status": "ok", "message": "RecoveryAgent API is running. Frontend UI deployed separately."}
