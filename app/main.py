@@ -56,10 +56,10 @@ _UPLOAD_DIR = "/tmp/uploads" if _IS_VERCEL else "uploads"
 os.makedirs(_UPLOAD_DIR, exist_ok=True)
 
 
-# ── Lifespan ──────────────────────────────────────────────────────────────────
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application startup / shutdown hooks."""
+# ── Startup / Shutdown ────────────────────────────────────────────────────────
+@app.on_event("startup")
+async def startup_event():
+    """Application startup hooks."""
     logger.info("🚀  RecoveryAgent starting up…")
     logger.info("🔒  Security mode: %s", "PRODUCTION" if settings.is_production else "DEBUG")
     logger.info("🔒  CORS origins: %s", settings.origins_list)
@@ -70,8 +70,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as exc:
         logger.warning("⚠️   MongoDB unavailable (%s) — continuing without DB", exc)
 
-    yield  # ← server is live
-
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Application shutdown hooks."""
     logger.info("🛑  RecoveryAgent shutting down…")
     await close_db()
     logger.info("✅  MongoDB connection closed")
@@ -91,7 +92,6 @@ app = FastAPI(
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
     openapi_url="/openapi.json" if settings.debug else None,
-    lifespan=lifespan,
 )
 
 
