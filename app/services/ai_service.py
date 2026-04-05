@@ -24,7 +24,7 @@ from app.models.schemas import PromptRequest
 logger = logging.getLogger(__name__)
 
 # ── Gemini model ────────────────────────────────────────────────────────────
-MODEL = "gemini-2.0-flash-lite"  # lighter model with separate quota bucket
+MODEL = "gemini-2.5-flash"  # lighter model with separate quota bucket
 
 
 # Lazy client — created on first use so a bad API key only breaks AI endpoints,
