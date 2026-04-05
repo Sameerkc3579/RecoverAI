@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 # ── Gemini client (shared config) ─────────────────────────────────────────────
 _client = genai.Client(api_key=settings.gemini_api_key)
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-2.5-flash"
 
 # ── Valid intents ─────────────────────────────────────────────────────────────
 IntentType = Literal["promise_to_pay", "dispute", "stall", "unknown"]
