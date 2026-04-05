@@ -217,9 +217,9 @@ async def startup_check():
 # ── Root — Serve the React Frontend ───────────────────────────────────────────────
 
 
-@app.get("/", tags=["System"], summary="Frontend", include_in_schema=False)
-async def root():
-    """Serve the RecoverAI single-page frontend."""
+@app.get("/dashboard", tags=["System"], summary="Frontend App", include_in_schema=False)
+async def dashboard():
+    """Serve the RecoverAI single-page frontend (dashboard)."""
     try:
         # Try each path at request time (Vercel may differ from import time)
         for path in _CANDIDATE_PATHS:
@@ -240,9 +240,9 @@ async def debug_error():
     if not settings.debug:
         return JSONResponse(status_code=404, content={"detail": "Not found"})
 
-@app.get("/landing", tags=["Frontend"], summary="Landing Page Preview", include_in_schema=False)
-async def serve_landing_preview():
-    """Serve the standalone Landing Page HTML."""
+@app.get("/", tags=["Frontend"], summary="Landing Page", include_in_schema=False)
+async def serve_landing():
+    """Serve the standalone Landing Page HTML on the root route."""
     from fastapi.responses import HTMLResponse
     from pathlib import Path
     
