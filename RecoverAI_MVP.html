@@ -2696,7 +2696,10 @@ Key rules:
         try {
           const res = await fetch('/api/debtor-reply', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + getToken()
+            },
             body: JSON.stringify({ invoice_id: simInvoiceId, message: simMessage.trim() }),
           });
           const data = await res.json();
