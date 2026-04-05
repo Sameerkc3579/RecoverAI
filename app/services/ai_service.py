@@ -24,7 +24,7 @@ from app.models.schemas import PromptRequest
 logger = logging.getLogger(__name__)
 
 # ── Gemini model ────────────────────────────────────────────────────────────
-MODEL = "gemini-1.5-flash"  # stable model — 2.5-flash may not be GA yet
+MODEL = "gemini-2.0-flash"  # correct model for google-genai SDK v1+
 
 # Lazy client — created on first use so a bad API key only breaks AI endpoints,
 # not the entire application startup (which would cause 500 on every route).
