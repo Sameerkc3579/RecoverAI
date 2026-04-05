@@ -24,7 +24,8 @@ from app.models.schemas import PromptRequest
 logger = logging.getLogger(__name__)
 
 # ── Gemini model ────────────────────────────────────────────────────────────
-MODEL = "gemini-2.0-flash"  # correct model for google-genai SDK v1+
+MODEL = "gemini-2.0-flash-lite"  # lighter model with separate quota bucket
+
 
 # Lazy client — created on first use so a bad API key only breaks AI endpoints,
 # not the entire application startup (which would cause 500 on every route).
@@ -47,12 +48,13 @@ IMPORTANT: You MUST generate the entire message. This includes the Subject Line,
 async def generate_message(prompt: str, invoice_data: dict, tone: str) -> str:
     """
     Call Gemini and return the generated recovery message text.
+    Retries once on 429 RESOURCE_EXHAUSTED after a short delay.
     """
     import json
-    
-    logger.info("Calling Gemini %s with dynamic UI prompt and tone: %s", MODEL, tone)
-    
-    # Inject MSMED Act penalty and invoice context
+    import asyncio
+
+    logger.info("Calling Gemini %s with tone: %s", MODEL, tone)
+
     context_prompt = f"""
 INVOICE CONTEXT:
 {json.dumps(invoice_data, indent=2)}
@@ -62,8 +64,8 @@ REQUESTED MESSAGE DRAFT:
 
 CRITICAL: Output the entire complete letter/email from start to finish. Include the full body and sign-off.
     """
-    
-    try:
+
+    async def _call_gemini():
         client = _get_client()
         response = await client.aio.models.generate_content(
             model=MODEL,
@@ -84,12 +86,26 @@ CRITICAL: Output the entire complete letter/email from start to finish. Include 
                     types.SafetySetting(
                         category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
                         threshold=types.HarmBlockThreshold.BLOCK_NONE,
-                    )
-                ]
+                    ),
+                ],
             ),
         )
-        
         return response.text
+
+    try:
+        return await _call_gemini()
     except Exception as exc:
+        err = str(exc)
+        # On quota exhaustion, wait and retry once
+        if "429" in err or "RESOURCE_EXHAUSTED" in err:
+            logger.warning("Gemini quota hit, retrying in 12s…")
+            await asyncio.sleep(12)
+            try:
+                return await _call_gemini()
+            except Exception as exc2:
+                logger.exception("Gemini retry also failed: %s", exc2)
+                raise RuntimeError(
+                    "AI quota exhausted. Please try again in a minute, or contact support to upgrade the AI plan."
+                )
         logger.exception("Gemini API error: %s", exc)
         raise RuntimeError(f"Gemini API error: {exc}")
