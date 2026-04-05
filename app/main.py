@@ -239,4 +239,24 @@ async def debug_error():
     """Endpoint to test error handling (only works in debug mode)."""
     if not settings.debug:
         return JSONResponse(status_code=404, content={"detail": "Not found"})
+
+@app.get("/landing", tags=["Frontend"], summary="Landing Page Preview", include_in_schema=False)
+async def serve_landing_preview():
+    """Serve the standalone Landing Page HTML."""
+    from fastapi.responses import HTMLResponse
+    from pathlib import Path
+    
+    # Check possible paths for landing-preview.html
+    paths = [
+        Path("landing-preview.html"),          # Execution root
+        Path(__file__).parent.parent / "landing-preview.html", # Relative to module
+    ]
+    for p in paths:
+        if p.exists():
+            return HTMLResponse(content=p.read_bytes(), status_code=200)
+            
+    return JSONResponse(
+        status_code=404,
+        content={"error": "Landing page preview file not found in deployment."}
+    )
     raise RuntimeError("Simulated debug error")
