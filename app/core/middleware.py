@@ -47,15 +47,20 @@ class SecurityHeadersMiddleware:
                 )
                 headers["Content-Security-Policy"] = (
                     "default-src 'self'; "
-                    "script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; "
-                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-                    "font-src 'self' https://fonts.gstatic.com; "
+                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+                    "https://accounts.google.com https://apis.google.com "
+                    "https://cdn.jsdelivr.net https://cdn.tailwindcss.com "
+                    "https://cdnjs.cloudflare.com https://unpkg.com "
+                    "https://cdn.plot.ly; "
+                    "style-src 'self' 'unsafe-inline' "
+                    "https://fonts.googleapis.com https://cdn.jsdelivr.net "
+                    "https://cdnjs.cloudflare.com https://cdn.tailwindcss.com; "
+                    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
                     "img-src 'self' data: https:; "
-                    "connect-src 'self' https://accounts.google.com; "
+                    "connect-src 'self' https://accounts.google.com https://recover-ai-lyart.vercel.app; "
                     "frame-src https://accounts.google.com; "
                     "object-src 'none'; "
-                    "base-uri 'self'; "
-                    "form-action 'self';"
+                    "base-uri 'self';"
                 )
                 headers["X-XSS-Protection"] = "1; mode=block"
                 # Remove server fingerprinting (MutableHeaders uses del, not pop)
