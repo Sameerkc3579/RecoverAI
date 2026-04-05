@@ -58,9 +58,15 @@ class SecurityHeadersMiddleware:
                     "form-action 'self';"
                 )
                 headers["X-XSS-Protection"] = "1; mode=block"
-                # Remove server fingerprinting
-                headers.pop("server", None)
-                headers.pop("x-powered-by", None)
+                # Remove server fingerprinting (MutableHeaders uses del, not pop)
+                try:
+                    del headers["server"]
+                except KeyError:
+                    pass
+                try:
+                    del headers["x-powered-by"]
+                except KeyError:
+                    pass
             await send(message)
 
         await self.app(scope, receive, send_with_security_headers)
