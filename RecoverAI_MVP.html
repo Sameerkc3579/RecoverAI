@@ -16,7 +16,7 @@
     tailwind.config = { corePlugins: { preflight: false } }
   </script>
   <link
-    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap"
     rel="stylesheet">
   <style>
     * {
@@ -26,40 +26,44 @@
     }
 
     :root {
-      --bg: #F7F6F2;
+      --bg: #EEF2F8;
       --surface: #FFFFFF;
-      --surface2: #F1EFE8;
-      --surface3: #E8E6DC;
-      --text: #1A1916;
-      --text2: #5F5E5A;
-      --text3: #888780;
-      --border: #E0DED5;
-      --border2: #C8C6BC;
-      --amber: #BA7517;
-      --amber-bg: #FAEEDA;
-      --amber-light: #FAC775;
-      --amber-dark: #633806;
-      --green: #3B6D11;
-      --green-bg: #EAF3DE;
-      --green-light: #97C459;
-      --red: #A32D2D;
-      --red-bg: #FCEBEB;
-      --red-light: #F09595;
-      --blue: #185FA5;
-      --blue-bg: #E6F1FB;
-      --blue-light: #85B7EB;
-      --purple: #534AB7;
-      --purple-bg: #EEEDFE;
-      --purple-light: #AFA9EC;
+      --surface2: #F1F5F9;
+      --surface3: #E2ECF5;
+      --text: #0A1428;
+      --text2: #334155;
+      --text3: #608098;
+      --border: #C0D4E8;
+      --border2: #94A3B8;
+      
+      /* Primary Brand / Accent mapped from old 'amber' */
+      --amber: #0EA5E9;
+      --amber-bg: #E0F2FE;
+      --amber-light: #38BDF8;
+      --amber-dark: #0369A1;
+      
+      --green: #10B981;
+      --green-bg: #D1FAE5;
+      --green-light: #34D399;
+      --red: #EF4444;
+      --red-bg: #FEE2E2;
+      --red-light: #F87171;
+      --blue: #3B82F6;
+      --blue-bg: #DBEAFE;
+      --blue-light: #60A5FA;
+      --purple: #8B5CF6;
+      --purple-bg: #EDE9FE;
+      --purple-light: #A78BFA;
+      
       --radius: 8px;
       --radius-lg: 12px;
       --radius-xl: 16px;
-      --shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
-      --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.1);
+      --shadow: 0 1px 4px rgba(10, 20, 40, 0.07);
+      --shadow-md: 0 2px 12px rgba(10, 20, 40, 0.1);
     }
 
     body {
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
       font-size: 14px;
@@ -152,7 +156,7 @@
       background: none;
       width: 100%;
       text-align: left;
-      font-family: 'DM Sans', sans-serif
+      font-family: 'Plus Jakarta Sans', sans-serif
     }
 
     .nav-item:hover {
@@ -1286,12 +1290,6 @@
       { id: 6, type: 'recovery', icon: '✓', text: '<strong>Invoice recovered</strong> — Nagpur Steel Works paid ₹1,95,000', time: '5 days ago', color: '#EAF3DE' },
     ];
 
-    const MONTHLY_DATA = {
-      labels: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
-      sent: [0, 12000, 85000, 42000, 55000, 28500],
-      recovered: [0, 0, 67000, 0, 195000, 0],
-    };
-
     const STATUS_META = {
       sent: { label: '1st Reminder Sent', color: 'badge-blue', days: '0–14d overdue' },
       reminded: { label: 'Follow-up Sent', color: 'badge-amber', days: '15–34d overdue' },
@@ -1809,13 +1807,14 @@ Key rules:
         if (bizName) setSettings(prev => ({ ...prev, businessName: bizName, ownerName: bizName }));
       }
       
-      function handleLogout() { 
-        setToken(null); 
-        setTokenState(null); 
-        setIsAdmin(false); 
-        setIsAdminState(false); 
-        setInvoices([]); 
-        if (page === 'admin') setPage('dashboard');
+      function handleLogout() {
+        // Redirect FIRST — before any React state updates that would re-render
+        // the old built-in login form and cause a visible flash.
+        localStorage.removeItem('recoverai_token');
+        localStorage.removeItem('recoverai_refresh');
+        localStorage.removeItem('recoverai_user_details');
+        localStorage.removeItem('recoverai_is_admin');
+        window.location.href = '/login';
       }
 
       useEffect(() => {
@@ -1982,20 +1981,44 @@ Key rules:
       useEffect(() => {
         if (!chartRef.current) return;
         if (chartObj.current) chartObj.current.destroy();
+
+        const labels = [];
+        const sent = [0, 0, 0, 0, 0, 0];
+        const recoveredValue = [0, 0, 0, 0, 0, 0];
+        
+        const today = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            labels.push(d.toLocaleString('default', { month: 'short' }));
+        }
+
+        invoices.forEach(inv => {
+            const d = inv.issueDate ? new Date(inv.issueDate) : new Date();
+            let diffMonths = (today.getFullYear() - d.getFullYear()) * 12 + (today.getMonth() - d.getMonth());
+            if (diffMonths >= 0 && diffMonths < 6) {
+                const index = 5 - diffMonths;
+                if (inv.recovered) {
+                    recoveredValue[index] += parseFloat(inv.amount) || 0;
+                } else {
+                    sent[index] += parseFloat(inv.amount) || 0;
+                }
+            }
+        });
+
         const ctx = chartRef.current.getContext('2d');
         chartObj.current = new Chart(ctx, {
           type: 'bar',
           data: {
-            labels: MONTHLY_DATA.labels,
+            labels: labels,
             datasets: [
-              { label: 'Outstanding', data: MONTHLY_DATA.sent, backgroundColor: '#FAEEDA', borderColor: '#BA7517', borderWidth: 1.5, borderRadius: 4 },
-              { label: 'Recovered', data: MONTHLY_DATA.recovered, backgroundColor: '#C0DD97', borderColor: '#3B6D11', borderWidth: 1.5, borderRadius: 4 },
+              { label: 'Outstanding', data: sent, backgroundColor: '#FEF3C7', borderColor: '#D97706', borderWidth: 1.5, borderRadius: 4 },
+              { label: 'Recovered', data: recoveredValue, backgroundColor: '#D1FAE5', borderColor: '#10B981', borderWidth: 1.5, borderRadius: 4 },
             ]
           },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { font: { size: 11, family: 'DM Sans' }, boxWidth: 12, padding: 12 } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 11 } } }, y: { grid: { color: '#F1EFE8' }, ticks: { font: { size: 11 }, callback: v => '₹' + v.toLocaleString('en-IN') } } } }
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { font: { size: 11, family: 'Plus Jakarta Sans' }, boxWidth: 12, padding: 12 } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 11, family: 'Plus Jakarta Sans' } } }, y: { grid: { color: '#E2ECF5' }, ticks: { font: { size: 11, family: 'Plus Jakarta Sans' }, callback: v => '₹' + v.toLocaleString('en-IN') } } } }
         });
         return () => { if (chartObj.current) chartObj.current.destroy() };
-      }, []);
+      }, [invoices]);
 
       useEffect(() => {
         if (!donutRef.current) return;
@@ -2007,9 +2030,9 @@ Key rules:
           type: 'doughnut',
           data: {
             labels: ['1st Reminder', 'Follow-up', 'Final Notice', 'Legal Ready'],
-            datasets: [{ data: Object.values(byStatus), backgroundColor: ['#E6F1FB', '#FAEEDA', '#FAC775', '#FCEBEB'], borderColor: ['#85B7EB', '#BA7517', '#BA7517', '#F09595'], borderWidth: 1.5 }]
+            datasets: [{ data: Object.values(byStatus), backgroundColor: ['#DBEAFE', '#FEF3C7', '#FFEDD5', '#FEE2E2'], borderColor: ['#3B82F6', '#D97706', '#EA580C', '#EF4444'], borderWidth: 1.5 }]
           },
-          options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { position: 'bottom', labels: { font: { size: 11, family: 'DM Sans' }, boxWidth: 10, padding: 10 } } } }
+          options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { position: 'bottom', labels: { font: { size: 11, family: 'Plus Jakarta Sans' }, boxWidth: 10, padding: 10 } } } }
         });
         return () => { if (donutObj.current) donutObj.current.destroy() };
       }, [invoices]);

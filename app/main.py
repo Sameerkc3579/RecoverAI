@@ -48,8 +48,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ── Upload Directory ──────────────────────────────────────────────────────────
+# ── Paths ─────────────────────────────────────────────────────────────────────
 _IS_VERCEL = bool(os.environ.get("VERCEL"))
+BASE_DIR = Path(__file__).resolve().parent.parent
 _UPLOAD_DIR = "/tmp/uploads" if _IS_VERCEL else "uploads"
 os.makedirs(_UPLOAD_DIR, exist_ok=True)
 
@@ -158,16 +159,22 @@ app.include_router(admin_router)
 
 
 # ── Static Files ──────────────────────────────────────────────────────────────
+_dist_assets = BASE_DIR / "dist" / "assets"
+if _dist_assets.exists():
+    app.mount("/assets", StaticFiles(directory=str(_dist_assets)), name="assets")
+
 if not _IS_VERCEL:
-    app.mount("/uploads", StaticFiles(directory=_UPLOAD_DIR), name="uploads")
+    if (BASE_DIR / "uploads").exists():
+        app.mount("/uploads", StaticFiles(directory=str(BASE_DIR / "uploads")), name="uploads")
+else:
+    app.mount("/uploads", StaticFiles(directory="/tmp"), name="uploads")
 
 
 # ── Root HTML path candidates ──────────────────────────────────────────────────
-# Defined early so /api/startup-check and the root route both reference the same list.
 _CANDIDATE_PATHS = [
-    Path(__file__).resolve().parent.parent / "RecoverAI_MVP.html",  # local: RecoveryAgent/
-    Path("/var/task/RecoverAI_MVP.html"),                            # Vercel lambda root
-    Path("/var/task/app/../RecoverAI_MVP.html"),
+    BASE_DIR / "RecoverAI_MVP.html",
+    Path("RecoverAI_MVP.html"),
+    Path("/var/task/RecoverAI_MVP.html"),
 ]
 FRONTEND_HTML: Path | None = next((p for p in _CANDIDATE_PATHS if p.exists()), None)
 logger.info("📄  Frontend HTML resolved to: %s", FRONTEND_HTML)
@@ -241,15 +248,28 @@ async def debug_error():
         return JSONResponse(status_code=404, content={"detail": "Not found"})
 
 @app.get("/", tags=["Frontend"], summary="Landing Page", include_in_schema=False)
+@app.get("/login", tags=["Frontend"], include_in_schema=False)
+@app.get("/register", tags=["Frontend"], include_in_schema=False)
 async def serve_landing():
     """Serve the standalone Landing Page HTML on the root route."""
     from fastapi.responses import HTMLResponse
     from pathlib import Path
     
-    # Check possible paths for landing-preview.html
+    # Try serving the React frontend (built in dist/)
+    dist_paths = [
+        BASE_DIR / "dist" / "index.html",
+        Path("dist/index.html"),
+        Path("/var/task/dist/index.html")
+    ]
+    for p in dist_paths:
+        if p.exists():
+            return HTMLResponse(content=p.read_bytes(), status_code=200)
+    
+    # Fallback to the dark HTML landing preview
     paths = [
-        Path("landing-preview.html"),          # Execution root
-        Path(__file__).parent.parent / "landing-preview.html", # Relative to module
+        BASE_DIR / "landing-preview.html",
+        Path("landing-preview.html"),
+        Path("/var/task/landing-preview.html")
     ]
     for p in paths:
         if p.exists():

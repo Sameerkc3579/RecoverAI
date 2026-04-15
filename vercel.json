@@ -1,14 +1,25 @@
 {
+  "version": 2,
   "builds": [
     {
       "src": "app/main.py",
       "use": "@vercel/python",
       "config": {
-        "includeFiles": ["RecoverAI_MVP.html", "app/**"]
+        "includeFiles": [
+          "RecoverAI_MVP.html",
+          "landing-preview.html",
+          "dist/index.html",
+          "dist/assets/**",
+          "app/**"
+        ]
       }
     }
   ],
   "routes": [
+    {
+      "src": "/assets/(.*)",
+      "dest": "dist/assets/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "app/main.py"
