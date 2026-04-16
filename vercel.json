@@ -1,9 +1,6 @@
 {
   "version": 2,
   "framework": null,
-  "installCommand": "pip install -r requirements.txt",
-  "buildCommand": "echo 'Python-only build, no frontend bundling needed'",
-  "outputDirectory": ".",
   "builds": [
     {
       "src": "app/main.py",
@@ -12,6 +9,8 @@
         "includeFiles": [
           "RecoverAI_MVP.html",
           "landing-preview.html",
+          "dist/index.html",
+          "dist/assets/**",
           "app/**",
           "requirements.txt"
         ]

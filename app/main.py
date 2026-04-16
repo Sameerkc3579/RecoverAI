@@ -159,15 +159,27 @@ app.include_router(admin_router)
 
 
 # ── Static Files ──────────────────────────────────────────────────────────────
-_dist_assets = BASE_DIR / "dist" / "assets"
-if _dist_assets.exists():
-    app.mount("/assets", StaticFiles(directory=str(_dist_assets)), name="assets")
+# Try to mount dist/assets from multiple candidate paths (local vs Vercel /var/task/)
+_dist_asset_candidates = [
+    BASE_DIR / "dist" / "assets",
+    Path("/var/task/dist/assets"),
+    Path("dist/assets"),
+]
+for _candidate in _dist_asset_candidates:
+    if _candidate.exists():
+        app.mount("/assets", StaticFiles(directory=str(_candidate)), name="assets")
+        logger.info("📦  Static assets mounted from: %s", _candidate)
+        break
+else:
+    logger.warning("⚠️  No dist/assets directory found — static files will not be served")
 
 if not _IS_VERCEL:
-    if (BASE_DIR / "uploads").exists():
-        app.mount("/uploads", StaticFiles(directory=str(BASE_DIR / "uploads")), name="uploads")
+    _uploads_dir = BASE_DIR / "uploads"
+    if _uploads_dir.exists():
+        app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 else:
-    app.mount("/uploads", StaticFiles(directory="/tmp"), name="uploads")
+    os.makedirs("/tmp/uploads", exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory="/tmp/uploads"), name="uploads")
 
 
 # ── Root HTML path candidates ──────────────────────────────────────────────────
@@ -277,6 +289,5 @@ async def serve_landing():
             
     return JSONResponse(
         status_code=404,
-        content={"error": "Landing page preview file not found in deployment."}
+        content={"error": "Landing page not found in deployment."}
     )
-    raise RuntimeError("Simulated debug error")
