@@ -29,3 +29,14 @@ node_modules/
 
 # Local data & Backups
 backup_safe_place/
+
+# ─── Vite / React frontend (not deployed to Vercel — Python backend serves HTML directly) ───
+index.html
+package.json
+package-lock.json
+vite.config.ts
+tsconfig.json
+tsconfig.node.json
+postcss.config.mjs
+src/
+public/
