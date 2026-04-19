@@ -244,7 +244,15 @@ async def dashboard():
         for path in _CANDIDATE_PATHS:
             if path.exists():
                 html_content = path.read_bytes()
-                return HTMLResponse(content=html_content, status_code=200)
+                return HTMLResponse(
+                    content=html_content, 
+                    status_code=200,
+                    headers={
+                        "Cache-Control": "no-cache, no-store, must-revalidate",
+                        "Pragma": "no-cache",
+                        "Expires": "0"
+                    }
+                )
     except Exception as exc:
         logger.error("❌  Failed to serve frontend: %s", exc)
     # Fallback: API is running but frontend file not found
@@ -267,6 +275,12 @@ async def serve_landing():
     from fastapi.responses import HTMLResponse
     from pathlib import Path
     
+    no_cache_headers = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    }
+
     # Try serving the React frontend (built in dist/)
     dist_paths = [
         BASE_DIR / "dist" / "index.html",
@@ -275,7 +289,7 @@ async def serve_landing():
     ]
     for p in dist_paths:
         if p.exists():
-            return HTMLResponse(content=p.read_bytes(), status_code=200)
+            return HTMLResponse(content=p.read_bytes(), status_code=200, headers=no_cache_headers)
     
     # Fallback to the dark HTML landing preview
     paths = [
@@ -285,7 +299,7 @@ async def serve_landing():
     ]
     for p in paths:
         if p.exists():
-            return HTMLResponse(content=p.read_bytes(), status_code=200)
+            return HTMLResponse(content=p.read_bytes(), status_code=200, headers=no_cache_headers)
             
     return JSONResponse(
         status_code=404,
