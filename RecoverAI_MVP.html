@@ -1139,40 +1139,305 @@
       font-weight: 700
     }
 
-    /* Responsive */
-    @media(max-width:900px) {
+    .dashboard-bottom-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px
+    }
+
+    .recovery-grid { display: grid; grid-template-columns: minmax(240px, 300px) 1fr; gap: 16px; align-items: start; }
+    .legal-grid { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 16px; align-items: start; }
+    .inbox-msg-grid { display: grid; grid-template-columns: minmax(140px, 180px) 1fr minmax(140px, 200px); gap: 16px; cursor: pointer; align-items: center; }
+    .admin-metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); margin-bottom: 20px; gap: 16px; }
+
+    /* Responsive — tablet / mobile (≤900px) */
+    @media(max-width: 900px) {
       .layout {
-        grid-template-columns: 1fr
+        grid-template-columns: 1fr;
+        min-height: 100vh
       }
 
-      .sidebar {
-        display: none
-      }
+      .sidebar { display: none }
 
+      .mobile-topbar { display: flex !important }
+
+      .mobile-bottom-nav { display: flex !important }
+
+      /* Push content above fixed bottom nav */
+      .main { padding-bottom: 68px }
+
+      /* Hide the per-page sticky topbar — mobile-topbar replaces it */
+      .topbar { display: none }
+
+      /* ── 2×2 metric grid on tablet ────────────────── */
       .metric-grid {
-        grid-template-columns: repeat(2, 1fr)
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 14px
       }
 
       .chart-grid {
-        grid-template-columns: 1fr
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 14px
       }
 
       .chart-grid-3 {
-        grid-template-columns: 1fr
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 14px
       }
 
-      .form-grid {
-        grid-template-columns: 1fr
+      .form-grid       { grid-template-columns: 1fr }
+      .form-grid-3     { grid-template-columns: 1fr }
+      .detail-grid     { grid-template-columns: 1fr }
+      .dashboard-bottom-grid { grid-template-columns: 1fr; gap: 14px }
+      .recovery-grid, .legal-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+      .admin-metric-grid { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+
+      /* Inbox message grid — stack into card on mobile */
+      .inbox-msg-grid {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+        cursor: pointer
       }
 
-      .form-grid-3 {
-        grid-template-columns: 1fr
+      /* ── Metric card text scaling ─────────────────── */
+      .metric-value {
+        font-size: clamp(20px, 6vw, 28px);
+        word-break: break-word
       }
 
-      .detail-grid {
-        grid-template-columns: 1fr
+      .metric-card {
+        padding: 14px 16px;
+        width: 100%
       }
+
+      /* ── Charts: must not overflow ────────────────── */
+      canvas {
+        max-width: 100% !important;
+        width: 100% !important
+      }
+
+      .card { padding: 14px; overflow: hidden }
+
+      /* Constrain chart wrappers */
+      .chart-grid > .card,
+      .chart-grid-3 > .card {
+        min-width: 0;
+        overflow: hidden
+      }
+
+      /* ── Content padding ──────────────────────────── */
+      .content { padding: 12px 10px }
+
+      /* ── Filters & search ─────────────────────────── */
+      .filter-bar   { flex-wrap: wrap }
+      .search-wrap  { min-width: 0; width: 100% }
+      .filter-select { flex: 1; min-width: 0 }
+
+      /* ── Tables responsive cards ──────────────────── */
+      .table-wrap { overflow-x: hidden; }
+      table, thead, tbody, th, td, tr { display: block; width: 100%; }
+      thead { display: none; }
+      .mobile-table-row {
+        margin-bottom: 12px;
+        border: 1px solid var(--border) !important;
+        border-radius: var(--radius-lg);
+        padding: 4px 12px;
+        background: var(--surface);
+      }
+      .mobile-td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 8px 0 !important;
+        border-bottom: 1px dashed var(--border2) !important;
+        text-align: right;
+      }
+      .mobile-td:last-child {
+        border-bottom: none !important;
+      }
+      .mobile-td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        font-size: 11px;
+        color: var(--text3);
+        text-transform: uppercase;
+        margin-right: 12px;
+        text-align: left;
+        flex-shrink: 0;
+      }
+
+      /* ── Modals fill screen ───────────────────────── */
+      .overlay { padding: 6px; align-items: flex-end }
+
+      .modal {
+        max-width: 100%;
+        width: 100%;
+        padding: 16px;
+        max-height: 92vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0
+      }
+
+      .modal-lg { max-width: 100% }
+
+      /* ── Tabs full-width scroll ───────────────────── */
+      .tabs { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch }
+
+      /* ── Section headers wrap ────────────────────── */
+      .section-hd { flex-wrap: wrap; gap: 8px }
+
+      /* ── Topbar actions shrink ───────────────────── */
+      .topbar-actions { gap: 4px; flex-wrap: wrap }
+
+      /* ── Page-level topbar badge row wrap ─────────── */
+      .topbar-actions .badge { font-size: 10px }
     }
+
+    /* Responsive — phone (≤480px): extra tightening */
+    @media(max-width: 480px) {
+      .content { padding: 10px 8px }
+
+      /* Single column on phones */
+      .metric-grid { grid-template-columns: 1fr }
+      .admin-metric-grid { grid-template-columns: 1fr !important }
+
+      .metric-value {
+        font-size: clamp(18px, 5.5vw, 26px)
+      }
+
+      .metric-label { font-size: 10px }
+
+      .btn     { padding: 7px 10px; font-size: 12px }
+      .btn-lg  { padding: 9px 14px; font-size: 13px }
+
+      .step-row       { padding: 8px 10px }
+      .campaign-card  { width: 100% }
+
+      .settings-row { flex-wrap: wrap; gap: 8px }
+
+      /* Chip row wraps */
+      .chip { font-size: 10px; padding: 3px 8px }
+
+      /* Inbox msg card on phone — slightly tighter */
+      .inbox-msg-grid > div:last-child { text-align: left !important }
+    }
+    .mobile-topbar {
+      display: none;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 40
+    }
+
+    .hamburger-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: var(--radius);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+      justify-content: center
+    }
+
+    .hamburger-btn span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: all 0.25s
+    }
+
+    .hamburger-btn.open span:nth-child(1) { transform: translateY(6px) rotate(45deg) }
+    .hamburger-btn.open span:nth-child(2) { opacity: 0 }
+    .hamburger-btn.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg) }
+
+    /* Mobile drawer */
+    .mobile-drawer-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 45
+    }
+
+    .mobile-drawer-overlay.open {
+      display: block
+    }
+
+    .mobile-drawer {
+      position: fixed;
+      top: 0;
+      left: -260px;
+      width: 240px;
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      z-index: 50;
+      transition: left 0.25s cubic-bezier(.4,0,.2,1);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto
+    }
+
+    .mobile-drawer.open {
+      left: 0
+    }
+
+    /* Mobile bottom nav */
+    .mobile-bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 6px 4px;
+      padding-bottom: max(6px, env(safe-area-inset-bottom));
+      z-index: 40;
+      justify-content: space-around
+    }
+
+    .mob-nav-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      flex: 1;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 2px;
+      border-radius: var(--radius);
+      color: var(--text3);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      transition: color 0.15s
+    }
+
+    .mob-nav-btn.active { color: var(--amber-dark) }
+
+    .mob-nav-icon {
+      font-size: 17px;
+      line-height: 1
+    }
+
+    .mob-nav-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.2px
+    }
+
 
     /* Pill toggle */
     .pill-toggle {
@@ -1748,20 +2013,20 @@ Key rules:
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {users.map(u => (
-                    <tr key={u._id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3">
+                    <tr key={u._id} className="hover:bg-gray-50 mobile-table-row">
+                      <td data-label="Business / Email" className="px-5 py-3 mobile-td">
                         <div className="font-semibold text-gray-900">{u.business_name}</div>
                         <div className="text-gray-500 text-xs">{u.email}</div>
                       </td>
-                      <td className="px-5 py-3 text-gray-600">{new Date(u.created_at).toLocaleDateString('en-IN')}</td>
-                      <td className="px-5 py-3 text-right font-medium text-gray-900">{u.invoice_count}</td>
-                      <td className="px-5 py-3 text-right font-mono text-gray-600">₹{Number(u.total_tracked_value).toLocaleString('en-IN')}</td>
-                      <td className="px-5 py-3 text-right font-mono text-green-600 font-semibold">₹{Number(u.total_recovered_value).toLocaleString('en-IN')}</td>
+                      <td data-label="Joined" className="px-5 py-3 text-gray-600 mobile-td">{new Date(u.created_at).toLocaleDateString('en-IN')}</td>
+                      <td data-label="Invoices" className="px-5 py-3 text-right font-medium text-gray-900 mobile-td">{u.invoice_count}</td>
+                      <td data-label="Total ₹ Tracked" className="px-5 py-3 text-right font-mono text-gray-600 mobile-td">₹{Number(u.total_tracked_value).toLocaleString('en-IN')}</td>
+                      <td data-label="Total ₹ Recovered" className="px-5 py-3 text-right font-mono text-green-600 font-semibold mobile-td">₹{Number(u.total_recovered_value).toLocaleString('en-IN')}</td>
                     </tr>
                   ))}
                   {users.length === 0 && (
-                    <tr>
-                      <td colSpan="5" className="px-5 py-8 text-center text-gray-500">No users found.</td>
+                    <tr className="mobile-table-row">
+                      <td colSpan="5" className="px-5 py-8 text-center text-gray-500 mobile-td" style={{justifyContent: 'center'}}>No users found.</td>
                     </tr>
                   )}
                 </tbody>
@@ -1781,6 +2046,7 @@ Key rules:
       const [showAddModal, setShowAddModal] = useState(false);
       const [selectedInv, setSelectedInv] = useState(null);
       const [showDetailModal, setShowDetailModal] = useState(false);
+      const [drawerOpen, setDrawerOpen] = useState(false);
       const [settings, setSettings] = useState(() => {
         const local = localStorage.getItem('recoverai_settings');
         return local ? JSON.parse(local) : {
@@ -1910,9 +2176,81 @@ Key rules:
         navItems.push({ id: 'admin', label: 'God Mode', icon: '👁', badge: 'Admin', badgeType: 'red' });
       }
 
+      /* helper to navigate and close drawer */
+      function navTo(id) { setPage(id); setDrawerOpen(false); }
+
+      /* Shared nav list renderer (used in both sidebar and drawer) */
+      function renderNavList(onNav) {
+        return (
+          <>
+            <div className="nav-section">Main</div>
+            {navItems.map(n => (
+              <button key={n.id} className={`nav-item${page === n.id ? ' active' : ''}`} onClick={() => onNav(n.id)}>
+                <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>{n.icon}</span>
+                {n.label}
+                {n.badge && <span className={`nav-badge${n.badgeType === 'amber' ? ' nav-badge-amber' : ''}`}>{n.badge}</span>}
+              </button>
+            ))}
+            <div className="nav-section" style={{ marginTop: 12 }}>Account</div>
+            <button className={`nav-item${page === 'settings' ? ' active' : ''}`} onClick={() => onNav('settings')}>
+              <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>⚙</span>
+              Settings
+            </button>
+            <button className="nav-item" onClick={handleLogout} style={{ color: 'var(--red)' }}>
+              <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>⏻</span>
+              Sign Out
+            </button>
+          </>
+        );
+      }
+
+      /* Bottom‐nav quick links */
+      const bottomTabs = [
+        { id: 'dashboard', icon: '▦', label: 'Home' },
+        { id: 'invoices', icon: '≡', label: 'Invoices' },
+        { id: 'recovery', icon: '↺', label: 'Recovery' },
+        { id: 'legal',     icon: '⚖', label: 'Legal' },
+        { id: 'menu',      icon: '☰', label: 'Menu' },
+      ];
+
+      /* Current page label for mobile topbar */
+      const currentLabel = navItems.find(n => n.id === page)?.label || (page === 'settings' ? 'Settings' : 'RecoverAI');
+
       return (
         <div className="layout">
-          {/* Sidebar */}
+
+          {/* ── Mobile top bar (visible ≤900px) ─────────────────── */}
+          <div className="mobile-topbar">
+            <button className={`hamburger-btn${drawerOpen ? ' open' : ''}`} onClick={() => setDrawerOpen(o => !o)} aria-label="Menu">
+              <span></span><span></span><span></span>
+            </button>
+            <span style={{ fontWeight: 700, fontSize: 15 }}>{currentLabel}</span>
+            <span className="badge badge-green" style={{ fontSize: 10 }}>● Live</span>
+          </div>
+
+          {/* ── Mobile drawer overlay ─────────────────────────── */}
+          <div className={`mobile-drawer-overlay${drawerOpen ? ' open' : ''}`} onClick={() => setDrawerOpen(false)}></div>
+          <div className={`mobile-drawer${drawerOpen ? ' open' : ''}`}>
+            <div className="sidebar-brand">
+              <div className="brand-icon">R</div>
+              <div className="brand-name">RecoverAI</div>
+              <div className="brand-tagline">MSME Invoice Recovery</div>
+            </div>
+            <nav className="nav">
+              {renderNavList(navTo)}
+            </nav>
+            <div className="sidebar-bottom">
+              <div className="user-card">
+                <div className="user-avatar">{getInitials(settings.ownerName)}</div>
+                <div>
+                  <div className="user-name">{settings.businessName || 'Unnamed Business'}</div>
+                  <div className="user-plan">Starter Plan {settings.city ? `· ${settings.city}` : ''}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Desktop sidebar (hidden ≤900px via CSS) ───────── */}
           <aside className="sidebar">
             <div className="sidebar-brand">
               <div className="brand-icon">R</div>
@@ -1920,23 +2258,7 @@ Key rules:
               <div className="brand-tagline">MSME Invoice Recovery</div>
             </div>
             <nav className="nav">
-              <div className="nav-section">Main</div>
-              {navItems.map(n => (
-                <button key={n.id} className={`nav-item${page === n.id ? ' active' : ''}`} onClick={() => setPage(n.id)}>
-                  <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>{n.icon}</span>
-                  {n.label}
-                  {n.badge && <span className={`nav-badge${n.badgeType === 'amber' ? ' nav-badge-amber' : ''}`}>{n.badge}</span>}
-                </button>
-              ))}
-              <div className="nav-section" style={{ marginTop: 12 }}>Account</div>
-              <button className={`nav-item${page === 'settings' ? ' active' : ''}`} onClick={() => setPage('settings')}>
-                <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>⚙</span>
-                Settings
-              </button>
-              <button className="nav-item" onClick={handleLogout} style={{ color: 'var(--red)' }}>
-                <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>⏻</span>
-                Sign Out
-              </button>
+              {renderNavList(setPage)}
             </nav>
             <div className="sidebar-bottom">
               <div className="user-card">
@@ -1949,10 +2271,30 @@ Key rules:
             </div>
           </aside>
 
-          {/* Main */}
+          {/* ── Main content ──────────────────────────────────── */}
           <main className="main">
             {pages[page]}
           </main>
+
+          {/* ── Mobile bottom nav (visible ≤900px) ───────────── */}
+          <div className="mobile-bottom-nav">
+            {bottomTabs.map(t => (
+              <button 
+                key={t.id} 
+                className={`mob-nav-btn${(page === t.id && t.id !== 'menu') ? ' active' : ''}`} 
+                onClick={() => {
+                  if (t.id === 'menu') {
+                    setDrawerOpen(true);
+                  } else {
+                    setPage(t.id);
+                  }
+                }}
+              >
+                <span className="mob-nav-icon">{t.icon}</span>
+                <span className="mob-nav-label">{t.label}</span>
+              </button>
+            ))}
+          </div>
 
           {/* Add Invoice Modal */}
           {showAddModal && <AddInvoiceModal onClose={() => setShowAddModal(false)} onAdd={inv => { addInvoice(inv); setShowAddModal(false) }} />}
@@ -2100,7 +2442,7 @@ Key rules:
             </div>
 
             {/* Bottom two panels */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16 }}>
+            <div className="dashboard-bottom-grid">
               <div className="card">
                 <div className="card-header">
                   <div className="card-title">Top Debtors</div>
@@ -2256,35 +2598,35 @@ Key rules:
                   </thead>
                   <tbody>
                     {filtered.length === 0 && (
-                      <tr><td colSpan={8}><div className="empty"><div className="empty-icon">◎</div><div className="empty-title">No invoices found</div></div></td></tr>
+                      <tr className="mobile-table-row"><td colSpan={8} className="mobile-td" style={{justifyContent:'center'}}><div className="empty"><div className="empty-icon">◎</div><div className="empty-title">No invoices found</div></div></td></tr>
                     )}
                     {filtered.map(inv => (
-                      <tr key={inv.id} style={{ cursor: 'pointer' }} onClick={() => openDetail(inv)}>
-                        <td onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(inv.id)} onChange={e => {
+                      <tr key={inv.id} className="mobile-table-row" style={{ cursor: 'pointer' }} onClick={() => openDetail(inv)}>
+                        <td data-label="Select" className="mobile-td" onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(inv.id)} onChange={e => {
                           const next = new Set(selectedIds);
                           if (e.target.checked) next.add(inv.id); else next.delete(inv.id);
                           setSelectedIds(next);
                         }} /></td>
-                        <td>
+                        <td data-label="Company" className="mobile-td">
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={{ width: 30, height: 30, borderRadius: 6, background: 'var(--amber-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--amber-dark)', flexShrink: 0 }}>{getInitials(inv.company)}</div>
                             <div>
-                              <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.company}</div>
-                              <div style={{ fontSize: 11, color: 'var(--text3)' }}>{inv.contact}</div>
+                              <div style={{ fontWeight: 600, fontSize: 13, textAlign: 'right' }}>{inv.company}</div>
+                              <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'right' }}>{inv.contact}</div>
                             </div>
                           </div>
                         </td>
-                        <td><span className="tag">{inv.invoiceNo}</span></td>
-                        <td><strong>{fmtINR(inv.amount)}</strong></td>
-                        <td style={{ fontSize: 12, color: 'var(--text2)' }}>{inv.dueDate}</td>
-                        <td>
+                        <td data-label="Invoice No" className="mobile-td"><span className="tag">{inv.invoiceNo}</span></td>
+                        <td data-label="Amount" className="mobile-td"><strong>{fmtINR(inv.amount)}</strong></td>
+                        <td data-label="Due Date" className="mobile-td" style={{ fontSize: 12, color: 'var(--text2)' }}>{inv.dueDate}</td>
+                        <td data-label="Overdue" className="mobile-td">
                           <span className={`badge ${daysBadge(inv.daysOverdue, inv.recovered)}`}>
                             {inv.recovered ? 'Paid' : inv.daysOverdue + 'd'}
                           </span>
                         </td>
-                        <td><span className={`badge ${STATUS_META[inv.status]?.color || 'badge-gray'}`}>{STATUS_META[inv.status]?.label || inv.status}</span></td>
-                        <td style={{ fontSize: 12 }}>{inv.channel === 'WhatsApp' ? '💬' : '📧'} {inv.channel}</td>
-                        <td onClick={e => e.stopPropagation()}>
+                        <td data-label="Status" className="mobile-td"><span className={`badge ${STATUS_META[inv.status]?.color || 'badge-gray'}`}>{STATUS_META[inv.status]?.label || inv.status}</span></td>
+                        <td data-label="Channel" className="mobile-td" style={{ fontSize: 12 }}>{inv.channel === 'WhatsApp' ? '💬' : '📧'} {inv.channel}</td>
+                        <td data-label="Action" className="mobile-td" onClick={e => e.stopPropagation()}>
                           <button className="btn btn-sm" onClick={() => openDetail(inv)}>View →</button>
                         </td>
                       </tr>
@@ -2292,7 +2634,7 @@ Key rules:
                   </tbody>
                 </table>
               </div>
-              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 16, fontSize: 12, color: 'var(--text3)' }}>
+              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 12, fontSize: 12, color: 'var(--text3)', flexWrap: 'wrap' }}>
                 <span>Showing {filtered.length} of {invoices.length}</span>
                 <span style={{ marginLeft: 'auto' }}>Outstanding: <strong style={{ color: 'var(--amber)' }}>{fmtINR(totals.outstanding)}</strong></span>
                 <span>Recovered: <strong style={{ color: 'var(--green)' }}>{fmtINR(totals.recovered)}</strong></span>
@@ -2395,7 +2737,7 @@ Key rules:
             </div>
           </div>
           <div className="content">
-            <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 16, alignItems: 'start' }}>
+            <div className="recovery-grid">
 
               {/* Invoice list */}
               <div>
@@ -2572,7 +2914,7 @@ Key rules:
 
             {invoices.length === 0 && <div className="empty"><div className="empty-icon">⚖</div><div className="empty-title">No invoices in legal queue</div><div className="empty-sub">Invoices 45+ days overdue will appear here</div></div>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: 16, alignItems: 'start' }}>
+            <div className="legal-grid">
               <div>
                 <div className="danger-box">
                   <strong>⚠ Action Required</strong><br />
@@ -2780,17 +3122,17 @@ Key rules:
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {msgs.map((msg, i) => (
-                  <div key={i} className="card" style={{ display: 'grid', gridTemplateColumns: '180px 1fr 200px', gap: 16, cursor: 'pointer', alignItems: 'center' }} onClick={() => openDetail(msg.inv)}>
+                  <div key={i} className="card inbox-msg-grid" onClick={() => openDetail(msg.inv)} style={{ overflow: 'hidden' }}>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 13 }}>{msg.inv.company}</div>
                       <div style={{ fontSize: 11, color: 'var(--text3)' }}>{msg.inv.contact}</div>
                       <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>{new Date(msg.timestamp).toLocaleString()}</div>
                     </div>
-                    <div>
-                      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 2 }}>Original: "{msg.raw_message}"</div>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{msg.translated_text}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Original: "{msg.raw_message}"</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, wordBreak: 'break-word' }}>{msg.translated_text}</div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
+                    <div>
                       <span className={`badge ${intentBadge(msg.intent)}`}>
                         {(msg.intent || 'unknown').replace(/_/g, ' ').toUpperCase()}
                       </span>
@@ -2970,7 +3312,7 @@ Key rules:
             </div>
 
             {/* Summary Metrics */}
-            <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 20 }}>
+            <div className="admin-metric-grid">
               <div className="metric-card">
                 <div className="metric-label">🎯 Campaign Targets</div>
                 <div className="metric-value" style={{ color: 'var(--amber)' }}>{targets.length}</div>
@@ -3017,7 +3359,7 @@ Key rules:
                   </thead>
                   <tbody>
                     {targets.length === 0 && (
-                      <tr><td colSpan={7}>
+                      <tr className="mobile-table-row"><td colSpan={7} className="mobile-td" style={{justifyContent: 'center'}}>
                         <div className="empty">
                           <div className="empty-icon">🎉</div>
                           <div className="empty-title">No overdue invoices</div>
@@ -3028,19 +3370,19 @@ Key rules:
                     {targets.map((inv, idx) => {
                       const claim = inv.interest_data?.total_claim || inv.amount;
                       return (
-                        <tr key={inv.id}>
-                          <td style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text3)', fontSize: 12 }}>{idx + 1}</td>
-                          <td>
+                        <tr key={inv.id} className="mobile-table-row">
+                          <td data-label="#" className="mobile-td" style={{ textAlign: 'center', fontWeight: 600, color: 'var(--text3)', fontSize: 12 }}>{idx + 1}</td>
+                          <td data-label="Company" className="mobile-td">
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--amber-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--amber-dark)', flexShrink: 0 }}>{getInitials(inv.company)}</div>
                               <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.company}</div>
                             </div>
                           </td>
-                          <td style={{ fontSize: 12, color: 'var(--text2)' }}>{inv.contact}</td>
-                          <td><span className="tag">{inv.invoiceNo}</span></td>
-                          <td><span className={`badge ${daysBadge(inv.daysOverdue, false)}`}>{inv.daysOverdue}d</span></td>
-                          <td><span className={`badge ${STATUS_META[inv.status]?.color || 'badge-gray'}`}>{STATUS_META[inv.status]?.label || inv.status}</span></td>
-                          <td style={{ textAlign: 'right' }}>
+                          <td data-label="Contact" className="mobile-td" style={{ fontSize: 12, color: 'var(--text2)' }}>{inv.contact}</td>
+                          <td data-label="Invoice" className="mobile-td"><span className="tag">{inv.invoiceNo}</span></td>
+                          <td data-label="Days Overdue" className="mobile-td"><span className={`badge ${daysBadge(inv.daysOverdue, false)}`}>{inv.daysOverdue}d</span></td>
+                          <td data-label="Status" className="mobile-td"><span className={`badge ${STATUS_META[inv.status]?.color || 'badge-gray'}`}>{STATUS_META[inv.status]?.label || inv.status}</span></td>
+                          <td data-label="Total Claim" className="mobile-td" style={{ textAlign: 'right' }}>
                             <div style={{ fontWeight: 700, fontSize: 13 }}>{fmtINR(claim)}</div>
                             {inv.interest_data?.interest_accrued > 0 && (
                               <div style={{ fontSize: 10, color: 'var(--red)', marginTop: 2 }}>+{fmtINR(inv.interest_data.interest_accrued)} penalty</div>
