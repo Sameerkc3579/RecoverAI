@@ -198,7 +198,8 @@
 
     .sidebar-bottom {
       padding: 12px 8px;
-      border-top: 1px solid var(--border)
+      border-top: 1px solid var(--border);
+      position: relative
     }
 
     .user-card {
@@ -206,32 +207,301 @@
       align-items: center;
       gap: 10px;
       padding: 8px 10px;
-      border-radius: var(--radius)
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      position: relative
+    }
+
+    .user-card:hover {
+      background: var(--surface2)
+    }
+
+    .user-card-chevron {
+      margin-left: auto;
+      color: var(--text3);
+      font-size: 11px;
+      transition: transform 0.2s;
+      flex-shrink: 0
+    }
+
+    .user-card-chevron.open {
+      transform: rotate(180deg)
     }
 
     .user-avatar {
-      width: 32px;
-      height: 32px;
+      width: 34px;
+      height: 34px;
       border-radius: 50%;
-      background: var(--purple-bg);
-      color: var(--purple);
-      font-size: 12px;
-      font-weight: 600;
+      background: linear-gradient(135deg, var(--amber), var(--purple));
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(139,92,246,0.3);
+      position: relative
+    }
+
+    .popover-plan-row {
+      cursor: pointer;
+      transition: all 0.2s;
+      border-radius: 8px;
+    }
+    .popover-plan-row:hover {
+      background: var(--surface2) !important;
+      transform: translateX(4px);
+    }
+
+    /* Pricing Modal Specifics */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 24px;
+    }
+    @media (max-width: 900px) {
+      .pricing-grid { grid-template-columns: 1fr; }
+    }
+    .pricing-card {
+      padding: 24px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .pricing-card.active { border-color: var(--amber); ring: 2px var(--amber); }
+    .pricing-card.featured {
+      background: linear-gradient(135deg, var(--surface) 0%, #fff9f0 100%);
+      border-color: var(--amber);
+      box-shadow: 0 20px 40px rgba(186,117,23,0.1);
+      transform: scale(1.05);
+    }
+    .pricing-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
+    .plan-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: var(--amber);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .payment-checking {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 0;
+      text-align: center;
+    }
+    .success-pulse {
+      width: 80px;
+      height: 80px;
+      background: var(--green-bg);
+      color: var(--green);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin-bottom: 24px;
+      animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+      70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+
+    .user-avatar-online {
+      position: absolute;
+      bottom: 1px;
+      right: 1px;
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      border: 1.5px solid var(--surface);
+      animation: pulse-green 2s infinite
+    }
+
+    @keyframes pulse-green {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4) }
+      50% { box-shadow: 0 0 0 4px rgba(16,185,129,0) }
     }
 
     .user-name {
       font-size: 12px;
-      font-weight: 600
+      font-weight: 600;
+      color: var(--text)
     }
 
     .user-plan {
       font-size: 10px;
       color: var(--text3)
     }
+
+    /* ── Profile Popover ───────────────────────────────────── */
+    .profile-popover {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 8px;
+      right: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 8px 32px rgba(10,20,40,0.14), 0 2px 8px rgba(10,20,40,0.08);
+      z-index: 200;
+      overflow: hidden;
+      animation: popover-up 0.2s cubic-bezier(.4,0,.2,1)
+    }
+
+    @keyframes popover-up {
+      from { opacity: 0; transform: translateY(8px) scale(0.97) }
+      to   { opacity: 1; transform: translateY(0) scale(1) }
+    }
+
+    .popover-header {
+      background: linear-gradient(135deg, #0EA5E9 0%, #8B5CF6 100%);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .popover-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      color: #fff;
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(255,255,255,0.4);
+      flex-shrink: 0
+    }
+
+    .popover-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff
+    }
+
+    .popover-email {
+      font-size: 11px;
+      color: rgba(255,255,255,0.8);
+      margin-top: 1px
+    }
+
+    .popover-badge {
+      margin-left: auto;
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      flex-shrink: 0
+    }
+
+    .popover-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .popover-stat {
+      padding: 10px 8px;
+      text-align: center;
+      border-right: 1px solid var(--border)
+    }
+
+    .popover-stat:last-child { border-right: none }
+
+    .popover-stat-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text)
+    }
+
+    .popover-stat-lbl {
+      font-size: 9px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 1px
+    }
+
+    .popover-info {
+      padding: 8px 12px
+    }
+
+    .popover-info-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 0;
+      font-size: 11px;
+      color: var(--text2)
+    }
+
+    .popover-info-icon {
+      font-size: 13px;
+      width: 18px;
+      text-align: center;
+      flex-shrink: 0
+    }
+
+    .popover-actions {
+      padding: 8px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 6px
+    }
+
+    .popover-btn {
+      flex: 1;
+      padding: 7px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--text2);
+      transition: all 0.15s
+    }
+
+    .popover-btn:hover { background: var(--border); color: var(--text) }
+
+    .popover-btn-danger {
+      color: var(--red);
+      border-color: var(--red-bg);
+      background: var(--red-bg)
+    }
+
+    .popover-btn-danger:hover { background: var(--red); color: #fff }
 
     /* Topbar */
     .topbar {
@@ -2047,6 +2317,7 @@ Key rules:
       const [selectedInv, setSelectedInv] = useState(null);
       const [showDetailModal, setShowDetailModal] = useState(false);
       const [drawerOpen, setDrawerOpen] = useState(false);
+      const [profileOpen, setProfileOpen] = useState(false);
       const [settings, setSettings] = useState(() => {
         const local = localStorage.getItem('recoverai_settings');
         return local ? JSON.parse(local) : {
@@ -2062,8 +2333,11 @@ Key rules:
           legalAtDays: 45,
           reminderDays: [7, 21, 35],
           commissionRate: 2,
+          plan: 'Starter',
         };
       });
+
+      const [showPlans, setShowPlans] = useState(false);
 
       function handleLogin(tok, adminStatus, bizName) { 
         setToken(tok); 
@@ -2176,8 +2450,104 @@ Key rules:
         navItems.push({ id: 'admin', label: 'God Mode', icon: '👁', badge: 'Admin', badgeType: 'red' });
       }
 
-      /* helper to navigate and close drawer */
-      function navTo(id) { setPage(id); setDrawerOpen(false); }
+       /* helper to navigate and close drawer */
+      function navTo(id) { setPage(id); setDrawerOpen(false); setProfileOpen(false); }
+
+      /* Shared user profile card used in sidebar + drawer */
+      function UserProfileCard() {
+        const userDetails = JSON.parse(localStorage.getItem('recoverai_user_details') || '{}');
+        const totalActive = invoices.filter(i => !i.recovered).length;
+        const totalRecovered = invoices.filter(i => i.recovered).length;
+        const recoveredVal = invoices.filter(i => i.recovered).reduce((s,i) => s + i.amount, 0);
+        const initials = getInitials(settings.ownerName || settings.businessName || 'User');
+        const memberSince = userDetails.created_at
+          ? new Date(userDetails.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
+          : 'N/A';
+        return (
+          <div className="profile-popover" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="popover-header">
+              <div className="popover-avatar">{initials}</div>
+              <div style={{minWidth:0}}>
+                <div className="popover-name">{settings.businessName || 'My Business'}</div>
+                <div className="popover-email">{settings.email || userDetails.email || 'No email set'}</div>
+              </div>
+              {isAdmin && <span className="popover-badge">Admin</span>}
+            </div>
+            {/* Stats row */}
+            <div className="popover-stats">
+              <div className="popover-stat">
+                <div className="popover-stat-val">{invoices.length}</div>
+                <div className="popover-stat-lbl">Total</div>
+              </div>
+              <div className="popover-stat">
+                <div className="popover-stat-val" style={{color:'var(--amber)'}}>{totalActive}</div>
+                <div className="popover-stat-lbl">Pending</div>
+              </div>
+              <div className="popover-stat">
+                <div className="popover-stat-val" style={{color:'var(--green)'}}>{totalRecovered}</div>
+                <div className="popover-stat-lbl">Recovered</div>
+              </div>
+            </div>
+            {/* Info rows */}
+            <div className="popover-info">
+              {settings.ownerName && (
+                <div className="popover-info-row">
+                  <span className="popover-info-icon">👤</span>
+                  <span>{settings.ownerName}</span>
+                </div>
+              )}
+              {settings.city && (
+                <div className="popover-info-row">
+                  <span className="popover-info-icon">📍</span>
+                  <span>{settings.city}</span>
+                </div>
+              )}
+              {settings.phone && (
+                <div className="popover-info-row">
+                  <span className="popover-info-icon">📞</span>
+                  <span>{settings.phone}</span>
+                </div>
+              )}
+              {settings.gstin && (
+                <div className="popover-info-row">
+                  <span className="popover-info-icon">🏢</span>
+                  <span style={{fontFamily:'monospace', fontSize:10}}>{settings.gstin}</span>
+                </div>
+              )}
+              <div className="popover-info-row">
+                <span className="popover-info-icon">💰</span>
+                <span>₹{Number(recoveredVal).toLocaleString('en-IN')} recovered</span>
+              </div>
+              <div className="popover-info-row">
+                <span className="popover-info-icon">📅</span>
+                <span>Member since {memberSince}</span>
+              </div>
+              <div className="popover-info-row popover-plan-row" onClick={() => { setShowPlans(true); setProfileOpen(false); }}>
+                <span className="popover-info-icon">🎯</span>
+                <span>{settings.plan || 'Starter'} Plan</span>
+                <span style={{
+                  marginLeft:'auto', 
+                  background: (settings.plan === 'Professional' ? 'var(--blue-bg)' : settings.plan === 'Enterprise' ? 'var(--purple-bg)' : 'var(--amber-bg)'), 
+                  color: (settings.plan === 'Professional' ? 'var(--blue)' : settings.plan === 'Enterprise' ? 'var(--purple)' : 'var(--amber-dark)'), 
+                  fontSize:9, 
+                  fontWeight:700, 
+                  padding:'2px 8px', 
+                  borderRadius:6,
+                  textTransform: 'uppercase'
+                }}>
+                  {settings.plan === 'Starter' ? 'FREE' : 'PRO'}
+                </span>
+              </div>
+            </div>
+            {/* Actions */}
+            <div className="popover-actions">
+              <button className="popover-btn" onClick={() => { setPage('settings'); setProfileOpen(false); setDrawerOpen(false); }}>⚙ Settings</button>
+              <button className="popover-btn popover-btn-danger" onClick={handleLogout}>⏻ Sign Out</button>
+            </div>
+          </div>
+        );
+      }
 
       /* Shared nav list renderer (used in both sidebar and drawer) */
       function renderNavList(onNav) {
@@ -2217,7 +2587,15 @@ Key rules:
       const currentLabel = navItems.find(n => n.id === page)?.label || (page === 'settings' ? 'Settings' : 'RecoverAI');
 
       return (
-        <div className="layout">
+        <div className="layout" onClick={() => setProfileOpen(false)}>
+          {showPlans && <PricingModal 
+            currentPlan={settings.plan || 'Starter'} 
+            onClose={() => setShowPlans(false)} 
+            onUpgrade={(newPlan) => {
+              setSettings(prev => ({ ...prev, plan: newPlan }));
+              setShowPlans(false);
+            }} 
+          />}
 
           {/* ── Mobile top bar (visible ≤900px) ─────────────────── */}
           <div className="mobile-topbar">
@@ -2240,13 +2618,18 @@ Key rules:
               {renderNavList(navTo)}
             </nav>
             <div className="sidebar-bottom">
-              <div className="user-card">
-                <div className="user-avatar">{getInitials(settings.ownerName)}</div>
-                <div>
-                  <div className="user-name">{settings.businessName || 'Unnamed Business'}</div>
-                  <div className="user-plan">Starter Plan {settings.city ? `· ${settings.city}` : ''}</div>
+              {profileOpen && <UserProfileCard />}
+              <button className="user-card" onClick={e => { e.stopPropagation(); setProfileOpen(o => !o); }}>
+                <div className="user-avatar">
+                  {getInitials(settings.ownerName || settings.businessName || 'U')}
+                  <div className="user-avatar-online"></div>
                 </div>
-              </div>
+                <div style={{minWidth:0}}>
+                  <div className="user-name">{settings.businessName || 'Unnamed Business'}</div>
+                  <div className="user-plan">{(settings.plan || 'Starter') + ' Plan'}{settings.city ? ` · ${settings.city}` : ''}</div>
+                </div>
+                <span className={`user-card-chevron${profileOpen ? ' open' : ''}`}>▲</span>
+              </button>
             </div>
           </div>
 
@@ -2261,13 +2644,18 @@ Key rules:
               {renderNavList(setPage)}
             </nav>
             <div className="sidebar-bottom">
-              <div className="user-card">
-                <div className="user-avatar">{getInitials(settings.ownerName)}</div>
-                <div>
-                  <div className="user-name">{settings.businessName || 'Unnamed Business'}</div>
-                  <div className="user-plan">Starter Plan {settings.city ? `· ${settings.city}` : ''}</div>
+              {profileOpen && <UserProfileCard />}
+              <button className="user-card" onClick={e => { e.stopPropagation(); setProfileOpen(o => !o); }}>
+                <div className="user-avatar">
+                  {getInitials(settings.ownerName || settings.businessName || 'U')}
+                  <div className="user-avatar-online"></div>
                 </div>
-              </div>
+                <div style={{minWidth:0}}>
+                  <div className="user-name">{settings.businessName || 'Unnamed Business'}</div>
+                  <div className="user-plan">{(settings.plan || 'Starter') + ' Plan'}{settings.city ? ` · ${settings.city}` : ''}</div>
+                </div>
+                <span className={`user-card-chevron${profileOpen ? ' open' : ''}`}>▲</span>
+              </button>
             </div>
           </aside>
 
@@ -3697,6 +4085,99 @@ Key rules:
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── PRICING MODAL ─── */
+    function PricingModal({ currentPlan, onClose, onUpgrade }) {
+      const [step, setStep] = useState('selection'); // selection, processing, success
+      const [selected, setSelected] = useState(null);
+
+      const plans = [
+        { name: 'Starter', price: '₹0', priceSub: 'forever free', features: ['Up to 10 Invoices/mo', 'Email Reminders', 'Basic Dashboard', 'WhatsApp (Manual)'], id: 'Starter' },
+        { name: 'Professional', price: '₹4,999', priceSub: 'per month', features: ['Unlimited Invoices', 'WhatsApp API Integration', 'Legal Notice Generator', 'Dedicated Recovery Agent', 'Real-time AI Chat'], id: 'Professional', featured: true },
+        { name: 'Enterprise', price: '₹19,999', priceSub: 'per month', features: ['Multiple Businesses', 'API Access', 'Custom Workflow Automation', 'White-labeled Documents', 'Priority Support'], id: 'Enterprise' }
+      ];
+
+      function handlePlanSelect(plan) {
+        if (plan.id === currentPlan) return;
+        setSelected(plan);
+        setStep('processing');
+        // Simulate payment check
+        setTimeout(() => {
+          setStep('success');
+          onUpgrade(plan.id);
+        }, 3000);
+      }
+
+      return (
+        <div className="overlay" onClick={onClose} style={{zIndex: 2000}}>
+          <div className="modal" style={{ maxWidth: 1000, padding: 32 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <div>
+                <h2 style={{ fontSize: 28, fontWeight: 800 }}>Choose Your Power Level</h2>
+                <p style={{ color: 'var(--text3)', marginTop: 4 }}>Scale your recovery operations with professional tools</p>
+              </div>
+              <button className="btn btn-sm" onClick={onClose}>✕</button>
+            </div>
+
+            {step === 'selection' && (
+              <div className="pricing-grid">
+                {plans.map(p => (
+                  <div key={p.id} className={`pricing-card ${p.featured ? 'featured' : ''} ${currentPlan === p.id ? 'active' : ''}`}>
+                    {p.featured && <div className="plan-badge">MOST POPULAR</div>}
+                    <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>{p.name}</div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
+                      <span style={{ fontSize: 32, fontWeight: 800 }}>{p.price}</span>
+                      <span style={{ color: 'var(--text3)', fontSize: 13 }}>{p.priceSub}</span>
+                    </div>
+                    <div style={{ height: 1, background: 'var(--border)', margin: '16px 0' }}></div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--text2)' }}>What's included:</div>
+                      {p.features.map(f => (
+                        <div key={f} style={{ display: 'flex', gap: 8, fontSize: 13, marginBottom: 8, alignItems: 'center' }}>
+                          <span style={{ color: 'var(--green)', fontWeight: 800 }}>✓</span>
+                          <span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button 
+                      className={`btn ${p.featured ? 'btn-primary' : 'btn-outline'} btn-lg`} 
+                      style={{ width: '100%', marginTop: 24, justifyContent: 'center' }}
+                      disabled={currentPlan === p.id}
+                      onClick={() => handlePlanSelect(p)}
+                    >
+                      {currentPlan === p.id ? 'Current Plan' : 'Select Plan'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {step === 'processing' && (
+              <div className="payment-checking">
+                <div className="spinner" style={{ width: 48, height: 48, borderWidth: 4, marginBottom: 24 }}></div>
+                <h3 style={{ fontSize: 20, fontWeight: 700 }}>Processing Secure Payment</h3>
+                <p style={{ color: 'var(--text3)', marginTop: 8 }}>Talking to Razorpay servers...</p>
+                <div style={{ marginTop: 24, padding: '12px 20px', background: 'var(--surface2)', borderRadius: 12, fontSize: 13, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                   <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 10px var(--green)' }}></div>
+                   Secure Transaction: {selected?.price} / month
+                </div>
+              </div>
+            )}
+
+            {step === 'success' && (
+              <div className="payment-checking">
+                <div className="success-pulse">✓</div>
+                <h3 style={{ fontSize: 24, fontWeight: 800, color: 'var(--green)' }}>Welcome to {selected?.name}!</h3>
+                <p style={{ color: 'var(--text3)', marginTop: 8, maxWidth: 400 }}>Your workspace has been upgraded. You now have access to all {selected?.name} features.</p>
+                <button className="btn btn-primary btn-lg" style={{ marginTop: 32, padding: '14px 40px' }} onClick={onClose}>
+                   Go to Dashboard →
+                </button>
+              </div>
+            )}
           </div>
         </div>
       );
