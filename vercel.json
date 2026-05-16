@@ -7,6 +7,8 @@
       "use": "@vercel/python",
       "config": {
         "includeFiles": [
+          "dashboard.html",
+          "static/**",
           "RecoverAI_MVP.html",
           "landing-preview.html",
           "dist/index.html",
