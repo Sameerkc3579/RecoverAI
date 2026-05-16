@@ -1,4 +1,4 @@
-"""
+﻿"""
 RecoverAI — Auth Router (Security-Hardened)
 
 Routes
@@ -64,21 +64,17 @@ _rate_limit_lock = Lock()
 
 def _check_rate_limit(ip: str) -> None:
     """
-    Enforce login rate limiting per IP address.
-    Raises HTTP 429 + Retry-After header if the limit is exceeded.
+    Check if this IP has exceeded the failed-login limit.
+    Does NOT increment the counter (call _record_failed_login on failure).
+    Raises HTTP 429 if at or above limit.
     """
     now = time.time()
     with _rate_limit_lock:
         record = _rate_limit_store[ip]
-
-        # Reset window if it has expired
         if now - record["window_start"] > _RATE_LIMIT_WINDOW_SECONDS:
             record["count"] = 0
             record["window_start"] = now
-
-        record["count"] += 1
-
-        if record["count"] > _MAX_ATTEMPTS:
+        if record["count"] >= _MAX_ATTEMPTS:
             retry_after = int(_RATE_LIMIT_WINDOW_SECONDS - (now - record["window_start"]))
             logger.warning(
                 "RATE_LIMIT_TRIGGERED | ip=%s | attempts=%d | retry_after=%ds",
@@ -94,8 +90,14 @@ def _check_rate_limit(ip: str) -> None:
             )
 
 
+def _record_failed_login(ip: str) -> None:
+    """Increment failed-login counter. Call only after credentials are verified wrong."""
+    with _rate_limit_lock:
+        _rate_limit_store[ip]["count"] += 1
+
+
 def _clear_rate_limit(ip: str) -> None:
-    """Reset rate limit counter after a successful login."""
+    """Reset the rate limit counter for an IP after a successful login."""
     with _rate_limit_lock:
         _rate_limit_store.pop(ip, None)
 
@@ -143,6 +145,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     is_admin: bool = False
     business_name: str | None = None
+    email: str | None = None
 
 
 class LogoutResponse(BaseModel):
@@ -264,6 +267,7 @@ async def login(
         token_type="bearer",
         is_admin=is_admin,
         business_name=user.get("business_name"),
+        email=user["email"],
     )
 
 
@@ -345,6 +349,7 @@ async def google_login(payload: GoogleAuthRequest) -> TokenResponse:
         token_type="bearer",
         is_admin=is_admin,
         business_name=user.get("business_name"),
+        email=user["email"],
     )
 
 
@@ -442,6 +447,7 @@ async def refresh_access_token(payload: RefreshRequest) -> TokenResponse:
         token_type="bearer",
         is_admin=user["email"] in settings.admin_emails_list,
         business_name=user.get("business_name"),
+        email=user["email"],
     )
 
 

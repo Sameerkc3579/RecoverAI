@@ -37,7 +37,9 @@ logger = logging.getLogger(__name__)
 
 # ── Gemini client (shared config) ─────────────────────────────────────────────
 _client = genai.Client(api_key=settings.gemini_api_key)
-MODEL = "gemini-2.5-flash"
+# Use gemini-2.0-flash (GA / stable). Switch to gemini-2.5-flash once it
+# has fully ramped its capacity and is no longer returning 503 UNAVAILABLE.
+MODEL = "gemini-2.0-flash"
 
 # ── Valid intents ─────────────────────────────────────────────────────────────
 IntentType = Literal["promise_to_pay", "dispute", "stall", "unknown"]
@@ -156,11 +158,14 @@ def _heuristic_classify(raw_text: str) -> dict:
 
 
 def _is_quota_error(exc: Exception) -> bool:
-    """Detect Google API quota / billing exhaustion errors (429, ResourceExhausted, etc.)."""
+    """Detect Google API quota / billing / overload errors (429, 503, etc.)."""
     err_str = str(exc).lower()
     return any(kw in err_str for kw in [
         "429", "quota", "resource_exhausted", "resourceexhausted",
         "billing", "limit: 0", "limit:0", "rate limit", "too many requests",
+        # 503 model overload — treat the same as quota exhaustion so the
+        # heuristic fallback activates instead of crashing the pipeline.
+        "503", "unavailable", "high demand",
     ])
 
 

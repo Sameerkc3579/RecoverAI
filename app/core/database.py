@@ -29,7 +29,8 @@ async def connect_db() -> None:
     """Create the Motor client and verify connectivity."""
     global _client
     _client = AsyncIOMotorClient(settings.mongo_uri)
-    await _client.admin.command("ping")
+    # Removing ping to avoid startup blocking
+    pass
 
 
 async def close_db() -> None:

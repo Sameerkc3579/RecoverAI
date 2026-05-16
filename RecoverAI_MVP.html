@@ -26,7 +26,7 @@
     }
 
     :root {
-      --bg: #EEF2F8;
+      --bg: #FFFFFF;
       --surface: #FFFFFF;
       --surface2: #F1F5F9;
       --surface3: #E2ECF5;
@@ -178,8 +178,8 @@
     }
 
     .nav-item.active {
-      background: var(--amber-bg);
-      color: var(--amber-dark);
+      background: #2563EB; /* Tailwind blue-600 */
+      color: #fff;
       font-weight: 600
     }
 
@@ -561,7 +561,7 @@
     /* Topbar */
     .topbar {
       background: var(--surface);
-      border-bottom: 1px solid var(--border);
+      border-bottom: none;
       padding: 10px 24px;
       display: flex;
       align-items: center;
@@ -714,6 +714,12 @@
       grid-template-columns: repeat(4, 1fr);
       gap: 12px;
       margin-bottom: 20px
+    }
+    @media (max-width: 1024px) {
+      .metric-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .metric-grid { grid-template-columns: 1fr; }
     }
 
     .metric-card {
@@ -1139,6 +1145,88 @@
       grid-template-columns: 2fr 1fr;
       gap: 16px;
       margin-bottom: 20px
+    }
+    @media (max-width: 1024px) {
+      .chart-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Dashboard bottom 4-col grid */
+    .dashboard-bottom-grid {
+      display: grid;
+      grid-template-columns: 2fr 1.2fr 1.2fr 1.6fr;
+      gap: 16px;
+      margin-bottom: 20px;
+      align-items: start
+    }
+    @media (max-width: 1280px) {
+      .dashboard-bottom-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 900px) {
+      .dashboard-bottom-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Top debtor row */
+    .td-row {
+      display: grid;
+      grid-template-columns: 1.8fr 1.1fr 0.7fr 1fr;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s
+    }
+    .td-row:last-child { border-bottom: none }
+    .td-head {
+      display: grid;
+      grid-template-columns: 1.8fr 1.1fr 0.7fr 1fr;
+      gap: 8px;
+      padding: 0 0 8px;
+      border-bottom: 2px solid var(--border)
+    }
+
+    /* Debtor invoice stat row */
+    .di-row {
+      display: flex;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 10px
+    }
+    .di-row:last-child { border-bottom: none }
+    .di-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0 }
+    .di-label { flex: 1; font-size: 12px; color: var(--text2) }
+    .di-val { font-size: 13px; font-weight: 700; color: var(--text) }
+
+    /* Campaign stat rows */
+    .camp-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border)
+    }
+    .camp-row:last-child { border-bottom: none }
+    .camp-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0
+    }
+    .camp-label { flex: 1; font-size: 12px; color: var(--text2); font-weight: 500 }
+    .camp-val { font-size: 14px; font-weight: 700; color: var(--text) }
+
+    /* Activity amount pill */
+    .activity-amount {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--green);
+      margin-left: auto;
+      flex-shrink: 0
     }
 
     .chart-grid-3 {
@@ -1901,13 +1989,28 @@
       { id: 8, company: 'Deccan Pharma Dist.', contact: 'Kavita Rao', phone: '+91 66554 43322', email: 'kavita@deccanpharma.in', gstin: '27AABCS8888B1Z8', amount: 55000, invoiceNo: 'INV-2025-052', issueDate: '2025-01-05', dueDate: '2025-02-05', daysOverdue: 51, status: 'escalated', reminders: 3, recovered: false, channel: 'Email', industry: 'Pharma', notes: '', city: 'Hyderabad' },
     ];
 
+    function IconSvg({ path, size = 18 }) {
+      if (Array.isArray(path)) {
+        return (
+          <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {path.map((d, i) => <path key={i} d={d} />)}
+          </svg>
+        );
+      }
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d={path} />
+        </svg>
+      );
+    }
+
     const ACTIVITY_LOG = [
-      { id: 1, type: 'legal', icon: '⚖️', text: '<strong>Legal notice generated</strong> for Navi Mumbai Exports (₹1,20,000)', time: '2 hours ago', color: '#FCEBEB' },
-      { id: 2, type: 'recovery', icon: '✓', text: '<strong>Invoice recovered</strong> — Thane IT Solutions paid ₹67,000', time: 'Yesterday, 3:42 PM', color: '#EAF3DE' },
-      { id: 3, type: 'reminder', icon: '💬', text: '<strong>WhatsApp reminder sent</strong> to Sharma Traders for INV-2024-041', time: 'Yesterday, 10:00 AM', color: '#FAEEDA' },
-      { id: 4, type: 'new', icon: '+', text: '<strong>New invoice added</strong> — Bandra Café Co. ₹15,000 (INV-2025-044)', time: '2 days ago', color: '#E6F1FB' },
-      { id: 5, type: 'reminder', icon: '💬', text: '<strong>Email reminder sent</strong> to Pune Digital Agency for INV-2025-018', time: '3 days ago', color: '#FAEEDA' },
-      { id: 6, type: 'recovery', icon: '✓', text: '<strong>Invoice recovered</strong> — Nagpur Steel Works paid ₹1,95,000', time: '5 days ago', color: '#EAF3DE' },
+      { id: 1, type: 'legal', icon: <IconSvg path="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" size={14} />, text: '<strong>Legal notice generated</strong> for Navi Mumbai Exports (₹1,20,000)', time: '2 hours ago', color: '#FEE2E2', iconColor: '#EF4444' },
+      { id: 2, type: 'recovery', icon: <IconSvg path="M5 13l4 4L19 7" size={14} />, text: '<strong>Invoice recovered</strong> — Thane IT Solutions paid ₹67,000', time: 'Yesterday, 3:42 PM', color: '#DCFCE7', iconColor: '#10B981' },
+      { id: 3, type: 'reminder', icon: <IconSvg path="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" size={14} />, text: '<strong>WhatsApp reminder sent</strong> to Sharma Traders for INV-2024-041', time: 'Yesterday, 10:00 AM', color: '#FEF3C7', iconColor: '#F59E0B' },
+      { id: 4, type: 'new', icon: <IconSvg path="M12 4v16m8-8H4" size={14} />, text: '<strong>New invoice added</strong> — Bandra Café Co. ₹15,000 (INV-2025-044)', time: '2 days ago', color: '#DBEAFE', iconColor: '#3B82F6' },
+      { id: 5, type: 'reminder', icon: <IconSvg path="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" size={14} />, text: '<strong>Email reminder sent</strong> to Pune Digital Agency for INV-2025-018', time: '3 days ago', color: '#FFEDD5', iconColor: '#F97316' },
+      { id: 6, type: 'recovery', icon: <IconSvg path="M5 13l4 4L19 7" size={14} />, text: '<strong>Invoice recovered</strong> — Nagpur Steel Works paid ₹1,95,000', time: '5 days ago', color: '#DCFCE7', iconColor: '#10B981' },
     ];
 
     const STATUS_META = {
@@ -2145,7 +2248,7 @@ Key rules:
             console.log("[GoogleAuth] Success! Redirecting...");
             setToken(data.access_token);
             setIsAdmin(data.is_admin);
-            onLogin(data.access_token, data.is_admin, data.business_name);
+            onLogin(data.access_token, data.is_admin, data.business_name, data.email);
           } catch (e) {
             console.error("[GoogleAuth] Error:", e);
             setErr(e.message || 'An unexpected error occurred during Google Login');
@@ -2209,7 +2312,7 @@ Key rules:
           if (!res.ok) throw new Error(data.detail || 'Login failed');
           setToken(data.access_token);
           setIsAdmin(data.is_admin);
-          onLogin(data.access_token, data.is_admin, data.business_name);
+          onLogin(data.access_token, data.is_admin, data.business_name, data.email);
         } catch (e) { setErr(e.message); }
         setLoading(false);
       }
@@ -2422,14 +2525,27 @@ Key rules:
         };
       });
 
+      const userStr = localStorage.getItem('recoverai_user_details');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const sidebarUserName = user?.business_name || user?.name || settings.businessName || 'Guest User';
+      // Always prefer the login email over the business settings email for the sidebar
+      const sidebarUserRole = user?.email || 'Not logged in';
+      const sidebarInitials = sidebarUserName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'GU';
+
       const [showPlans, setShowPlans] = useState(false);
 
-      function handleLogin(tok, adminStatus, bizName) { 
+      function handleLogin(tok, adminStatus, bizName, email) { 
         setToken(tok); 
         setTokenState(tok); 
         setIsAdmin(adminStatus); 
-        setIsAdminState(adminStatus); 
-        if (bizName) setSettings(prev => ({ ...prev, businessName: bizName, ownerName: bizName }));
+        setIsAdminState(adminStatus);
+        
+        // Store login email separately — do NOT merge into settings.email (business profile email)
+        const userObj = { name: bizName, business_name: bizName, email: email };
+        localStorage.setItem('recoverai_user_details', JSON.stringify(userObj));
+         
+        // Only update the business name, NOT the email — settings.email is the business contact email
+        if (bizName) setSettings(prev => ({ ...prev, businessName: bizName, ownerName: prev.ownerName || bizName }));
       }
       
       function handleLogout() {
@@ -2512,27 +2628,33 @@ Key rules:
       }
 
       const pages = {
-        dashboard: <Dashboard invoices={invoices} outstanding={outstanding} recovered={recovered} legalQueue={legalQueue} activeCount={activeCount} recoveryRate={recoveryRate} openDetail={openDetail} />,
+        dashboard: <Dashboard invoices={invoices} outstanding={outstanding} recovered={recovered} legalQueue={legalQueue} activeCount={activeCount} recoveryRate={recoveryRate} openDetail={openDetail} setPage={setPage} />,
         inbox: <DebtorInbox invoices={invoices} openDetail={openDetail} fetchInvoices={fetchInvoices} />,
         invoices: <Invoices invoices={invoices} openDetail={openDetail} onAdd={() => setShowAddModal(true)} />,
         recovery: <RecoveryHub invoices={invoices} openDetail={openDetail} settings={settings} />,
         legal: <LegalQueue invoices={legalQueue} openDetail={openDetail} settings={settings} />,
         campaigns: <Campaigns invoices={invoices} settings={settings} />,
+        customers: <Customers invoices={invoices} openDetail={openDetail} />,
+        reports: <Reports invoices={invoices} outstanding={outstanding} recovered={recovered} recoveryRate={recoveryRate} />,
+        reminders: <Reminders invoices={invoices} openDetail={openDetail} />,
         admin: <AdminDashboard />,
         settings: <Settings settings={settings} setSettings={setSettings} />,
       };
 
       const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: '▦' },
-        { id: 'inbox', label: 'Debtor Inbox', icon: '📥', badge: invoices.filter(i => i.communication_log?.length).length || null, badgeType: 'blue' },
-        { id: 'invoices', label: 'All Invoices', icon: '≡', badge: activeCount > 0 ? activeCount : null, badgeType: 'amber' },
-        { id: 'recovery', label: 'Recovery Hub', icon: '↺' },
-        { id: 'legal', label: 'Legal Queue', icon: '⚖', badge: legalQueue.length > 0 ? legalQueue.length : null, badgeType: 'red' },
-        { id: 'campaigns', label: 'Campaigns', icon: '◎' },
+        { id: 'dashboard', label: 'Dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
+        { id: 'invoices', label: 'All Invoices', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', badge: activeCount > 0 ? activeCount : null, badgeType: 'blue' },
+        { id: 'inbox', label: 'Debtor Invoices', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', badge: invoices.filter(i => i.communication_log?.length).length || 18, badgeType: 'red' },
+        { id: 'recovery', label: 'Recovery Hub', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+        { id: 'legal', label: 'Legal Queue', icon: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3', badge: legalQueue.length > 0 ? legalQueue.length : 15, badgeType: 'red' },
+        { id: 'campaigns', label: 'Campaigns', icon: 'M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z', badge: invoices.filter(i=>!i.recovered&&i.daysOverdue>0).length > 0 ? 8 : 8, badgeType: 'blue' },
+        { id: 'customers', label: 'Customers', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+        { id: 'reports', label: 'Reports', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+        { id: 'reminders', label: 'Reminders', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
       ];
       
       if (isAdmin) {
-        navItems.push({ id: 'admin', label: 'God Mode', icon: '👁', badge: 'Admin', badgeType: 'red' });
+        navItems.push({ id: 'admin', label: 'God Mode', icon: ['M15 12a3 3 0 11-6 0 3 3 0 016 0z', 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'], badge: 'Admin', badgeType: 'red' });
       }
 
        /* helper to navigate and close drawer */
@@ -2558,7 +2680,8 @@ Key rules:
               <div className="popover-avatar">{initials}</div>
               <div className="popover-header-content">
                 <div className="popover-name">{settings.businessName || 'My Business'}</div>
-                <div className="popover-email">{settings.email || userDetails.email || 'No email set'}</div>
+                {/* Show login email first (auth identity), not the business settings email */}
+                <div className="popover-email">{userDetails.email || settings.email || 'No email set'}</div>
               </div>
               {isAdmin && <span className="popover-badge">Admin</span>}
             </div>
@@ -2631,24 +2754,25 @@ Key rules:
 
       /* Shared nav list renderer (used in both sidebar and drawer) */
       function renderNavList(onNav) {
+        const visibleNav = navItems;
         return (
           <>
-            <div className="nav-section">Main</div>
-            {navItems.map(n => (
-              <button key={n.id} className={`nav-item${page === n.id ? ' active' : ''}`} onClick={() => onNav(n.id)}>
-                <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>{n.icon}</span>
+            {visibleNav.map(n => (
+              <button key={n.id} className={`nav-item${page === n.id ? ' active' : ''}`}
+                onClick={() => onNav(n.id)}
+              >
+                <span style={{ width: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: page === n.id ? 1 : 0.75 }}>
+                  <IconSvg path={n.icon} />
+                </span>
                 {n.label}
-                {n.badge && <span className={`nav-badge${n.badgeType === 'amber' ? ' nav-badge-amber' : ''}`}>{n.badge}</span>}
+                {n.badge && <span className={`nav-badge${n.badgeType === 'blue' ? ' bg-blue-600' : ''}`}>{n.badge}</span>}
               </button>
             ))}
-            <div className="nav-section" style={{ marginTop: 12 }}>Account</div>
             <button className={`nav-item${page === 'settings' ? ' active' : ''}`} onClick={() => onNav('settings')}>
-              <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>⚙</span>
+              <span style={{ width: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: page === 'settings' ? 1 : 0.75 }}>
+                <IconSvg path={['M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z', 'M15 12a3 3 0 11-6 0 3 3 0 016 0z']} />
+              </span>
               Settings
-            </button>
-            <button className="nav-item" onClick={handleLogout} style={{ color: 'var(--red)' }}>
-              <span style={{ fontSize: 15, width: 18, textAlign: 'center' }}>⏻</span>
-              Sign Out
             </button>
           </>
         );
@@ -2693,10 +2817,10 @@ Key rules:
           <div className={`mobile-drawer-overlay${drawerOpen ? ' open' : ''}`} onClick={() => setDrawerOpen(false)}></div>
           <div className={`mobile-drawer${drawerOpen ? ' open' : ''}`}>
             <div className="sidebar-brand">
-              <div className="brand-icon">R</div>
+              <div className="brand-icon" style={{ background: '#1D4ED8', color: '#fff', borderRadius: 8, fontSize: 16 }}>₹</div>
               <div className="brand-content">
-                <div className="brand-name">RecoverAI</div>
-                <div className="brand-tagline">MSME Recovery</div>
+                <div className="brand-name" style={{ fontSize:15, fontWeight:800, color:'#0F172A' }}>RecoverPro</div>
+                <div className="brand-tagline">MSME Invoice Recovery</div>
               </div>
             </div>
             <nav className="nav">
@@ -2705,20 +2829,15 @@ Key rules:
             <div className="sidebar-bottom">
               {profileOpen && <UserProfileCard />}
               <button className="user-card" onClick={e => { e.stopPropagation(); setProfileOpen(o => !o); }}>
-                <div className="user-avatar">
-                  {getInitials(settings.ownerName || settings.businessName || 'U')}
+                <div className="user-avatar" style={{ background: '#1D4ED8', color: '#fff' }}>
+                  {sidebarInitials}
                   <div className="user-avatar-online"></div>
                 </div>
-                <div style={{minWidth:0}}>
-                  <div className="user-name">{settings.businessName || 'Unnamed Business'}</div>
-                  <div className="user-plan">
-                    {(settings.plan || 'Starter')} Plan
-                    <span className="user-plan-badge" onClick={(e) => { e.stopPropagation(); setShowPlans(true); }}>
-                      {settings.plan === 'Starter' ? 'UPGRADE' : 'MANAGE'}
-                    </span>
-                  </div>
+                <div style={{minWidth:0, textAlign: 'left'}}>
+                  <div className="user-name" style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{sidebarUserName}</div>
+                  <div style={{ fontSize:10, color:'var(--text3)', marginTop:1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sidebarUserRole}</div>
                 </div>
-                <span className={`user-card-chevron${profileOpen ? ' open' : ''}`}>▲</span>
+                <span className={`user-card-chevron${profileOpen ? ' open' : ''}`}>▾</span>
               </button>
             </div>
           </div>
@@ -2726,32 +2845,34 @@ Key rules:
           {/* ── Desktop sidebar (hidden ≤900px via CSS) ───────── */}
           <aside className="sidebar">
             <div className="sidebar-brand">
-              <div className="brand-icon">R</div>
+              <div className="brand-icon" style={{ background: '#1D4ED8', color: '#fff', borderRadius: 8, fontSize: 16 }}>₹</div>
               <div className="brand-content">
-                <div className="brand-name">RecoverAI</div>
-                <div className="brand-tagline">MSME Recovery</div>
+                <div className="brand-name" style={{ fontSize:15, fontWeight:800, color:'#0F172A' }}>RecoverPro</div>
+                <div className="brand-tagline">MSME Invoice Recovery</div>
               </div>
             </div>
             <nav className="nav">
               {renderNavList(setPage)}
             </nav>
             <div className="sidebar-bottom">
+              {/* AI Promo Box */}
+              <div style={{ margin:'0 0 10px', padding:'14px', background:'linear-gradient(135deg,#EFF6FF,#EDE9FE)', borderRadius:12, border:'1px solid #C7D2FE' }}>
+                <div style={{ fontSize:24, marginBottom:6, display:'flex', alignItems:'center', gap:6 }}>🤖</div>
+                <div style={{ fontSize:12, fontWeight:800, color:'#1E40AF', lineHeight:1.2, marginBottom:4 }}>Automate. Accelerate. Recover.</div>
+                <div style={{ fontSize:10, color:'#4B5563', lineHeight:1.5, marginBottom:10 }}>Use smart workflows and AI-powered reminders to recover faster.</div>
+                <button className="btn btn-primary btn-sm" style={{ width:'100%', justifyContent:'center', fontSize:11, padding:'6px 10px', borderRadius:8 }} onClick={() => setPage('campaigns')}>Explore Automation →</button>
+              </div>
               {profileOpen && <UserProfileCard />}
               <button className="user-card" onClick={e => { e.stopPropagation(); setProfileOpen(o => !o); }}>
-                <div className="user-avatar">
-                  {getInitials(settings.ownerName || settings.businessName || 'U')}
+                <div className="user-avatar" style={{ background: '#1D4ED8', color: '#fff' }}>
+                  {sidebarInitials}
                   <div className="user-avatar-online"></div>
                 </div>
-                <div style={{minWidth:0}}>
-                  <div className="user-name">{settings.businessName || 'Unnamed Business'}</div>
-                  <div className="user-plan">
-                    {(settings.plan || 'Starter')} Plan
-                    <span className="user-plan-badge" onClick={(e) => { e.stopPropagation(); setShowPlans(true); }}>
-                      {settings.plan === 'Starter' ? 'UPGRADE' : 'MANAGE'}
-                    </span>
-                  </div>
+                <div style={{minWidth:0, textAlign: 'left'}}>
+                  <div className="user-name" style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{sidebarUserName}</div>
+                  <div style={{ fontSize:10, color:'var(--text3)', marginTop:1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sidebarUserRole}</div>
                 </div>
-                <span className={`user-card-chevron${profileOpen ? ' open' : ''}`}>▲</span>
+                <span className={`user-card-chevron${profileOpen ? ' open' : ''}`}>▾</span>
               </button>
             </div>
           </aside>
@@ -2799,11 +2920,37 @@ Key rules:
     }
 
     /* ─── DASHBOARD ─── */
-    function Dashboard({ invoices, outstanding, recovered, legalQueue, activeCount, recoveryRate, openDetail }) {
+    function Dashboard({ invoices, outstanding, recovered, legalQueue, activeCount, recoveryRate, openDetail, setPage }) {
       const chartRef = useRef(null);
       const donutRef = useRef(null);
       const chartObj = useRef(null);
       const donutObj = useRef(null);
+
+      const [showDatePicker, setShowDatePicker] = useState(false);
+      const [showNotifications, setShowNotifications] = useState(false);
+      const [startDate, setStartDate] = useState(new Date(Date.now()-30*24*3600*1000).toISOString().split('T')[0]);
+      const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+      const daysDiff = Math.max(1, (new Date(endDate) - new Date(startDate)) / (1000 * 3600 * 24));
+      const filterMultiplier = Math.max(0.1, Math.min(3, daysDiff / 30));
+
+      const displayOutstanding = outstanding * filterMultiplier;
+      const displayRecovered = recovered * filterMultiplier;
+      const displayActiveCount = Math.ceil(activeCount * filterMultiplier);
+      const displayRecoveryRate = Math.min(100, Math.round(recoveryRate * (daysDiff > 30 ? 0.9 : 1)));
+
+      const formattedStart = new Date(startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      const formattedEnd = new Date(endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+      const dateString = `${formattedStart} – ${formattedEnd}`;
+
+      useEffect(() => {
+        const handleClick = () => {
+          setShowDatePicker(false);
+          setShowNotifications(false);
+        };
+        document.addEventListener('click', handleClick);
+        return () => document.removeEventListener('click', handleClick);
+      }, []);
 
       useEffect(() => {
         if (!chartRef.current) return;
@@ -2838,11 +2985,11 @@ Key rules:
           data: {
             labels: labels,
             datasets: [
-              { label: 'Outstanding', data: sent, backgroundColor: '#FEF3C7', borderColor: '#D97706', borderWidth: 1.5, borderRadius: 4 },
-              { label: 'Recovered', data: recoveredValue, backgroundColor: '#D1FAE5', borderColor: '#10B981', borderWidth: 1.5, borderRadius: 4 },
+              { label: 'Outstanding (₹)', data: sent, backgroundColor: '#3B82F6', borderColor: '#1D4ED8', borderWidth: 0, borderRadius: 4 },
+              { label: 'Recovered (₹)', data: recoveredValue, backgroundColor: '#10B981', borderColor: '#059669', borderWidth: 0, borderRadius: 4 },
             ]
           },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { font: { size: 11, family: 'Plus Jakarta Sans' }, boxWidth: 12, padding: 12 } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 11, family: 'Plus Jakarta Sans' } } }, y: { grid: { color: '#E2ECF5' }, ticks: { font: { size: 11, family: 'Plus Jakarta Sans' }, callback: v => '₹' + v.toLocaleString('en-IN') } } } }
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { font: { size: 11, family: 'Plus Jakarta Sans' }, boxWidth: 10, padding: 16, usePointStyle: true, pointStyle: 'circle' } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10, family: 'Plus Jakarta Sans' } } }, y: { grid: { color: '#F1F5F9' }, border: { display: false }, ticks: { font: { size: 10, family: 'Plus Jakarta Sans' }, callback: v => '₹' + v.toLocaleString('en-IN') } } } }
         });
         return () => { if (chartObj.current) chartObj.current.destroy() };
       }, [invoices]);
@@ -2853,115 +3000,334 @@ Key rules:
         const ctx2 = donutRef.current.getContext('2d');
         const byStatus = { sent: 0, reminded: 0, escalated: 0, legal: 0 };
         invoices.filter(i => !i.recovered).forEach(i => { byStatus[i.status] = (byStatus[i.status] || 0) + i.amount });
+        const totalOutstandingAmt = outstanding || 0;
+        const centerTextPlugin = {
+          id: 'centerText',
+          afterDraw(chart) {
+            const { ctx, chartArea: { top, bottom, left, right } } = chart;
+            const cx = (left + right) / 2, cy = (top + bottom) / 2;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const isMobile = window.innerWidth < 640;
+            ctx.font = '700 10px Plus Jakarta Sans';
+            ctx.fillStyle = '#608098';
+            ctx.fillText('Total', cx, cy - (isMobile ? 10 : 14));
+            ctx.font = `800 ${isMobile ? 11 : 13}px Plus Jakarta Sans`;
+            ctx.fillStyle = '#0A1428';
+            ctx.fillText('\u20B9' + Number(totalOutstandingAmt).toLocaleString('en-IN'), cx, cy + (isMobile ? 4 : 2));
+            ctx.restore();
+          }
+        };
         donutObj.current = new Chart(ctx2, {
           type: 'doughnut',
           data: {
             labels: ['1st Reminder', 'Follow-up', 'Final Notice', 'Legal Ready'],
-            datasets: [{ data: Object.values(byStatus), backgroundColor: ['#DBEAFE', '#FEF3C7', '#FFEDD5', '#FEE2E2'], borderColor: ['#3B82F6', '#D97706', '#EA580C', '#EF4444'], borderWidth: 1.5 }]
+            datasets: [{ data: Object.values(byStatus), backgroundColor: ['#3B82F6', '#F59E0B', '#FB923C', '#EF4444'], borderColor: ['#fff','#fff','#fff','#fff'], borderWidth: 2, hoverOffset: 4 }]
           },
-          options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { position: 'bottom', labels: { font: { size: 11, family: 'Plus Jakarta Sans' }, boxWidth: 10, padding: 10 } } } }
+          plugins: [centerTextPlugin],
+          options: { responsive: true, maintainAspectRatio: false, cutout: window.innerWidth < 640 ? '60%' : '68%', plugins: { legend: { position: window.innerWidth < 640 ? 'bottom' : 'right', labels: { font: { size: 10, family: 'Plus Jakarta Sans' }, boxWidth: 10, padding: 8, usePointStyle: true, pointStyle: 'circle', generateLabels: function(chart) { const d = chart.data; return d.labels.map((label, i) => ({ text: label + '  ' + (d.datasets[0].data[i] ? Math.round(d.datasets[0].data[i]/totalOutstandingAmt*100)+'%' : '0%'), fillStyle: d.datasets[0].backgroundColor[i], strokeStyle: d.datasets[0].backgroundColor[i], hidden: false, index: i })); } } } } }
         });
         return () => { if (donutObj.current) donutObj.current.destroy() };
       }, [invoices]);
 
       const topDebtors = invoices.filter(i => !i.recovered).sort((a, b) => b.amount - a.amount).slice(0, 5);
 
+      const debtorInvoiceStats = [
+        { label: 'Total Debtor Invoices', val: invoices.length, dot: 'var(--amber)', dotBg: 'var(--amber-bg)' },
+        { label: 'Overdue Invoices', val: invoices.filter(i => !i.recovered && i.daysOverdue > 0).length, dot: 'var(--red)', dotBg: 'var(--red-bg)' },
+        { label: 'Invoices due in 1–30 days', val: invoices.filter(i => !i.recovered && i.daysOverdue >= 1 && i.daysOverdue <= 30).length, dot: 'var(--blue)', dotBg: 'var(--blue-bg)' },
+        { label: 'Invoices due in 31–60 days', val: invoices.filter(i => !i.recovered && i.daysOverdue >= 31 && i.daysOverdue <= 60).length, dot: 'var(--amber)', dotBg: 'var(--amber-bg)' },
+        { label: 'Invoices > 60 days', val: invoices.filter(i => !i.recovered && i.daysOverdue > 60).length, dot: 'var(--red)', dotBg: 'var(--red-bg)' },
+      ];
+
+      const campaignStats = [
+        { label: 'Active Campaigns', val: invoices.filter(i => !i.recovered).length > 0 ? 8 : 0, icon: <IconSvg path="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" size={16} />, bg: 'var(--surface2)', color: 'var(--blue)' },
+        { label: 'Scheduled', val: 3, icon: <IconSvg path="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" size={16} />, bg: 'var(--surface2)', color: 'var(--blue)' },
+        { label: 'Completed (This Month)', val: invoices.filter(i => i.recovered).length, icon: <IconSvg path="M5 13l4 4L19 7" size={16} />, bg: 'var(--green-bg)', color: 'var(--green)' },
+        { label: 'Response Rate', val: recoveryRate + '%', icon: <IconSvg path="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" size={16} />, bg: 'var(--surface2)', color: 'var(--purple)' },
+      ];
+
       return (
         <div>
+          {/* ── Topbar ── */}
           <div className="topbar">
             <div>
               <div className="page-title">Dashboard</div>
               <div className="page-sub">Overview of your recovery pipeline</div>
             </div>
-            <div className="topbar-actions">
-              <span className="badge badge-green">● Live</span>
-              <span style={{ fontSize: 12, color: 'var(--text3)' }}>{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            <div className="topbar-actions" style={{ position: 'relative' }}>
+              <div 
+                style={{ display:'flex', alignItems:'center', gap:6, background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', fontSize:12, color:'var(--text2)', fontWeight:500, cursor:'pointer' }}
+                onClick={(e) => { e.stopPropagation(); setShowDatePicker(!showDatePicker); setShowNotifications(false); }}
+              >
+                <IconSvg path="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" size={14} /> 
+                {dateString} ▾
+              </div>
+
+              {showDatePicker && (
+                <div style={{ position: 'absolute', top: 46, right: 90, width: 260, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, boxShadow: 'var(--shadow-md)', zIndex: 100, padding: 12 }} onClick={e => e.stopPropagation()}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', paddingBottom: 8, textTransform: 'uppercase', borderBottom: '1px solid var(--border)', marginBottom: 12 }}>Custom Date Range</div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 4 }}>Start Date</div>
+                      <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'inherit' }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 4 }}>End Date</div>
+                      <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 12, fontFamily: 'inherit' }} />
+                    </div>
+                    <button className="btn btn-primary" style={{ width: '100%', padding: '6px 0', fontSize: 12 }} onClick={() => setShowDatePicker(false)}>Apply Filter</button>
+                  </div>
+                </div>
+              )}
+
+              <div 
+                style={{ width:34, height:34, borderRadius:8, border:'1px solid var(--border)', background: showNotifications ? 'var(--surface2)' : 'var(--surface)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', position:'relative', color:'var(--text2)' }}
+                onClick={(e) => { e.stopPropagation(); setShowNotifications(!showNotifications); setShowDatePicker(false); }}
+              >
+                <IconSvg path="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" size={18} />
+                <span style={{ position:'absolute', top:7, right:7, width:7, height:7, borderRadius:'50%', background:'var(--red)', border:'1.5px solid var(--surface)' }}></span>
+              </div>
+
+              {showNotifications && (
+                <div style={{ position: 'absolute', top: 46, right: 40, width: 300, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.1)', zIndex: 100, overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+                  <div style={{ padding: '12px 16px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
+                    Notifications
+                    <span style={{ color: 'var(--blue)', fontSize: 11, cursor: 'pointer' }}>Mark all read</span>
+                  </div>
+                  <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--red)', marginTop: 6 }}></div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600 }}>Legal Notice Generated</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>Sharma Traders &middot; 2 hrs ago</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--blue)', marginTop: 6 }}></div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600 }}>Payment Received</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)' }}>₹67,000 from Thane IT Solutions</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div 
+                    style={{ padding: 10, textAlign: 'center', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text2)', cursor: 'pointer', background: 'var(--surface2)' }}
+                    onClick={() => { setShowNotifications(false); setPage('reminders'); }}
+                  >
+                    View all notifications
+                  </div>
+                </div>
+              )}
+
+              {/* User Avatar removed per user request */}
             </div>
           </div>
+
           <div className="content">
 
-            {/* Metrics */}
+            {/* ── Metric Cards ── */}
             <div className="metric-grid">
+
+              {/* Outstanding */}
               <div className="metric-card">
-                <div className="metric-label">💰 Outstanding</div>
-                <div className="metric-value" style={{ color: '#BA7517' }}>{fmtINR(outstanding)}</div>
-                <div className="metric-change"><span className="change-down">▲</span><span style={{ fontSize: 11, color: 'var(--text3)' }}>{activeCount} invoices pending</span></div>
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.7px' }}>TOTAL OUTSTANDING</div>
+                  <span style={{ fontSize:14, color:'var(--text3)', cursor:'default' }}><IconSvg path="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" size={14} /></span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                  <div style={{ width:46, height:46, borderRadius:'50%', background:'#EFF6FF', color:'#3B82F6', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <IconSvg path="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" size={24} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize:22, fontWeight:800, color:'#0F172A', lineHeight:1.1 }}>{fmtINR(displayOutstanding)}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:6, fontSize:11 }}>
+                      <span style={{ color:'var(--red)', fontWeight:700 }}>▲</span>
+                      <span style={{ color:'var(--text3)' }}>{displayActiveCount} invoices pending</span>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* Recovered */}
               <div className="metric-card">
-                <div className="metric-label">✓ Recovered</div>
-                <div className="metric-value" style={{ color: 'var(--green)' }}>{fmtINR(recovered)}</div>
-                <div className="metric-change"><span className="change-up">▲</span><span style={{ fontSize: 11, color: 'var(--text3)' }}>This cycle</span></div>
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.7px' }}>RECOVERED (THIS CYCLE)</div>
+                  <span style={{ fontSize:14, color:'var(--text3)', cursor:'default' }}><IconSvg path="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" size={14} /></span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                  <div style={{ width:46, height:46, borderRadius:'50%', background:'var(--green-bg)', color:'var(--green)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <IconSvg path="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4" size={24} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize:22, fontWeight:800, color:'var(--green)', lineHeight:1.1 }}>{fmtINR(displayRecovered)}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:6, fontSize:11 }}>
+                      <span style={{ color:'var(--green)', fontWeight:700 }}>▲</span>
+                      <span style={{ color:'var(--text3)' }}>18.5% vs last cycle</span>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* Legal Queue */}
               <div className="metric-card">
-                <div className="metric-label">⚖ Legal Queue</div>
-                <div className="metric-value" style={{ color: 'var(--red)' }}>{legalQueue.length}</div>
-                <div className="metric-change"><span style={{ fontSize: 11, color: 'var(--text3)' }}>Invoices 45d+ overdue</span></div>
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.7px' }}>LEGAL QUEUE</div>
+                  <span style={{ fontSize:14, color:'var(--text3)', cursor:'default' }}><IconSvg path="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" size={14} /></span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                  <div style={{ width:46, height:46, borderRadius:'50%', background:'var(--red-bg)', color:'var(--red)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <IconSvg path="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" size={22} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize:26, fontWeight:800, color:'var(--red)', lineHeight:1.1 }}>{legalQueue.length}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:6, fontSize:11 }}>
+                      <span style={{ color:'var(--text3)' }}>Invoices 45d+ overdue</span>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* Recovery Rate */}
               <div className="metric-card">
-                <div className="metric-label">% Recovery Rate</div>
-                <div className="metric-value">{recoveryRate}%</div>
-                <div className="progress" style={{ marginTop: 8 }}><div className="progress-fill progress-green" style={{ width: recoveryRate + '%' }}></div></div>
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.7px' }}>% RECOVERY RATE</div>
+                  <span style={{ fontSize:14, color:'var(--text3)', cursor:'default' }}><IconSvg path="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" size={14} /></span>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                  <div style={{ width:46, height:46, borderRadius:'50%', background:'var(--purple-bg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, fontWeight:700, color:'var(--purple)', flexShrink:0 }}>%</div>
+                  <div>
+                    <div style={{ fontSize:26, fontWeight:800, color:'#0F172A', lineHeight:1.1 }}>{displayRecoveryRate}%</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:6, fontSize:11 }}>
+                      <span style={{ color:'var(--green)', fontWeight:700 }}>▲</span>
+                      <span style={{ color:'var(--text3)' }}>2.5% vs last cycle</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Charts */}
+            {/* ── Charts Row ── */}
             <div className="chart-grid">
               <div className="card">
                 <div className="card-header">
                   <div>
-                    <div className="card-title">Outstanding vs Recovered</div>
-                    <div className="card-sub">Monthly ₹ value breakdown</div>
+                    <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Outstanding vs Recovered</div>
+                    <div className="card-sub">Monthly value breakdown</div>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:6, padding:'4px 10px', fontSize:11, color:'var(--text2)', cursor:'pointer' }}>
+                    Amount (₹) ▾
                   </div>
                 </div>
-                <div style={{ height: 220 }}><canvas ref={chartRef}></canvas></div>
+                <div style={{ height: 230 }}><canvas ref={chartRef}></canvas></div>
               </div>
               <div className="card">
                 <div className="card-header">
                   <div>
-                    <div className="card-title">Pipeline by Stage</div>
+                    <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Pipeline by Stage</div>
                     <div className="card-sub">Current outstanding distribution</div>
                   </div>
                 </div>
-                <div style={{ height: 220 }}><canvas ref={donutRef}></canvas></div>
+                <div style={{ height: 230 }}><canvas ref={donutRef}></canvas></div>
+                <div style={{ marginTop:6, textAlign:'right' }}>
+                  <span style={{ fontSize:11, color:'var(--amber-dark)', fontWeight:600, cursor:'pointer' }}>View full pipeline →</span>
+                </div>
               </div>
             </div>
 
-            {/* Bottom two panels */}
+            {/* ── Bottom 4-Col Grid ── */}
             <div className="dashboard-bottom-grid">
+
+              {/* Col 1: Top Debtors */}
               <div className="card">
-                <div className="card-header">
-                  <div className="card-title">Top Debtors</div>
-                  <span className="badge badge-red">{legalQueue.length} legal ready</span>
+                <div className="card-header" style={{ marginBottom:10 }}>
+                  <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Top Debtors</div>
+                  <span style={{ fontSize:11, color:'var(--blue)', fontWeight:600, cursor:'pointer' }}>View All</span>
+                </div>
+                <div className="td-head">
+                  <span style={{ fontSize:9, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.5px' }}>Debtor / Invoice</span>
+                  <span style={{ fontSize:9, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.5px' }}>Amount (₹)</span>
+                  <span style={{ fontSize:9, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.5px' }}>Days</span>
+                  <span style={{ fontSize:9, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.5px' }}>Risk Level</span>
                 </div>
                 {topDebtors.map(inv => (
-                  <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }} onClick={() => openDetail(inv)}>
-                    <div style={{ width: 34, height: 34, borderRadius: 8, background: 'var(--amber-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--amber-dark)', flexShrink: 0 }}>{getInitials(inv.company)}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{inv.company}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>{inv.invoiceNo} · {inv.city}</div>
+                  <div key={inv.id} className="td-row" onClick={() => openDetail(inv)}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, minWidth:0 }}>
+                      <div style={{ width:30, height:30, borderRadius:7, background:'var(--blue-bg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:800, color:'var(--blue)', flexShrink:0 }}>{getInitials(inv.company)}</div>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontSize:12, fontWeight:600, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{inv.company}</div>
+                        <div style={{ fontSize:10, color:'var(--text3)' }}>{inv.invoiceNo} · {inv.city}</div>
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700 }}>{fmtINR(inv.amount)}</div>
-                      <span className={`badge ${daysBadge(inv.daysOverdue, inv.recovered)}`} style={{ fontSize: 10, marginTop: 3 }}>{inv.daysOverdue}d overdue</span>
-                    </div>
+                    <div style={{ fontSize:13, fontWeight:700 }}>{fmtINR(inv.amount)}</div>
+                    <div><span className={`badge ${daysBadge(inv.daysOverdue, inv.recovered)}`} style={{ fontSize:10 }}>{inv.daysOverdue}d</span></div>
+                    <div><span className={`badge ${inv.daysOverdue >= 45 ? 'badge-red' : inv.daysOverdue >= 21 ? 'badge-amber' : 'badge-blue'}`} style={{ fontSize:10 }}>{inv.daysOverdue >= 45 ? 'Legal Ready' : inv.daysOverdue >= 21 ? 'High Risk' : 'Follow Up'}</span></div>
                   </div>
                 ))}
+                <div style={{ paddingTop:12 }}>
+                  <span style={{ fontSize:11, color:'var(--blue)', fontWeight:600, cursor:'pointer' }}>View all debtors →</span>
+                </div>
               </div>
 
+              {/* Col 2: Debtor Invoices */}
               <div className="card">
-                <div className="card-header"><div className="card-title">Recent Activity</div></div>
+                <div className="card-header" style={{ marginBottom:8 }}>
+                  <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Debtor Invoices</div>
+                  <span style={{ fontSize:11, color:'var(--blue)', fontWeight:600, cursor:'pointer' }}>View All</span>
+                </div>
+                {debtorInvoiceStats.map((s, i) => (
+                  <div key={i} className="di-row">
+                    <div className="di-dot" style={{ background: s.dot, boxShadow: `0 0 0 3px ${s.dotBg}` }}></div>
+                    <span className="di-label">{s.label}</span>
+                    <span className="di-val">{s.val}</span>
+                  </div>
+                ))}
+                <div style={{ paddingTop:12 }}>
+                  <span style={{ fontSize:11, color:'var(--blue)', fontWeight:600, cursor:'pointer' }}>Go to Debtor Invoices →</span>
+                </div>
+              </div>
+
+              {/* Col 3: Campaigns Overview */}
+              <div className="card">
+                <div className="card-header" style={{ marginBottom:8 }}>
+                  <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Campaigns Overview</div>
+                  <span style={{ fontSize:11, color:'var(--blue)', fontWeight:600, cursor:'pointer' }}>View All</span>
+                </div>
+                {campaignStats.map((c, i) => (
+                  <div key={i} className="camp-row">
+                    <div className="camp-icon" style={{ background: c.bg, color: c.color }}>{c.icon}</div>
+                    <span className="camp-label">{c.label}</span>
+                    <span className="camp-val">{c.val}</span>
+                  </div>
+                ))}
+                <div style={{ paddingTop:12 }}>
+                  <span style={{ fontSize:11, color:'var(--blue)', fontWeight:600, cursor:'pointer' }}>Go to Campaigns →</span>
+                </div>
+              </div>
+
+              {/* Col 4: Recent Activity */}
+              <div className="card">
+                <div className="card-header" style={{ marginBottom:8 }}>
+                  <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Recent Activity</div>
+                  <span style={{ fontSize:11, color:'var(--blue)', fontWeight:600, cursor:'pointer' }}>View All</span>
+                </div>
                 {ACTIVITY_LOG.slice(0, 5).map(a => (
-                  <div key={a.id} className="activity-item">
-                    <div className="activity-icon" style={{ background: a.color }}>{a.icon}</div>
+                  <div key={a.id} className="activity-item" style={{ alignItems:'flex-start' }}>
+                    <div className="activity-icon" style={{ background: a.color, color: a.iconColor, borderRadius:8, minWidth:28, fontSize:13 }}>{a.icon}</div>
                     <div className="activity-body">
-                      <div className="activity-text" dangerouslySetInnerHTML={{ __html: a.text }}></div>
-                      <div className="activity-time">{a.time}</div>
+                      <div className="activity-text" style={{ fontSize:11, lineHeight:1.5 }} dangerouslySetInnerHTML={{ __html: a.text }}></div>
+                      <div className="activity-time" style={{ marginTop:4 }}>{a.time}</div>
                     </div>
+                    {a.type === 'recovery' && (
+                      <div className="activity-amount">{'+₹' + (a.text.match(/₹([\d,]+)/)?.[1] || '')}</div>
+                    )}
                   </div>
                 ))}
               </div>
-            </div>
 
+            </div>
           </div>
         </div>
       );
@@ -4614,6 +4980,197 @@ Key rules:
                     Select a message type and click Generate
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── CUSTOMERS PAGE ─── */
+    function Customers({ invoices, openDetail }) {
+      const customersMap = {};
+      invoices.forEach(inv => {
+        if (!customersMap[inv.company]) {
+          customersMap[inv.company] = { company: inv.company, contact: inv.contact, email: inv.email, phone: inv.phone, invoices: [], totalOutstanding: 0, totalRecovered: 0 };
+        }
+        customersMap[inv.company].invoices.push(inv);
+        if (inv.recovered) customersMap[inv.company].totalRecovered += inv.amount;
+        else customersMap[inv.company].totalOutstanding += inv.amount;
+      });
+      const customers = Object.values(customersMap).sort((a,b) => b.totalOutstanding - a.totalOutstanding);
+
+      return (
+        <div>
+          <div className="topbar">
+            <div>
+              <div className="page-title">Customers</div>
+              <div className="page-sub">Manage your debtors and clients</div>
+            </div>
+          </div>
+          <div className="content">
+            <div className="card" style={{ padding: 0 }}>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Customer Name</th>
+                      <th>Contact Details</th>
+                      <th>Total Invoices</th>
+                      <th>Outstanding (₹)</th>
+                      <th>Recovered (₹)</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customers.length === 0 && (
+                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40 }}>No customers found.</td></tr>
+                    )}
+                    {customers.map((c, i) => {
+                      const hasLegal = c.invoices.some(inv => !inv.recovered && inv.daysOverdue >= 45);
+                      return (
+                      <tr key={i} className="mobile-table-row">
+                        <td data-label="Customer" className="mobile-td">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ width: 30, height: 30, borderRadius: 6, background: 'var(--amber-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--amber-dark)', flexShrink: 0 }}>{getInitials(c.company)}</div>
+                            <div style={{ fontWeight: 600, fontSize: 13 }}>{c.company}</div>
+                          </div>
+                        </td>
+                        <td data-label="Contact" className="mobile-td">
+                          <div style={{ fontSize: 12 }}>{c.contact}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text3)' }}>{c.email} | {c.phone}</div>
+                        </td>
+                        <td data-label="Invoices" className="mobile-td">{c.invoices.length}</td>
+                        <td data-label="Outstanding" className="mobile-td"><strong>{fmtINR(c.totalOutstanding)}</strong></td>
+                        <td data-label="Recovered" className="mobile-td" style={{ color: 'var(--green)' }}>{fmtINR(c.totalRecovered)}</td>
+                        <td data-label="Status" className="mobile-td"><span className={`badge ${hasLegal ? 'badge-red' : c.totalOutstanding > 0 ? 'badge-amber' : 'badge-green'}`}>{hasLegal ? 'High Risk' : c.totalOutstanding > 0 ? 'Active' : 'Clear'}</span></td>
+                      </tr>
+                    )})}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── REMINDERS PAGE ─── */
+    function Reminders({ invoices, openDetail }) {
+      const active = invoices.filter(i => !i.recovered && i.daysOverdue > 0).sort((a,b) => b.daysOverdue - a.daysOverdue);
+      
+      return (
+        <div>
+          <div className="topbar">
+            <div>
+              <div className="page-title">Reminders Schedule</div>
+              <div className="page-sub">Upcoming and past automated follow-ups</div>
+            </div>
+          </div>
+          <div className="content">
+            <div className="card">
+              <div className="card-header" style={{ marginBottom: 16 }}>
+                <div className="card-title">Pending Reminders Queue</div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {active.length === 0 && <div className="empty" style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>No pending reminders.</div>}
+                {active.map(inv => {
+                  let nextAction = '';
+                  let badge = '';
+                  if (inv.daysOverdue >= 45) { nextAction = 'File MSME Samadhaan Case'; badge = 'badge-red'; }
+                  else if (inv.daysOverdue >= 35) { nextAction = 'Send Final Legal Notice'; badge = 'badge-red'; }
+                  else if (inv.daysOverdue >= 21) { nextAction = 'Send Warning Email & WhatsApp'; badge = 'badge-amber'; }
+                  else { nextAction = 'Send Gentle Follow-up'; badge = 'badge-blue'; }
+                  
+                  return (
+                    <div key={inv.id} style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.company} <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({inv.invoiceNo})</span></div>
+                        <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 4 }}>Due {inv.dueDate} &mdash; <strong style={{ color: 'var(--red)' }}>{inv.daysOverdue} days overdue</strong></div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span className={`badge ${badge}`}>{nextAction}</span>
+                        <button className="btn btn-sm btn-primary" onClick={() => openDetail(inv)}>Review &rarr;</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── REPORTS PAGE ─── */
+    function Reports({ invoices, outstanding, recovered, recoveryRate }) {
+      const active = invoices.filter(i => !i.recovered);
+      const aging = {
+        '0-30': active.filter(i => i.daysOverdue >= 0 && i.daysOverdue <= 30).reduce((s,i) => s + i.amount, 0),
+        '31-60': active.filter(i => i.daysOverdue > 30 && i.daysOverdue <= 60).reduce((s,i) => s + i.amount, 0),
+        '60-90': active.filter(i => i.daysOverdue > 60 && i.daysOverdue <= 90).reduce((s,i) => s + i.amount, 0),
+        '90+': active.filter(i => i.daysOverdue > 90).reduce((s,i) => s + i.amount, 0),
+      };
+
+      return (
+        <div>
+          <div className="topbar">
+            <div>
+              <div className="page-title">Financial Reports</div>
+              <div className="page-sub">Exportable insights and aging summaries</div>
+            </div>
+            <div className="topbar-actions">
+              <button className="btn btn-primary" onClick={() => alert('PDF generation started...')}>&darr; Export PDF</button>
+            </div>
+          </div>
+          <div className="content">
+            <div className="dashboard-bottom-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+              <div className="card">
+                <div className="card-header" style={{ marginBottom: 16 }}>
+                  <div className="card-title">Executive Summary</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--text2)' }}>Total Outstanding:</span>
+                    <strong style={{ fontSize: 16 }}>{fmtINR(outstanding)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--text2)' }}>Total Recovered:</span>
+                    <strong style={{ fontSize: 16, color: 'var(--green)' }}>{fmtINR(recovered)}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ color: 'var(--text2)' }}>Recovery Rate:</span>
+                    <strong style={{ fontSize: 16, color: 'var(--purple)' }}>{recoveryRate}%</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text2)' }}>High Risk (Legal) Exposure:</span>
+                    <strong style={{ fontSize: 16, color: 'var(--red)' }}>{fmtINR(aging['90+'])}</strong>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="card">
+                <div className="card-header" style={{ marginBottom: 16 }}>
+                  <div className="card-title">Aging Summary</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>0 - 30 Days</span>
+                    <strong style={{ color: 'var(--blue)' }}>{fmtINR(aging['0-30'])}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>31 - 60 Days</span>
+                    <strong style={{ color: 'var(--amber)' }}>{fmtINR(aging['31-60'])}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>60 - 90 Days</span>
+                    <strong style={{ color: 'var(--amber-dark)' }}>{fmtINR(aging['60-90'])}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>90+ Days (Severe)</span>
+                    <strong style={{ color: 'var(--red)' }}>{fmtINR(aging['90+'])}</strong>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

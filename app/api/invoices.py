@@ -307,3 +307,37 @@ async def upload_proof(
     )
 
     return {"proof_url": f"/uploads/{safe_filename}"}
+
+
+@router.post(
+    "/{invoice_id}/portal-link",
+    response_model=dict,
+    status_code=200,
+    summary="Generate Magic Link for Debtor Portal",
+)
+async def generate_portal_link(
+    invoice_id: str,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+) -> dict:
+    """Generate a magic link for a specific invoice.
+    Uses 'demo' for frontend preview purposes."""
+    if invoice_id == "demo":
+        token = "demo_" + str(uuid.uuid4())[:8]
+    else:
+        col = get_collection(COLLECTION)
+        try:
+            oid = ObjectId(invoice_id)
+        except InvalidId:
+            raise HTTPException(status_code=400, detail="Invalid invoice ID format.")
+
+        doc = await col.find_one({"_id": oid, "owner_id": current_user["_id"]})
+        if not doc:
+            raise HTTPException(status_code=404, detail="Invoice not found.")
+
+        # In a real system, you'd store this token in a DB with an expiry.
+        token = "tok_" + str(uuid.uuid4())
+
+    base_url = str(request.base_url).rstrip("/")
+    portal_url = f"{base_url}/portal?token={token}"
+    return {"token": token, "portal_url": portal_url}

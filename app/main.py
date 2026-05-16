@@ -40,6 +40,8 @@ from app.api.webhook import router as webhook_router
 from app.api.auth import router as auth_router
 from app.api.enrich import router as enrich_router
 from app.api.admin import router as admin_router
+from app.api.users import router as users_router
+from app.api.customers import router as customers_router
 
 # ── Logger ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -156,10 +158,26 @@ app.include_router(chat_router)
 app.include_router(webhook_router)
 app.include_router(enrich_router)
 app.include_router(admin_router)
+app.include_router(users_router)
+app.include_router(customers_router)
 
 
 # ── Static Files ──────────────────────────────────────────────────────────────
-# Try to mount dist/assets from multiple candidate paths (local vs Vercel /var/task/)
+# Serve the new modular frontend static directory (/static/css, /static/js)
+_static_dir_candidates = [
+    BASE_DIR / "static",
+    Path("static"),
+    Path("/var/task/static"),
+]
+for _static_cand in _static_dir_candidates:
+    if _static_cand.exists():
+        app.mount("/static", StaticFiles(directory=str(_static_cand)), name="static")
+        logger.info("📦  Static dir mounted from: %s", _static_cand)
+        break
+else:
+    logger.warning("⚠️  No static/ directory found — JS/CSS will not be served")
+
+# Legacy dist/assets (Vite build artefacts)
 _dist_asset_candidates = [
     BASE_DIR / "dist" / "assets",
     Path("/var/task/dist/assets"),
@@ -170,8 +188,6 @@ for _candidate in _dist_asset_candidates:
         app.mount("/assets", StaticFiles(directory=str(_candidate)), name="assets")
         logger.info("📦  Static assets mounted from: %s", _candidate)
         break
-else:
-    logger.warning("⚠️  No dist/assets directory found — static files will not be served")
 
 if not _IS_VERCEL:
     _uploads_dir = BASE_DIR / "uploads"
@@ -182,8 +198,21 @@ else:
     app.mount("/uploads", StaticFiles(directory="/tmp/uploads"), name="uploads")
 
 
-# ── Root HTML path candidates ──────────────────────────────────────────────────
+# ── Landing page path candidates ─────────────────────────────────────────────
+_LANDING_PATHS = [
+    BASE_DIR / "landing-preview.html",
+    Path("landing-preview.html"),
+    Path("/var/task/landing-preview.html"),
+]
+LANDING_HTML: Path | None = next((p for p in _LANDING_PATHS if p.exists()), None)
+logger.info("🌐  Landing HTML resolved to: %s", LANDING_HTML)
+
+# ── App shell (SPA) HTML path candidates ──────────────────────────────────────
+# Prefer new modular dashboard.html, fallback to legacy RecoverAI_MVP.html
 _CANDIDATE_PATHS = [
+    BASE_DIR / "dashboard.html",
+    Path("dashboard.html"),
+    Path("/var/task/dashboard.html"),
     BASE_DIR / "RecoverAI_MVP.html",
     Path("RecoverAI_MVP.html"),
     Path("/var/task/RecoverAI_MVP.html"),
@@ -237,6 +266,19 @@ async def startup_check():
 
 
 @app.get("/dashboard", tags=["System"], summary="Frontend App", include_in_schema=False)
+@app.get("/dashboard.html", tags=["System"], include_in_schema=False)
+@app.get("/RecoverAI_MVP.html", tags=["System"], include_in_schema=False)
+@app.get("/index.html", tags=["System"], include_in_schema=False)
+@app.get("/inbox", tags=["Frontend"], include_in_schema=False)
+@app.get("/invoices", tags=["Frontend"], include_in_schema=False)
+@app.get("/recovery", tags=["Frontend"], include_in_schema=False)
+@app.get("/legal", tags=["Frontend"], include_in_schema=False)
+@app.get("/campaigns", tags=["Frontend"], include_in_schema=False)
+@app.get("/customers", tags=["Frontend"], include_in_schema=False)
+@app.get("/reports", tags=["Frontend"], include_in_schema=False)
+@app.get("/reminders", tags=["Frontend"], include_in_schema=False)
+@app.get("/admin", tags=["Frontend"], include_in_schema=False)
+@app.get("/settings", tags=["Frontend"], include_in_schema=False)
 async def dashboard():
     """Serve the RecoverAI single-page frontend (dashboard)."""
     try:
@@ -268,40 +310,54 @@ async def debug_error():
         return JSONResponse(status_code=404, content={"detail": "Not found"})
 
 @app.get("/", tags=["Frontend"], summary="Landing Page", include_in_schema=False)
-@app.get("/login", tags=["Frontend"], include_in_schema=False)
-@app.get("/register", tags=["Frontend"], include_in_schema=False)
 async def serve_landing():
-    """Serve the standalone Landing Page HTML on the root route."""
-    from fastapi.responses import HTMLResponse
-    from pathlib import Path
-    
+    """Serve the RecoverAI marketing landing page."""
     no_cache_headers = {
         "Cache-Control": "no-cache, no-store, must-revalidate",
         "Pragma": "no-cache",
         "Expires": "0"
     }
-
-    # Try serving the React frontend (built in dist/)
-    dist_paths = [
-        BASE_DIR / "dist" / "index.html",
-        Path("dist/index.html"),
-        Path("/var/task/dist/index.html")
-    ]
-    for p in dist_paths:
-        if p.exists():
-            return HTMLResponse(content=p.read_bytes(), status_code=200, headers=no_cache_headers)
-    
-    # Fallback to the dark HTML landing preview
-    paths = [
-        BASE_DIR / "landing-preview.html",
-        Path("landing-preview.html"),
-        Path("/var/task/landing-preview.html")
-    ]
-    for p in paths:
-        if p.exists():
-            return HTMLResponse(content=p.read_bytes(), status_code=200, headers=no_cache_headers)
-            
+    # Serve landing page if it exists
+    for path in _LANDING_PATHS:
+        if path.exists():
+            return HTMLResponse(
+                content=path.read_bytes(),
+                status_code=200,
+                headers=no_cache_headers,
+            )
+    # Fallback: serve the app shell if no landing page found
+    for path in _CANDIDATE_PATHS:
+        if path.exists():
+            return HTMLResponse(
+                content=path.read_bytes(),
+                status_code=200,
+                headers=no_cache_headers,
+            )
     return JSONResponse(
-        status_code=404,
-        content={"error": "Landing page not found in deployment."}
+        status_code=503,
+        content={"error": "Frontend not found. Run the backend from the project root directory."}
     )
+
+
+@app.get("/login", tags=["Frontend"], include_in_schema=False)
+@app.get("/register", tags=["Frontend"], include_in_schema=False)
+@app.get("/index.html", tags=["Frontend"], include_in_schema=False)
+async def serve_app_shell():
+    """Serve the RecoverAI SPA shell (login handled client-side)."""
+    no_cache_headers = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    }
+    for path in _CANDIDATE_PATHS:
+        if path.exists():
+            return HTMLResponse(
+                content=path.read_bytes(),
+                status_code=200,
+                headers=no_cache_headers,
+            )
+    return JSONResponse(
+        status_code=503,
+        content={"error": "Frontend not found. Run the backend from the project root directory."}
+    )
+

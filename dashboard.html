@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RecoverAI — MSME Invoice Recovery Platform</title>
+  <meta name="description" content="AI-powered invoice recovery for Indian MSMEs. Automate reminders, generate legal notices, and recover dues faster.">
+
+  <!-- React & Build Tools -->
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>tailwind.config = { corePlugins: { preflight: false } }</script>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="/static/css/app_v2.css?v=17">
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Utilities (plain JS — no JSX) -->
+  <script src="/static/js/config.js?v=17"></script>
+
+  <!-- All page components (JSX via Babel) -->
+  <script type="text/babel" src="/static/js/components/Login.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/AdminDashboard.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/Dashboard_v2.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/Invoices.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/RecoveryHub.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/LegalQueue.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/DebtorInbox.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/Campaigns.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/Settings.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/Customers.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/Reports.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/Reminders.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/Modals.js?v=17"></script>
+  <script type="text/babel" src="/static/js/components/PricingModal.js?v=17"></script>
+  <!-- Root App (must load last) -->
+  <script type="text/babel" src="/static/js/app_v2.js?v=17"></script>
+</body>
+</html>
