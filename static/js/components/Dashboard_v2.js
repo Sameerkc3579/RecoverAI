@@ -81,6 +81,11 @@
         const byStatus = { sent: 0, reminded: 0, escalated: 0, legal: 0 };
         invoices.filter(i => !i.recovered).forEach(i => { byStatus[i.status] = (byStatus[i.status] || 0) + i.amount });
         const totalOutstandingAmt = outstanding || 0;
+        // Use real hex values — canvas API cannot read CSS variables
+        const legendColor = darkMode ? '#CBD5E1' : '#334155';
+        const centerSubColor = darkMode ? '#94A3B8' : '#608098';
+        const centerMainColor = darkMode ? '#F1F5F9' : '#0A1428';
+        const borderColor = darkMode ? '#0F172A' : '#ffffff';
         const centerTextPlugin = {
           id: 'centerText',
           afterDraw(chart) {
@@ -91,10 +96,10 @@
             ctx.textBaseline = 'middle';
             const isMobile = window.innerWidth < 640;
             ctx.font = '700 10px Plus Jakarta Sans';
-            ctx.fillStyle = darkMode ? '#94A3B8' : '#608098';
+            ctx.fillStyle = centerSubColor;
             ctx.fillText('Total', cx, cy - (isMobile ? 10 : 14));
             ctx.font = `800 ${isMobile ? 11 : 13}px Plus Jakarta Sans`;
-            ctx.fillStyle = darkMode ? '#F1F5F9' : '#0A1428';
+            ctx.fillStyle = centerMainColor;
             ctx.fillText('\u20B9' + Number(totalOutstandingAmt).toLocaleString('en-IN'), cx, cy + (isMobile ? 4 : 2));
             ctx.restore();
           }
@@ -103,7 +108,7 @@
           type: 'doughnut',
           data: {
             labels: ['1st Reminder', 'Follow-up', 'Final Notice', 'Legal Ready'],
-            datasets: [{ data: Object.values(byStatus), backgroundColor: ['#3B82F6', '#F59E0B', '#FB923C', '#EF4444'], borderColor: ['#fff','#fff','#fff','#fff'], borderWidth: 2, hoverOffset: 4 }]
+            datasets: [{ data: Object.values(byStatus), backgroundColor: ['#3B82F6', '#F59E0B', '#FB923C', '#EF4444'], borderColor: [borderColor, borderColor, borderColor, borderColor], borderWidth: 2, hoverOffset: 4 }]
           },
           plugins: [centerTextPlugin],
           options: { 
@@ -114,7 +119,7 @@
               legend: { 
                 position: window.innerWidth < 640 ? 'bottom' : 'right', 
                 labels: { 
-                  color: 'var(--text2)', /* Dynamic text color for legend */
+                  color: legendColor,
                   font: { size: 10, family: 'Plus Jakarta Sans' }, 
                   boxWidth: 10, 
                   padding: 8, 
@@ -125,7 +130,8 @@
                     return d.labels.map((label, i) => ({ 
                       text: label + '  ' + (d.datasets[0].data[i] ? Math.round(d.datasets[0].data[i]/totalOutstandingAmt*100)+'%' : '0%'), 
                       fillStyle: d.datasets[0].backgroundColor[i], 
-                      strokeStyle: d.datasets[0].backgroundColor[i], 
+                      strokeStyle: d.datasets[0].backgroundColor[i],
+                      fontColor: legendColor,
                       hidden: false, 
                       index: i 
                     })); 
@@ -136,7 +142,7 @@
           } 
         });
         return () => { if (donutObj.current) donutObj.current.destroy() };
-      }, [invoices]);
+      }, [invoices, darkMode]);
 
       const topDebtors = invoices.filter(i => !i.recovered).sort((a, b) => b.amount - a.amount).slice(0, 5);
 
@@ -179,11 +185,20 @@
               <div className="page-sub">Overview of your recovery pipeline</div>
             </div>
             <div className="topbar-actions" style={{ position: 'relative' }}>
-              <button className="theme-toggle-btn" style={{ padding: '6px 12px', marginBottom: 0, width: 'auto', border: '1px solid var(--border)' }} onClick={(e) => { e.stopPropagation(); setDarkMode(d => !d); }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 16 }}>{darkMode ? '🌙' : '☀️'}</span>
-                  <span style={{ display: 'none' }}>Dark Mode</span>
-                </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); setDarkMode(d => !d); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                  background: darkMode ? '#1E293B' : '#F1F5F9',
+                  border: darkMode ? '1px solid #1E3A5F' : '1px solid #C0D4E8',
+                  color: darkMode ? '#CBD5E1' : '#334155',
+                  fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <span style={{ fontSize: 16 }}>{darkMode ? '🌙' : '☀️'}</span>
+                <span>{darkMode ? 'Dark' : 'Light'}</span>
               </button>
               <div 
                 style={{ display:'flex', alignItems:'center', gap:6, background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', fontSize:12, color:'var(--text2)', fontWeight:500, cursor:'pointer' }}
@@ -266,11 +281,11 @@
                   <span style={{ fontSize:14, color:'var(--text3)', cursor:'default' }}><IconSvg path="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" size={14} /></span>
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-                  <div style={{ width:46, height:46, borderRadius:'50%', background:'#EFF6FF', color:'#3B82F6', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <div style={{ width:46, height:46, borderRadius:'50%', background:'var(--blue-bg)', color:'var(--blue)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                     <IconSvg path="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" size={24} />
                   </div>
                   <div>
-                    <div style={{ fontSize:22, fontWeight:800, color:'var(--blue)', lineHeight:1.1 }}>{fmtINR(displayOutstanding)}</div>
+                    <div style={{ fontSize:22, fontWeight:800, color: darkMode ? '#60A5FA' : '#3B82F6', lineHeight:1.1 }}>{fmtINR(displayOutstanding)}</div>
                     <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:6, fontSize:11 }}>
                       <span style={{ color:'var(--red)', fontWeight:700 }}>▲</span>
                       <span style={{ color:'var(--text3)' }}>{displayActiveCount} invoices pending</span>
@@ -327,7 +342,7 @@
                 <div style={{ display:'flex', alignItems:'center', gap:14 }}>
                   <div style={{ width:46, height:46, borderRadius:'50%', background:'var(--purple-bg)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, fontWeight:700, color:'var(--purple)', flexShrink:0 }}>%</div>
                   <div>
-                    <div style={{ fontSize:26, fontWeight:800, color:'var(--purple)', lineHeight:1.1 }}>{displayRecoveryRate}%</div>
+                    <div style={{ fontSize:26, fontWeight:800, color: darkMode ? '#A78BFA' : '#8B5CF6', lineHeight:1.1 }}>{displayRecoveryRate}%</div>
                     <div style={{ display:'flex', alignItems:'center', gap:4, marginTop:6, fontSize:11 }}>
                       <span style={{ color:'var(--green)', fontWeight:700 }}>▲</span>
                       <span style={{ color:'var(--text3)' }}>2.5% vs last cycle</span>
