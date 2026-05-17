@@ -75,7 +75,23 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'top', labels: { font: { size: 11, family: 'Plus Jakarta Sans' }, boxWidth: 10, usePointStyle: true, pointStyle: 'circle' } } },
+        plugins: { 
+          legend: { position: 'top', labels: { font: { size: 11, family: 'Plus Jakarta Sans' }, boxWidth: 10, usePointStyle: true, pointStyle: 'circle' } },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                  label = label.split(' (')[0] + ': ';
+                }
+                if (context.parsed.y !== null) {
+                  label += fmtINR(context.parsed.y);
+                }
+                return label;
+              }
+            }
+          }
+        },
         scales: {
           x: { grid: { display: false }, ticks: { font: { size: 10, family: 'Plus Jakarta Sans' } } },
           y: { grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false }, ticks: { font: { size: 10, family: 'Plus Jakarta Sans' }, callback: v => '₹' + (v/1000).toFixed(0) + 'K' } }
@@ -97,7 +113,16 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return 'Expected Cashflow: ' + fmtINR(context.parsed.y);
+              }
+            }
+          }
+        },
         scales: {
           x: { grid: { display: false }, ticks: { font: { size: 10, family: 'Plus Jakarta Sans' } } },
           y: { grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false }, ticks: { font: { size: 10, family: 'Plus Jakarta Sans' }, callback: v => '₹' + (v/1000).toFixed(0) + 'K' } }
@@ -147,7 +172,16 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
       options: {
         indexAxis: 'y',
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: { 
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return 'Outstanding: ' + fmtINR(context.parsed.x);
+              }
+            }
+          }
+        },
         scales: {
           x: { grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: false }, ticks: { font: { size: 10, family: 'Plus Jakarta Sans' }, callback: v => '₹' + (v/1000).toFixed(0) + 'K' } },
           y: { grid: { display: false }, ticks: { font: { size: 11, family: 'Plus Jakarta Sans' } } }
@@ -187,7 +221,7 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
 
         {/* Top Charts Row: Cashflow Forecast & Recovery Rate */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-          <div className="card">
+          <div className="card interactive-card">
             <div className="card-header">
               <div>
                 <div className="card-title" style={{ fontWeight: 700, fontSize: 14 }}>Cashflow Forecast</div>
@@ -197,7 +231,7 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
             </div>
             <div className="reports-chart-wrap" style={{ height: 200 }}><canvas ref={forecastRef}></canvas></div>
           </div>
-          <div className="card">
+          <div className="card interactive-card">
             <div className="card-header">
               <div>
                 <div className="card-title" style={{ fontWeight: 700, fontSize: 14 }}>Month-over-Month Recovery Rate</div>
@@ -210,7 +244,7 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
 
         {/* Charts Row */}
         <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 16, marginBottom: 20 }}>
-          <div className="card">
+          <div className="card interactive-card">
             <div className="card-header">
               <div>
                 <div className="card-title" style={{ fontWeight: 700, fontSize: 14 }}>Monthly Recovery Trend</div>
@@ -219,7 +253,7 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
             </div>
             <div className="reports-chart-wrap"><canvas ref={lineRef}></canvas></div>
           </div>
-          <div className="card">
+          <div className="card interactive-card">
             <div className="card-header">
               <div>
                 <div className="card-title" style={{ fontWeight: 700, fontSize: 14 }}>Aging Analysis</div>
@@ -232,7 +266,7 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
 
         {/* Bottom 2-col: Executive Summary + Aging Table */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div className="card">
+          <div className="card interactive-card">
             <div className="card-header" style={{ marginBottom: 16 }}>
               <div className="card-title">Executive Summary</div>
               <span style={{ fontSize: 11, color: 'var(--text3)' }}>Current period</span>
@@ -246,7 +280,7 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
                 ['Active Invoices',         active.length + ' invoices','var(--blue)'],
                 ['Avg Days to Recover',     avgDays + ' days',         'var(--text)'],
               ].map(([label, value, color]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
+                <div key={label} className="report-item" style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: '1px solid var(--border)' }}>
                   <span style={{ color: 'var(--text2)', fontSize: 13 }}>{label}:</span>
                   <strong style={{ fontSize: 15, color }}>{value}</strong>
                 </div>
@@ -254,7 +288,7 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
             </div>
           </div>
 
-          <div className="card">
+          <div className="card interactive-card">
             <div className="card-header" style={{ marginBottom: 16 }}>
               <div className="card-title">Aging Summary</div>
               <span style={{ fontSize: 11, color: 'var(--text3)' }}>{fmtINR(totalAgingAmt)} total</span>
@@ -268,7 +302,7 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
               ].map(([label, value, color, fill]) => {
                 const pct = totalAgingAmt > 0 ? Math.round(value / totalAgingAmt * 100) : 0;
                 return (
-                  <div key={label}>
+                  <div key={label} className="report-item">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 500 }}>{label}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -276,7 +310,7 @@ function Reports({ invoices, outstanding, recovered, recoveryRate }) {
                         <span style={{ fontSize: 11, color: 'var(--text3)' }}>{pct}%</span>
                       </div>
                     </div>
-                    <div style={{ height: 8, background: 'var(--surface2)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div title={fmtINR(value)} style={{ height: 8, background: 'var(--surface2)', borderRadius: 4, overflow: 'hidden', cursor: 'pointer' }}>
                       <div style={{ width: pct + '%', height: '100%', background: fill, borderRadius: 4, transition: 'width 0.8s ease' }}></div>
                     </div>
                   </div>

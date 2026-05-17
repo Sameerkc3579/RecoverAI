@@ -64,7 +64,7 @@ function LegalQueue({ invoices, openDetail, settings }) {
             {invoices.map(inv => {
               const id = idata(inv);
               return (
-                <div key={inv.id} onClick={() => { setSelected(inv.id); setAiNotice(''); setCopied(false); }}
+                <div key={inv.id} className="legal-item" onClick={() => { setSelected(inv.id); setAiNotice(''); setCopied(false); }}
                   style={{ padding: '12px', border: `1.5px solid ${selected === inv.id ? 'var(--red)' : 'var(--border)'}`, borderRadius: 'var(--radius-lg)', marginBottom: 8, cursor: 'pointer', background: selected === inv.id ? 'var(--red-bg)' : 'var(--surface)', transition: 'all 0.15s' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ fontWeight: 700, fontSize: 13 }}>{inv.company}</div>

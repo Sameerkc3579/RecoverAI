@@ -104,7 +104,7 @@ Rules:
               const key = `${i}_${msg.timestamp}`;
               const sr = smartReplies[key] || {};
               return (
-                <div key={i} className="card" style={{ overflow: 'hidden' }}>
+                <div key={i} className="card inbox-card" style={{ overflow: 'hidden' }}>
                   {/* Message Header */}
                   <div className="inbox-msg-grid" onClick={() => openDetail(msg.inv)} style={{ cursor: 'pointer' }}>
                     <div>

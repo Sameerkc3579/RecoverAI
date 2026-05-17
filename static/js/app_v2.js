@@ -51,9 +51,16 @@ function App() {
     localStorage.setItem('recoverai_dark', darkMode ? 'true' : 'false');
   }, [darkMode]);
 
+  // Decode email securely from JWT to prevent local storage staleness
+  const getEmailFromToken = (t) => {
+    try { return t ? JSON.parse(atob(t.split('.')[1])).sub : null; } 
+    catch(e) { return null; }
+  };
+  const tokenEmail = getEmailFromToken(token);
+
   // Sidebar user info — reactive state, updated immediately on login
   const sidebarUserName = userDetails?.business_name || userDetails?.name || settings.businessName || 'My Account';
-  const sidebarUserRole = userDetails?.email || settings.email || 'Logged in';  // login email ONLY
+  const sidebarUserRole = tokenEmail || userDetails?.email || settings.email || 'Logged in';
   const sidebarInitials = sidebarUserName.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'ME';
 
   function handleLogin(tok, adminStatus, bizName, email) {
@@ -95,13 +102,36 @@ function App() {
     if (!getToken()) return;
     authFetch('/api/invoices')
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) setInvoices(data); })
+      .then(data => { 
+        if (Array.isArray(data)) {
+          // Dynamically recalculate daysOverdue and status based on TODAY'S date
+          // This ensures that even if you open the app weeks later, the numbers are perfectly accurate
+          const dynamicData = data.map(inv => {
+            if (inv.recovered) return inv; // Skip dynamic logic for fully recovered invoices
+            const due = new Date(inv.dueDate);
+            const days = Math.max(0, Math.floor((Date.now() - due.getTime()) / 86400000));
+            let currentStatus = 'sent';
+            if (days >= 45) currentStatus = 'legal';
+            else if (days >= 35) currentStatus = 'escalated';
+            else if (days >= 15) currentStatus = 'reminded';
+            return { ...inv, daysOverdue: days, status: currentStatus };
+          });
+          setInvoices(dynamicData);
+        }
+      })
       .catch(e => console.error('Error loading invoices:', e));
   }, []);
 
   useEffect(() => { if (token) fetchInvoices(); }, [token, fetchInvoices]);
 
-  if (!token) return <LoginScreen onLogin={handleLogin} />;
+  if (!token) {
+    if (page !== 'login' && page !== 'register') {
+      window.location.replace('/login');
+      return null;
+    }
+    // Fallback if already on /login but somehow inside dashboard.html
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   /* ── Computed values ── */
   const outstanding = invoices.filter(i => !i.recovered).reduce((s, i) => s + i.amount, 0);
@@ -184,8 +214,8 @@ function App() {
 
   /* ── Profile Popover ── */
   function UserProfileCard() {
-    // Use the REACTIVE userDetails state from parent — not localStorage (stale)
-    const profileEmail = userDetails?.email || settings.email || 'No email set';
+    // Use the securely decoded tokenEmail first, then REACTIVE userDetails, then fallback
+    const profileEmail = tokenEmail || userDetails?.email || settings.email || 'No email set';
     const profileName = userDetails?.business_name || userDetails?.name || settings.businessName || 'My Account';
     const totalActive = invoices.filter(i => !i.recovered).length;
     const totalRecovered = invoices.filter(i => i.recovered).length;
@@ -281,7 +311,12 @@ function App() {
       {/* Mobile drawer overlay */}
       <div className={`mobile-drawer-overlay${drawerOpen ? ' open' : ''}`} onClick={() => setDrawerOpen(false)}></div>
       <div className={`mobile-drawer${drawerOpen ? ' open' : ''}`}>
-        <div className="sidebar-brand">
+        <div className="sidebar-brand" style={{ paddingLeft: 16 }}>
+          <button onClick={() => setDrawerOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '4.5px', marginRight: '6px', padding: '4px' }}>
+            <span style={{ width: 18, height: '2px', background: 'currentColor', borderRadius: 2 }}></span>
+            <span style={{ width: 18, height: '2px', background: 'currentColor', borderRadius: 2 }}></span>
+            <span style={{ width: 18, height: '2px', background: 'currentColor', borderRadius: 2 }}></span>
+          </button>
           <div className="brand-icon" style={{ background: '#1D4ED8', color: '#fff', borderRadius: 8, fontSize: 16 }}>₹</div>
           <div className="brand-content">
             <div className="brand-name" style={{ fontSize:15, fontWeight:800, color:'var(--text)' }}>RecoverPro</div>
@@ -290,6 +325,10 @@ function App() {
         </div>
         <nav className="nav">{renderNavList(navTo)}</nav>
         <div className="sidebar-bottom">
+          <button onClick={() => setDarkMode(!darkMode)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', marginBottom: 10, borderRadius: 10, cursor: 'pointer', background: darkMode ? '#1E293B' : '#F1F5F9', border: darkMode ? '1px solid #1E3A5F' : '1px solid #C0D4E8', color: darkMode ? '#CBD5E1' : '#334155', fontWeight: 600, fontSize: 13, transition: 'all 0.2s' }}>
+            <span style={{ fontSize: 16 }}>{darkMode ? '🌙' : '☀️'}</span>
+            <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
           {profileOpen && <UserProfileCard />}
           <button className="user-card" onClick={e => { e.stopPropagation(); setProfileOpen(o => !o); }}>
             <div className="user-avatar" style={{ background: '#1D4ED8', color: '#fff' }}>
@@ -321,6 +360,10 @@ function App() {
             <div style={{ fontSize:10, color:'#4B5563', lineHeight:1.5, marginBottom:10 }}>Use smart workflows and AI-powered reminders to recover faster.</div>
             <button className="btn btn-primary btn-sm" style={{ width:'100%', justifyContent:'center', fontSize:11, padding:'6px 10px', borderRadius:8 }} onClick={() => setPage('campaigns')}>Explore Automation →</button>
           </div>
+          <button onClick={() => setDarkMode(!darkMode)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', marginBottom: 10, borderRadius: 10, cursor: 'pointer', background: darkMode ? '#1E293B' : '#F1F5F9', border: darkMode ? '1px solid #1E3A5F' : '1px solid #C0D4E8', color: darkMode ? '#CBD5E1' : '#334155', fontWeight: 600, fontSize: 13, transition: 'all 0.2s' }}>
+            <span style={{ fontSize: 16 }}>{darkMode ? '🌙' : '☀️'}</span>
+            <span>{darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}</span>
+          </button>
           {profileOpen && <UserProfileCard />}
           <button className="user-card" onClick={e => { e.stopPropagation(); setProfileOpen(o => !o); }}>
             <div className="user-avatar" style={{ background: '#1D4ED8', color: '#fff' }}>
@@ -338,16 +381,7 @@ function App() {
       {/* Main content — routed by page state */}
       <main className="main">{pages[page] || pages.dashboard}</main>
 
-      {/* Mobile bottom nav */}
-      <div className="mobile-bottom-nav">
-        {bottomTabs.map(t => (
-          <button key={t.id} className={`mob-nav-btn${(page === t.id && t.id !== 'menu') ? ' active' : ''}`}
-            onClick={() => t.id === 'menu' ? setDrawerOpen(true) : setPage(t.id)}>
-            <span className="mob-nav-icon">{t.icon}</span>
-            <span className="mob-nav-label">{t.label}</span>
-          </button>
-        ))}
-      </div>
+      {/* Mobile bottom nav removed per user request */}
 
       {/* Add Invoice Modal */}
       {showAddModal && <AddInvoiceModal onClose={() => setShowAddModal(false)} onAdd={inv => { addInvoice(inv); setShowAddModal(false); }} />}

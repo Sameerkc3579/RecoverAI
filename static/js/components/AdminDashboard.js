@@ -176,16 +176,16 @@ function AdminDashboard() {
           <div className="page-title">Platform Overview</div>
           <div className="page-sub">God Mode — System-wide analytics across all users</div>
         </div>
-        <div style={{display:'flex',gap:8}}>
-          <button className="btn-secondary" onClick={() => setTab('users')}>Manage Users →</button>
-          <button className="btn-primary" onClick={() => {
+        <div style={{display:'flex',gap:12}}>
+          <button className="btn-secondary animated-btn" onClick={() => setTab('users')} style={{ fontSize: '15px', padding: '12px 28px', borderRadius: '50px', fontWeight: '700' }}>Manage Users →</button>
+          <button className="btn-primary animated-btn" onClick={() => {
             authFetch('/api/admin/export/users').then(r=>r.json()).then(data=>{
               const rows = [['Email','Business','Plan','Active','Invoices','Tracked','Recovered','Joined'],
                 ...data.map(u=>[u.email,u.business_name||'',u.plan||'Starter',u.is_active!==false,u.invoice_count||0,u.total_tracked_value||0,u.total_recovered_value||0,(u.created_at||'').substring(0,10)])];
               const blob = new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});
               const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='users.csv';a.click();
             });
-          }}>⬇ Export CSV</button>
+          }} style={{ fontSize: '15px', padding: '12px 28px', borderRadius: '50px', fontWeight: '700' }}>⬇ Export CSV</button>
         </div>
       </div>
       <div className="content">
@@ -238,7 +238,7 @@ function AdminDashboard() {
         <div className="card" style={{padding:0,marginTop:16}}>
           <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border)',fontWeight:700,fontSize:13,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <span>Top Users by Value Tracked</span>
-            <button className="btn-secondary" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>setTab('users')}>View All →</button>
+            <button className="btn-secondary animated-btn" style={{fontSize:'14px',padding:'8px 18px',borderRadius:'50px',fontWeight:'700'}} onClick={()=>setTab('users')}>View All →</button>
           </div>
           <div className="table-wrap"><table><thead><tr>
             <th>Business / Email</th><th>Plan</th><th style={{textAlign:'right'}}>Invoices</th>
@@ -272,9 +272,9 @@ function AdminDashboard() {
         </div>
       </div>
       <div className="content">
-        <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap',alignItems:'center'}}>
-          <input className="input-field" placeholder="🔍  Search name or email…" value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1,minWidth:260,maxWidth:500}}/>
-          <select className="input-field" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{width:140}}>
+        <div style={{display:'flex',gap:16,marginBottom:18,flexWrap:'wrap',alignItems:'center'}}>
+          <input className="input-field" placeholder="🔍  Search name or email…" value={search} onChange={e=>setSearch(e.target.value)} style={{flex:2,minWidth:'320px',maxWidth:'600px',padding:'12px 24px',fontSize:'15px',borderRadius:'50px',height:'auto'}}/>
+          <select className="input-field" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{width:'200px',padding:'12px 24px',fontSize:'15px',borderRadius:'50px',height:'auto',cursor:'pointer'}}>
             <option value="all">All Status</option>
             <option value="active">Active Only</option>
             <option value="inactive">Inactive Only</option>

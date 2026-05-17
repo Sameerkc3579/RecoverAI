@@ -101,7 +101,14 @@ function App() {
 
   useEffect(() => { if (token) fetchInvoices(); }, [token, fetchInvoices]);
 
-  if (!token) return <LoginScreen onLogin={handleLogin} />;
+  if (!token) {
+    if (page !== 'login' && page !== 'register') {
+      window.location.replace('/login');
+      return null;
+    }
+    // Fallback if already on /login but somehow inside dashboard.html
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   /* ── Computed values ── */
   const outstanding = invoices.filter(i => !i.recovered).reduce((s, i) => s + i.amount, 0);

@@ -374,6 +374,15 @@ async def serve_app_shell():
         "Pragma": "no-cache",
         "Expires": "0"
     }
+    # Serve landing page for auth routes (Vite app)
+    for path in _LANDING_PATHS:
+        if path.exists():
+            return HTMLResponse(
+                content=path.read_bytes(),
+                status_code=200,
+                headers=no_cache_headers,
+            )
+    # Fallback to candidate paths
     for path in _CANDIDATE_PATHS:
         if path.exists():
             return HTMLResponse(

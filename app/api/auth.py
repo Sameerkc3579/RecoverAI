@@ -1,4 +1,4 @@
-﻿"""
+"""
 RecoverAI — Auth Router (Security-Hardened)
 
 Routes
@@ -31,6 +31,10 @@ from jose import JWTError, jwt
 
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from starlette.concurrency import run_in_threadpool
+
+# Persistent session caches Google's public certs to avoid an HTTP roundtrip on every login
+_GOOGLE_AUTH_REQ = google_requests.Request()
 
 from app.core.database import get_collection
 from app.core.config import settings
@@ -291,9 +295,10 @@ async def google_login(payload: GoogleAuthRequest) -> TokenResponse:
         )
 
     try:
-        idinfo = id_token.verify_oauth2_token(
+        idinfo = await run_in_threadpool(
+            id_token.verify_oauth2_token,
             payload.credential,
-            google_requests.Request(),
+            _GOOGLE_AUTH_REQ,
             settings.google_client_id,   # Always verify audience — no None bypass
         )
 

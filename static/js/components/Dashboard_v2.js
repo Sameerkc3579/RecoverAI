@@ -185,21 +185,6 @@
               <div className="page-sub">Overview of your recovery pipeline</div>
             </div>
             <div className="topbar-actions" style={{ position: 'relative' }}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setDarkMode(d => !d); }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
-                  background: darkMode ? '#1E293B' : '#F1F5F9',
-                  border: darkMode ? '1px solid #1E3A5F' : '1px solid #C0D4E8',
-                  color: darkMode ? '#CBD5E1' : '#334155',
-                  fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
-                  transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0
-                }}
-              >
-                <span style={{ fontSize: 16 }}>{darkMode ? '🌙' : '☀️'}</span>
-                <span className="btn-label">{darkMode ? 'Dark' : 'Light'}</span>
-              </button>
               <div 
                 style={{ display:'flex', alignItems:'center', gap:6, background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', fontSize:12, color:'var(--text2)', fontWeight:500, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}
                 onClick={(e) => { e.stopPropagation(); setShowDatePicker(!showDatePicker); setShowNotifications(false); }}
@@ -354,7 +339,7 @@
 
             {/* ── Charts Row ── */}
             <div className="chart-grid">
-              <div className="card">
+              <div className="card interactive-card">
                 <div className="card-header">
                   <div>
                     <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Outstanding vs Recovered</div>
@@ -366,7 +351,7 @@
                 </div>
                 <div style={{ height: 230 }}><canvas ref={chartRef}></canvas></div>
               </div>
-              <div className="card">
+              <div className="card interactive-card">
                 <div className="card-header">
                   <div>
                     <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Pipeline by Stage</div>
@@ -384,7 +369,7 @@
             <div className="dashboard-bottom-grid">
 
               {/* Col 1: Top Debtors */}
-              <div className="card">
+              <div className="card interactive-card">
                 <div className="card-header" style={{ marginBottom:10 }}>
                   <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Top Debtors</div>
                   <span style={{ fontSize:11, color:'var(--blue)', fontWeight:600, cursor:'pointer' }}>View All</span>
@@ -415,7 +400,7 @@
               </div>
 
               {/* Col 2: Debtor Invoices */}
-              <div className="card">
+              <div className="card interactive-card">
                 <div className="card-header" style={{ marginBottom:8 }}>
                   <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Debtor Invoices</div>
                   <span style={{ fontSize:11, color:'var(--blue)', fontWeight:600, cursor:'pointer' }}>View All</span>
@@ -433,7 +418,7 @@
               </div>
 
               {/* Col 3: Campaigns Overview */}
-              <div className="card">
+              <div className="card interactive-card">
                 <div className="card-header" style={{ marginBottom:8 }}>
                   <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Campaigns Overview</div>
                   <span style={{ fontSize:11, color:'var(--blue)', fontWeight:600, cursor:'pointer' }}>View All</span>
@@ -451,7 +436,7 @@
               </div>
 
               {/* Col 4: Recent Activity */}
-              <div className="card">
+              <div className="card interactive-card">
                 <div className="card-header" style={{ marginBottom:8 }}>
                   <div className="card-title" style={{ fontWeight:700, fontSize:14 }}>Recent Activity</div>
                   <span style={{ fontSize:11, color:'var(--blue)', fontWeight:600, cursor:'pointer' }}>View All</span>

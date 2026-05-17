@@ -62,7 +62,7 @@ function RecoveryHub({ invoices, openDetail, settings }) {
               Active Invoices ({active.length})
             </div>
             {active.map(inv => (
-              <div key={inv.id} onClick={() => { setSelected(inv.id); setAiMsg(''); setCopied(false); }}
+              <div key={inv.id} className="recovery-item" onClick={() => { setSelected(inv.id); setAiMsg(''); setCopied(false); }}
                 style={{ padding: '10px 12px', border: `1.5px solid ${selected === inv.id ? 'var(--amber)' : 'var(--border)'}`, borderRadius: 'var(--radius-lg)', marginBottom: 8, cursor: 'pointer', background: selected === inv.id ? '#FAEEDA' : 'var(--surface)', transition: 'all 0.15s' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.company}</div>

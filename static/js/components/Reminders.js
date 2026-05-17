@@ -27,7 +27,7 @@ function Reminders({ invoices, openDetail }) {
               else { nextAction = 'Send Gentle Follow-up'; badge = 'badge-blue'; }
 
               return (
-                <div key={inv.id} style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                <div key={inv.id} className="reminder-item" style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.company} <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({inv.invoiceNo})</span></div>
                     <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 4 }}>Due {inv.dueDate} — <strong style={{ color: 'var(--red)' }}>{inv.daysOverdue} days overdue</strong></div>
