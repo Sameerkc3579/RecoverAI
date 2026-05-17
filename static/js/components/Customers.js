@@ -177,7 +177,7 @@ function Customers({ invoices, openDetail }) {
             background: 'linear-gradient(135deg, #0F172A 0%, #1E3A5F 60%, #1D4ED8 100%)',
             borderRadius: 20, padding: '28px 32px', marginBottom: 20,
             display: 'flex', alignItems: 'center', gap: 28, position: 'relative', overflow: 'hidden',
-          }}>
+          }} className="customer-hero">
             {/* decorative circles */}
             <div style={{ position:'absolute', right:-40, top:-40, width:200, height:200, borderRadius:'50%', background:'rgba(255,255,255,0.03)' }} />
             <div style={{ position:'absolute', right:60, bottom:-60, width:150, height:150, borderRadius:'50%', background:'rgba(255,255,255,0.04)' }} />
@@ -213,7 +213,7 @@ function Customers({ invoices, openDetail }) {
           </div>
 
           {/* KPI Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
+          <div className="customer-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
             {[
               { label: 'Total Invoices', val: c.invoices.length, color: 'var(--blue)', icon: '📄' },
               { label: 'Outstanding', val: fmtINR(c.totalOutstanding), color: 'var(--amber)', icon: '⏳' },
@@ -278,7 +278,7 @@ function Customers({ invoices, openDetail }) {
           </div>
 
           {/* Two-column: profile + invoices */}
-          <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16 }}>
+          <div className="customer-detail-grid" style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16 }}>
             {/* Left: Contact Card */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div className="card" style={{ padding: 0 }}>
@@ -432,7 +432,7 @@ function Customers({ invoices, openDetail }) {
 
       <div className="content">
         {/* Summary KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
+        <div className="customer-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
           {[
             { label: 'Total Customers', val: Object.keys(customersMap).length, color: 'var(--blue)', icon: '🏢' },
             { label: 'High Risk Accounts', val: highRiskCount, color: 'var(--red)', icon: '⚠️' },
@@ -456,7 +456,7 @@ function Customers({ invoices, openDetail }) {
         </div>
 
         {/* Filters */}
-        <div style={{ display: 'flex', gap: 14, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="customer-filter-row" style={{ display: 'flex', gap: 14, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center' }}>
           <input
             className="input-field"
             placeholder="🔍  Search company, contact, email…"
@@ -476,7 +476,7 @@ function Customers({ invoices, openDetail }) {
             <option value="invoices">Sort: Invoices</option>
             <option value="name">Sort: Name</option>
           </select>
-          <div style={{ fontSize: 14, color: 'var(--text3)', marginLeft: 'auto', flex: '1 1 100px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+          <div className="account-count" style={{ fontSize: 14, color: 'var(--text3)', marginLeft: 'auto', flex: '1 1 100px', textAlign: 'right', whiteSpace: 'nowrap' }}>
             <strong style={{ color: 'var(--text)' }}>{customers.length}</strong> accounts
           </div>
         </div>

@@ -188,20 +188,20 @@
               <button
                 onClick={(e) => { e.stopPropagation(); setDarkMode(d => !d); }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
+                  display: 'flex', alignItems: 'center', gap: 6,
                   padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
                   background: darkMode ? '#1E293B' : '#F1F5F9',
                   border: darkMode ? '1px solid #1E3A5F' : '1px solid #C0D4E8',
                   color: darkMode ? '#CBD5E1' : '#334155',
                   fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0
                 }}
               >
                 <span style={{ fontSize: 16 }}>{darkMode ? '🌙' : '☀️'}</span>
-                <span>{darkMode ? 'Dark' : 'Light'}</span>
+                <span className="btn-label">{darkMode ? 'Dark' : 'Light'}</span>
               </button>
               <div 
-                style={{ display:'flex', alignItems:'center', gap:6, background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', fontSize:12, color:'var(--text2)', fontWeight:500, cursor:'pointer' }}
+                style={{ display:'flex', alignItems:'center', gap:6, background:'var(--surface2)', border:'1px solid var(--border)', borderRadius:8, padding:'6px 12px', fontSize:12, color:'var(--text2)', fontWeight:500, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}
                 onClick={(e) => { e.stopPropagation(); setShowDatePicker(!showDatePicker); setShowNotifications(false); }}
               >
                 <IconSvg path="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" size={14} /> 

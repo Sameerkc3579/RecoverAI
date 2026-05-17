@@ -261,6 +261,30 @@ async def startup_check():
         checks["html_file"][str(p)] = "exists" if p.exists() else "missing"
     return checks
 
+@app.get("/api/fs-debug", tags=["System"], include_in_schema=False)
+async def fs_debug():
+    import os
+    from pathlib import Path
+    data = {"cwd": os.getcwd(), "files_in_cwd": [], "files_in_var_task": [], "files_in_app": []}
+    
+    try:
+        data["files_in_cwd"] = os.listdir(os.getcwd())
+    except Exception as e:
+        data["files_in_cwd"] = str(e)
+        
+    try:
+        data["files_in_var_task"] = os.listdir("/var/task")
+    except Exception as e:
+        data["files_in_var_task"] = str(e)
+        
+    try:
+        data["files_in_app"] = os.listdir(os.path.join(os.getcwd(), "app"))
+    except Exception as e:
+        data["files_in_app"] = str(e)
+        
+    return data
+
+
 
 # ── Root — Serve the React Frontend ───────────────────────────────────────────────
 
@@ -290,6 +314,7 @@ async def dashboard():
                     content=html_content, 
                     status_code=200,
                     headers={
+                        "X-Source-File": str(path.name),
                         "Cache-Control": "no-cache, no-store, must-revalidate",
                         "Pragma": "no-cache",
                         "Expires": "0"
