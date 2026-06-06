@@ -75,9 +75,9 @@ MOCK_INVOICES = [
 async def run_tests():
     # Setup dynamic test credentials so tests always run isolated
     test_user = f"test_crud_{uuid.uuid4().hex[:6]}@example.com"
-    test_pass = "securepass123"
+    test_pass = "Securepass123!"
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         print("=== STAGE 1: Authentication Setup ===")
         # Register User
         print(f"Registering dynamic test user: {test_user}...")

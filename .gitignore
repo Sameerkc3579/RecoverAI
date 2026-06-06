@@ -41,3 +41,10 @@ backup_safe_place/
 /src/
 /public/
 .env.example
+
+# Local test files & logs
+logs/
+scratch/
+*.pdf
+*.log
+*.tmp
