@@ -25,8 +25,13 @@ class Settings(BaseSettings):
     mongo_uri: str
     db_name: str = "recovery_agent"
 
-    # ── WhatsApp ──────────────────────────────────────────────────────────────
-    whatsapp_api_token: str = ""
+    # ── WhatsApp Cloud API ──────────────────────────────────────────────────────
+    whatsapp_api_token: str = ""           # Legacy field kept for compatibility
+    whatsapp_verify_token: str = ""        # Your chosen secret for Meta webhook verification
+    whatsapp_webhook_secret: str = ""      # HMAC secret Meta uses to sign POST bodies
+    whatsapp_phone_number_id: str = ""     # Meta Phone Number ID (from Developer Console)
+    whatsapp_access_token: str = ""        # Meta System User permanent access token
+    whatsapp_auto_reply: bool = False      # Set True to enable automatic intent-based replies
 
     # ── JWT Auth ──────────────────────────────────────────────────────────────
     # NO default fallback — startup CRASHES if SECRET_KEY is not in .env

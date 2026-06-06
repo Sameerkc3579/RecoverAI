@@ -22,7 +22,7 @@ import logging
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -42,6 +42,8 @@ from app.api.enrich import router as enrich_router
 from app.api.admin import router as admin_router
 from app.api.users import router as users_router
 from app.api.customers import router as customers_router
+from app.api.whatsapp_webhook import router as whatsapp_router
+from app.api.deps import get_admin_user
 
 # ── Logger ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -160,6 +162,7 @@ app.include_router(enrich_router)
 app.include_router(admin_router)
 app.include_router(users_router)
 app.include_router(customers_router)
+app.include_router(whatsapp_router)
 
 
 # ── Static Files ──────────────────────────────────────────────────────────────
@@ -234,8 +237,13 @@ async def health_check() -> dict[str, str]:
 
 
 @app.get("/api/startup-check", tags=["System"], include_in_schema=False)
-async def startup_check():
-    """Diagnostic endpoint — reports env var presence and import health."""
+async def startup_check(_admin=Depends(get_admin_user)):
+    """
+    Diagnostic endpoint — reports env var presence and import health.
+    SECURITY: Requires admin JWT. Returns 404 in production mode.
+    """
+    if not settings.debug:
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
     import os
     checks = {
         "python_version": __import__("sys").version,
@@ -249,39 +257,40 @@ async def startup_check():
         "imports": {},
         "html_file": {},
     }
-    # Check imports
     for mod in ["fastapi", "motor", "jose", "passlib", "google.genai", "pymongo"]:
         try:
             __import__(mod)
             checks["imports"][mod] = "ok"
         except Exception as e:
             checks["imports"][mod] = f"FAILED: {e}"
-    # Check HTML paths (using _CANDIDATE_PATHS defined at module level)
     for p in _CANDIDATE_PATHS:
         checks["html_file"][str(p)] = "exists" if p.exists() else "missing"
     return checks
 
+
 @app.get("/api/fs-debug", tags=["System"], include_in_schema=False)
-async def fs_debug():
+async def fs_debug(_admin=Depends(get_admin_user)):
+    """
+    Filesystem diagnostic — lists files in key directories.
+    SECURITY: Requires admin JWT. Returns 404 in production mode to prevent
+    server directory structure from leaking to unauthenticated users.
+    """
+    if not settings.debug:
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
     import os
-    from pathlib import Path
     data = {"cwd": os.getcwd(), "files_in_cwd": [], "files_in_var_task": [], "files_in_app": []}
-    
     try:
         data["files_in_cwd"] = os.listdir(os.getcwd())
     except Exception as e:
         data["files_in_cwd"] = str(e)
-        
     try:
         data["files_in_var_task"] = os.listdir("/var/task")
     except Exception as e:
         data["files_in_var_task"] = str(e)
-        
     try:
         data["files_in_app"] = os.listdir(os.path.join(os.getcwd(), "app"))
     except Exception as e:
         data["files_in_app"] = str(e)
-        
     return data
 
 

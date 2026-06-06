@@ -40,3 +40,4 @@ backup_safe_place/
 /postcss.config.mjs
 /src/
 /public/
+.env.example

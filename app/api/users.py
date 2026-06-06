@@ -13,7 +13,7 @@ class UserSettingsUpdate(BaseModel):
     ownerName: Optional[str] = None
     phone: Optional[str] = None
     city: Optional[str] = None
-    email: Optional[str] = None # Contact email, not login email
+    email: Optional[str] = None  # Contact email, not login email
     gstin: Optional[str] = None
     autoReminder: Optional[bool] = None
     whatsappEnabled: Optional[bool] = None
@@ -21,7 +21,8 @@ class UserSettingsUpdate(BaseModel):
     legalAtDays: Optional[int] = None
     reminderDays: Optional[list[int]] = None
     commissionRate: Optional[float] = None
-    plan: Optional[str] = None
+    # NOTE: `plan` is intentionally excluded — subscription plan changes are admin-only.
+    # A user setting their own plan would be a privilege escalation vulnerability.
 
 @router.get("/me", summary="Get current user profile & settings")
 async def get_me(current_user: dict = Depends(get_current_user)):
@@ -36,7 +37,13 @@ async def update_settings(
     current_user: dict = Depends(get_current_user)
 ):
     update_data = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None}
-    
+
+    # SECURITY: Explicitly block any privileged fields that must not be user-writable.
+    # These should only be modified via admin endpoints.
+    _BLOCKED_USER_FIELDS = {"plan", "is_active", "hashed_password", "_id", "owner_id", "auth_provider"}
+    for blocked in _BLOCKED_USER_FIELDS:
+        update_data.pop(blocked, None)
+
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields provided to update")
 

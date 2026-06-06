@@ -326,7 +326,7 @@ function App() {
             <div style={{ fontSize:24, marginBottom:6 }}>🤖</div>
             <div style={{ fontSize:12, fontWeight:800, color:'#1E40AF', lineHeight:1.2, marginBottom:4 }}>Automate. Accelerate. Recover.</div>
             <div style={{ fontSize:10, color:'#4B5563', lineHeight:1.5, marginBottom:10 }}>Use smart workflows and AI-powered reminders to recover faster.</div>
-            <button className="btn btn-primary btn-sm" style={{ width:'100%', justifyContent:'center', fontSize:11, padding:'6px 10px', borderRadius:8 }} onClick={() => setPage('campaigns')}>Explore Automation →</button>
+            <button className="btn btn-primary btn-sm" style={{ width:'100%', justifyContent:'center', fontSize:11, padding:'6px 10px', borderRadius:8 }} onClick={() => setPage('invoices')}>Explore Automation →</button>
           </div>
           {profileOpen && <UserProfileCard />}
           <button className="user-card" onClick={e => { e.stopPropagation(); setProfileOpen(o => !o); }}>

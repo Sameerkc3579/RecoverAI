@@ -107,10 +107,39 @@ def _clear_rate_limit(ip: str) -> None:
 
 
 def _get_client_ip(request: Request) -> str:
-    """Extract real client IP, respecting X-Forwarded-For (Vercel/proxy)."""
+    """
+    Extract the real client IP, hardened against X-Forwarded-For spoofing.
+
+    Attack scenario: An attacker can inject arbitrary IPs at the *front* of the
+    X-Forwarded-For header (e.g., "1.1.1.1, real-attacker-ip").
+    Taking the leftmost IP (as the original code did) would let any attacker
+    bypass the rate limiter by simply rotating the spoofed first entry.
+
+    Fix: Walk the X-Forwarded-For list from right-to-left and return the
+    rightmost *public* IP — the last untrusted hop that the upstream proxy
+    actually observed. If all IPs are private/loopback (internal network),
+    fall back to the direct socket peer address.
+    """
+    import ipaddress
+
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        candidates = [ip.strip() for ip in reversed(forwarded.split(","))]
+        for ip in candidates:
+            try:
+                addr = ipaddress.ip_address(ip)
+                if not (addr.is_private or addr.is_loopback or addr.is_link_local):
+                    return ip
+            except ValueError:
+                continue
+        # All were private/invalid — use the rightmost valid entry
+        try:
+            last_xff = forwarded.split(",")[-1].strip()
+            ipaddress.ip_address(last_xff)
+            return last_xff
+        except ValueError:
+            pass
+
     return request.client.host if request.client else "unknown"
 
 

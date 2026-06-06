@@ -60,20 +60,40 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
 
 
 # ── Token Revocation Blacklist ────────────────────────────────────────────────
-# In-memory set of revoked JWT IDs (jti).
-# In production with multiple workers, replace this with a Redis SET.
-# Interface is the same — just swap the storage backend.
+# In-memory dict mapping revoked JWT IDs (jti) -> expiry timestamp.
+# Expired entries are pruned on each lookup to prevent unbounded memory growth.
+# In production with multiple workers, replace this with a Redis SET + EXPIREAT.
+# The interface (revoke_token / is_token_revoked) is identical to a Redis backend.
 
-_REVOKED_TOKENS: set[str] = set()
+_REVOKED_TOKENS: dict[str, float] = {}  # jti -> unix expiry timestamp
 
 
-def revoke_token(jti: str) -> None:
-    """Add a JWT ID to the revocation blacklist."""
-    _REVOKED_TOKENS.add(jti)
+def _prune_revoked_tokens() -> None:
+    """Remove expired entries from the blacklist (called on each check)."""
+    import time
+    now = time.time()
+    expired = [jti for jti, exp in _REVOKED_TOKENS.items() if exp < now]
+    for jti in expired:
+        del _REVOKED_TOKENS[jti]
+
+
+def revoke_token(jti: str, expires_at: float | None = None) -> None:
+    """Add a JWT ID to the revocation blacklist with an optional expiry time.
+
+    Args:
+        jti: The JWT ID to revoke.
+        expires_at: Unix timestamp when this token naturally expires.
+                    If None, defaults to 30 days from now (safe upper bound).
+    """
+    import time
+    if expires_at is None:
+        expires_at = time.time() + 30 * 24 * 3600  # 30-day fallback
+    _REVOKED_TOKENS[jti] = expires_at
 
 
 def is_token_revoked(jti: str) -> bool:
-    """Return True if the given JWT ID has been revoked."""
+    """Return True if the given JWT ID has been revoked and not yet expired."""
+    _prune_revoked_tokens()
     return jti in _REVOKED_TOKENS
 
 

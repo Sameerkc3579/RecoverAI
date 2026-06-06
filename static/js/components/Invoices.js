@@ -136,7 +136,14 @@ function Invoices({ invoices, openDetail, onAdd }) {
       </div>
       <div className="content">
 
-
+        {/* AI Integration Banner */}
+        <div style={{ background: 'linear-gradient(135deg, #E0F2FE 0%, #EDE9FE 100%)', border: '1px solid #C0D4E8', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 12px rgba(139,92,246,0.1)' }}>
+          <div style={{ fontSize: '28px' }}>✨</div>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: '800', color: '#0A1428', marginBottom: '4px' }}>AI Email Ingestion is Active!</div>
+            <div style={{ fontSize: '13px', color: '#334155' }}>Forward your PDF invoices to <strong style={{ color: '#0EA5E9' }}>itssamproj@gmail.com</strong> from your registered email account, and our Zero-Trust AI will automatically extract and map them to this dashboard.</div>
+          </div>
+        </div>
 
         {/* Status filter chips */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>

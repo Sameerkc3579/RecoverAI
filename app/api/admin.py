@@ -173,8 +173,22 @@ async def list_users(
     sort_by: Optional[str] = Query("created_at", description="Sort field"),
     order: Optional[str] = Query("desc", description="asc | desc"),
 ) -> list[dict]:
-    col = get_collection("users")
+    # ── Allowlist validation for sort_by (NoSQL injection protection) ─────────
+    # Passing arbitrary field names to MongoDB $sort can expose document structure
+    # or be used to probe fields that should not be sortable.
+    ALLOWED_SORT_FIELDS = {
+        "created_at", "email", "business_name", "is_active", "plan",
+        "invoice_count", "total_tracked_value", "total_recovered_value",
+        "active_invoice_count", "legal_queue_count",
+    }
+    if sort_by not in ALLOWED_SORT_FIELDS:
+        logger.warning("ADMIN_INVALID_SORT_FIELD | sort_by=%s", sort_by)
+        sort_by = "created_at"  # Silently fall back to safe default
 
+    # Restrict order to prevent unexpected behavior
+    sort_order = -1 if order == "desc" else 1
+
+    col = get_collection("users")
     match_stage = {}
     if search:
         match_stage["$or"] = [
@@ -185,8 +199,6 @@ async def list_users(
         match_stage["is_active"] = True
     elif status_filter == "inactive":
         match_stage["is_active"] = False
-
-    sort_order = -1 if order == "desc" else 1
 
     pipeline = [
         *([ {"$match": match_stage} ] if match_stage else []),

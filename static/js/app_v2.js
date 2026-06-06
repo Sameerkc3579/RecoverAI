@@ -358,7 +358,7 @@ function App() {
             <div style={{ fontSize:24, marginBottom:6 }}>🤖</div>
             <div style={{ fontSize:12, fontWeight:800, color:'#1E40AF', lineHeight:1.2, marginBottom:4 }}>Automate. Accelerate. Recover.</div>
             <div style={{ fontSize:10, color:'#4B5563', lineHeight:1.5, marginBottom:10 }}>Use smart workflows and AI-powered reminders to recover faster.</div>
-            <button className="btn btn-primary btn-sm" style={{ width:'100%', justifyContent:'center', fontSize:11, padding:'6px 10px', borderRadius:8 }} onClick={() => setPage('campaigns')}>Explore Automation →</button>
+            <button className="btn btn-primary btn-sm" style={{ width:'100%', justifyContent:'center', fontSize:11, padding:'6px 10px', borderRadius:8 }} onClick={() => setPage('invoices')}>Explore Automation →</button>
           </div>
           <button onClick={() => setDarkMode(!darkMode)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', marginBottom: 10, borderRadius: 10, cursor: 'pointer', background: darkMode ? '#1E293B' : '#F1F5F9', border: darkMode ? '1px solid #1E3A5F' : '1px solid #C0D4E8', color: darkMode ? '#CBD5E1' : '#334155', fontWeight: 600, fontSize: 13, transition: 'all 0.2s' }}>
             <span style={{ fontSize: 16 }}>{darkMode ? '🌙' : '☀️'}</span>
