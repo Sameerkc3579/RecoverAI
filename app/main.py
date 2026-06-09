@@ -312,6 +312,9 @@ async def fs_debug(_admin=Depends(get_admin_user)):
 @app.get("/reminders", tags=["Frontend"], include_in_schema=False)
 @app.get("/admin", tags=["Frontend"], include_in_schema=False)
 @app.get("/settings", tags=["Frontend"], include_in_schema=False)
+@app.get("/accounting", tags=["Frontend"], include_in_schema=False)
+@app.get("/whatsapp", tags=["Frontend"], include_in_schema=False)
+@app.get("/whitelabel", tags=["Frontend"], include_in_schema=False)
 async def dashboard():
     """Serve the RecoverAI single-page frontend (dashboard)."""
     try:

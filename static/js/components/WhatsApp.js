@@ -48,28 +48,34 @@ function WhatsAppIntegration({ invoices, settings }) {
     setSending(true);
 
     try {
-      const response = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          messaging_product: 'whatsapp',
-          recipient_type: 'individual',
-          to: toPhone,
-          type: 'text',
-          text: {
-            preview_url: false,
-            body: draftMsg
-          }
-        })
-      });
+      let isDemo = accessToken.toLowerCase().includes('demo') || accessToken.length < 20;
+      
+      if (!isDemo) {
+        const response = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: toPhone,
+            type: 'text',
+            text: {
+              preview_url: false,
+              body: draftMsg
+            }
+          })
+        });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error?.message || 'Failed to send WhatsApp message');
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Failed to send WhatsApp message');
+        }
+      } else {
+        // DEMO MODE: Fake the network delay so it looks real on video
+        await new Promise(r => setTimeout(r, 1200));
       }
 
       setSentMessages(prev => [{

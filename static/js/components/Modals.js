@@ -172,6 +172,39 @@ function InvoiceDetailModal({ inv, settings, onClose, onRecover, onDelete }) {
   const [copied, setCopied] = React.useState(false);
   const [confirm, setConfirm] = React.useState(false);
   const [tone, setTone] = React.useState('Firm Warning');
+  
+  // Edit State
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editForm, setEditForm] = React.useState({ ...inv });
+  const [saving, setSaving] = React.useState(false);
+
+  const updEdit = (k, v) => setEditForm(p => ({ ...p, [k]: v }));
+
+  async function saveEdit() {
+    setSaving(true);
+    try {
+      const payload = {
+        company: editForm.company,
+        contact: editForm.contact,
+        phone: editForm.phone,
+        email: editForm.email,
+        amount: parseInt(editForm.amount) || 0,
+        invoiceNo: editForm.invoiceNo,
+        dueDate: editForm.dueDate
+      };
+      const res = await authFetch('/api/invoices/' + inv.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error("Failed to update invoice");
+      window.location.reload();
+    } catch(e) {
+      alert(e.message);
+      setSaving(false);
+    }
+  }
+
   const aiMsg = aiMsgs[msgType] || '';
 
   const id = inv.interest_data || {};
@@ -223,6 +256,7 @@ function InvoiceDetailModal({ inv, settings, onClose, onRecover, onDelete }) {
           </div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <span className={`badge ${daysBadge(inv.daysOverdue, inv.recovered)}`}>{inv.recovered ? 'Recovered' : STATUS_META[inv.status]?.label}</span>
+            {!isEditing && <button className="btn btn-sm" onClick={() => setIsEditing(true)}>✎ Edit</button>}
             <button className="close-btn" onClick={onClose}>×</button>
           </div>
         </div>
@@ -230,11 +264,27 @@ function InvoiceDetailModal({ inv, settings, onClose, onRecover, onDelete }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           {/* Left */}
           <div>
-            <div className="detail-grid" style={{ marginBottom: 12 }}>
-              {[['Invoice No', inv.invoiceNo], ['Amount', fmtINR(inv.amount)], ['Due Date', inv.dueDate], ['Days Overdue', inv.recovered ? '—' : inv.daysOverdue + 'd'], ['Channel', inv.channel], ['Industry', inv.industry], ['GSTIN', inv.gstin || '—'], ['Reminders Sent', inv.reminders + '/4']].map(([l, v]) => (
-                <div key={l} className="detail-item"><div className="detail-label">{l}</div><div className="detail-value" style={{ fontSize: 12 }}>{v}</div></div>
-              ))}
-            </div>
+            {isEditing ? (
+              <div className="form-grid" style={{ marginBottom: 16 }}>
+                <div className="form-group"><label className="form-label">Company</label><input className="form-input" value={editForm.company || ''} onChange={e => updEdit('company', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Contact</label><input className="form-input" value={editForm.contact || ''} onChange={e => updEdit('contact', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Phone (WhatsApp)</label><input className="form-input" value={editForm.phone || ''} onChange={e => updEdit('phone', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Email</label><input className="form-input" value={editForm.email || ''} onChange={e => updEdit('email', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Invoice No</label><input className="form-input" value={editForm.invoiceNo || ''} onChange={e => updEdit('invoiceNo', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Amount</label><input className="form-input" type="number" value={editForm.amount || ''} onChange={e => updEdit('amount', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Due Date</label><input className="form-input" type="date" value={editForm.dueDate || ''} onChange={e => updEdit('dueDate', e.target.value)} /></div>
+                <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+                  <button className="btn" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setIsEditing(false)}>Cancel</button>
+                  <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={saveEdit} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</button>
+                </div>
+              </div>
+            ) : (
+              <div className="detail-grid" style={{ marginBottom: 12 }}>
+                {[['Invoice No', inv.invoiceNo], ['Amount', fmtINR(inv.amount)], ['Due Date', inv.dueDate], ['Days Overdue', inv.recovered ? '—' : inv.daysOverdue + 'd'], ['Channel', inv.channel], ['Industry', inv.industry], ['GSTIN', inv.gstin || '—'], ['Reminders Sent', inv.reminders + '/4']].map(([l, v]) => (
+                  <div key={l} className="detail-item"><div className="detail-label">{l}</div><div className="detail-value" style={{ fontSize: 12 }}>{v}</div></div>
+                ))}
+              </div>
+            )}
 
             {hasInterest && (
               <div style={{ marginBottom: 12 }}>
