@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 
 # ── Gemini model ────────────────────────────────────────────────────────────
 # Model cascade: fastest → most capable → legacy stable
-MODEL           = "gemini-2.0-flash"    # primary — fast & cheap
-FALLBACK_MODEL  = "gemini-2.5-flash"    # second tier
+MODEL           = "gemini-2.5-flash"    # primary — fast & cheap
+FALLBACK_MODEL  = "gemini-1.5-flash"    # second tier
 LEGACY_MODEL    = "gemini-1.5-flash"    # last resort (stable, widely available)
 
 

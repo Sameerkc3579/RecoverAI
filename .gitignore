@@ -48,3 +48,8 @@ scratch/
 *.pdf
 *.log
 *.tmp
+jwt.txt
+output.txt
+result.txt
+test_auth_results.txt
+test_ai.py

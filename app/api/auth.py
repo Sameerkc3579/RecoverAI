@@ -270,8 +270,6 @@ async def login(
     )
 
     if not user:
-        # Still run a fake verify to prevent timing attacks
-        verify_password("dummy", "$2b$12$somethingthatnevermatchesat.all.plzandthankyou00")
         raise AUTH_ERROR
 
     if not verify_password(form_data.password, user["hashed_password"]):

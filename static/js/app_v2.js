@@ -11,7 +11,7 @@ function App() {
   // page = current route/section
   const getInitialPage = () => {
     const path = window.location.pathname.substring(1);
-    const validPages = ['dashboard', 'inbox', 'invoices', 'recovery', 'legal', 'campaigns', 'customers', 'reports', 'reminders', 'admin', 'settings', 'login', 'register'];
+    const validPages = ['dashboard', 'inbox', 'invoices', 'recovery', 'legal', 'campaigns', 'customers', 'reports', 'reminders', 'admin', 'settings', 'whatsapp', 'whitelabel', 'accounting', 'login', 'register'];
     return validPages.includes(path) ? path : 'dashboard';
   };
   const [page, setPage] = useState(getInitialPage);
@@ -19,6 +19,12 @@ function App() {
   useEffect(() => {
     window.history.pushState(null, '', `/${page}`);
   }, [page]);
+
+  useEffect(() => {
+    if (token && (page === 'login' || page === 'register')) {
+      setPage('dashboard');
+    }
+  }, [token, page]);
 
   useEffect(() => {
     const onPopState = () => setPage(getInitialPage());
@@ -196,6 +202,9 @@ function App() {
     { id: 'reminders',  label: 'Reminders',        icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
   ];
   if (isAdmin) navItems.push({ id: 'admin', label: 'God Mode', icon: ['M15 12a3 3 0 11-6 0 3 3 0 016 0z', 'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'], badge: 'Admin', badgeType: 'red' });
+  navItems.push({ id: 'whatsapp',   label: 'WhatsApp',        icon: 'M20.52 3.449A11.963 11.963 0 0012.002 0C5.373 0 .002 5.373.002 12c0 2.117.554 4.102 1.521 5.83L0 24l6.335-1.663A11.954 11.954 0 0012.002 24c6.628 0 12-5.372 12-12 0-3.205-1.248-6.219-3.482-8.551zm-8.518 18.451a9.946 9.946 0 01-5.073-1.385l-.364-.216-3.76.986 1.004-3.659-.237-.375A9.945 9.945 0 012.003 12c0-5.514 4.486-10 10-10 2.671 0 5.181 1.04 7.071 2.929A9.944 9.944 0 0122.001 12c0 5.514-4.487 10-9.999 10z' });
+  navItems.push({ id: 'accounting', label: 'Tally / Zoho',    icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z' });
+  navItems.push({ id: 'whitelabel', label: 'White-Label',     icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01' });
 
   /* ── Pages map ── */
   const pages = {
@@ -210,6 +219,9 @@ function App() {
     reminders: <Reminders invoices={invoices} openDetail={openDetail} />,
     admin:     <AdminDashboard />,
     settings:  <Settings settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} />,
+    whatsapp:  <WhatsAppIntegration invoices={invoices} settings={settings} />,
+    whitelabel:<WhiteLabel settings={settings} setSettings={setSettings} />,
+    accounting:<AccountingExport invoices={invoices} settings={settings} />,
   };
 
   /* ── Profile Popover ── */
