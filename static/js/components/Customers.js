@@ -1,39 +1,34 @@
 /* ─── Customers Page — MNC-Grade Profile View ─── */
-function Customers({ invoices, openDetail }) {
+function Customers({ token, invoices, openDetail }) {
+  const [customersData, setCustomersData] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
   const [selectedCustomer, setSelectedCustomer] = React.useState(null);
   const [search, setSearch] = React.useState('');
   const [sortBy, setSortBy] = React.useState('outstanding');
   const [filterStatus, setFilterStatus] = React.useState('all');
 
-  /* Build customers map */
-  const customersMap = {};
-  invoices.forEach(inv => {
-    const key = inv.company || 'Unknown';
-    if (!customersMap[key]) {
-      customersMap[key] = {
-        company: inv.company,
-        contact: inv.contact,
-        email: inv.email,
-        phone: inv.phone,
-        gstin: inv.gstin,
-        city: inv.city,
-        invoices: [],
-        totalOutstanding: 0,
-        totalRecovered: 0,
-        totalAmount: 0,
-        lastActivity: null,
-      };
-    }
-    const c = customersMap[key];
-    c.invoices.push(inv);
-    c.totalAmount += inv.amount;
-    if (inv.recovered) c.totalRecovered += inv.amount;
-    else c.totalOutstanding += inv.amount;
-    const invDate = new Date(inv.dueDate || inv.issueDate);
-    if (!c.lastActivity || invDate > c.lastActivity) c.lastActivity = invDate;
-  });
+  React.useEffect(() => {
+    fetch('/api/customers', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(res => res.json())
+    .then(data => {
+      setCustomersData(data);
+      setLoading(false);
+    })
+    .catch(err => {
+      console.error(err);
+      setLoading(false);
+    });
+  }, [token]);
 
-  let customers = Object.values(customersMap);
+  // Enrich customers with their invoices for the detail view
+  let customers = customersData.map(c => {
+    return {
+      ...c,
+      invoices: invoices.filter(inv => inv.customerId === c.id || inv.company === c.company)
+    };
+  });
 
   /* Filter */
   if (search.trim()) {
@@ -431,10 +426,12 @@ function Customers({ invoices, openDetail }) {
       </div>
 
       <div className="content">
+        {loading && <div style={{textAlign: 'center', padding: '40px', color: 'var(--text3)'}}>Loading customers...</div>}
+        {!loading && <>
         {/* Summary KPIs */}
         <div className="customer-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
           {[
-            { label: 'Total Customers', val: Object.keys(customersMap).length, color: 'var(--blue)', icon: '🏢' },
+            { label: 'Total Customers', val: customers.length, color: 'var(--blue)', icon: '🏢' },
             { label: 'High Risk Accounts', val: highRiskCount, color: 'var(--red)', icon: '⚠️' },
             { label: 'Fully Cleared', val: clearCount, color: 'var(--green)', icon: '✅' },
           ].map((m, i) => (
@@ -572,6 +569,7 @@ function Customers({ invoices, openDetail }) {
             );
           })}
         </div>
+        </>}
       </div>
     </div>
   );

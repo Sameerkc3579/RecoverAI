@@ -83,6 +83,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.core.config import settings
 from app.models.schemas import InvoiceCreate
+from app.services.customer_service import upsert_customer
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -611,6 +612,15 @@ class MongoInsertionAgent:
 
                 result = await self._db[INVOICES_COLLECTION].insert_one(payload)
                 inserted_id = str(result.inserted_id)
+                
+                # Customer Upsert Logic
+                if owner_id:
+                    customer_id = await upsert_customer(owner_id, payload)
+                    await self._db[INVOICES_COLLECTION].update_one(
+                        {"_id": result.inserted_id},
+                        {"$set": {"customer_id": customer_id}}
+                    )
+
                 logger.info(
                     "MongoDB ✅ Invoice inserted: _id=%s company='%s' amount=%.2f",
                     inserted_id, invoice.company, invoice.amount,

@@ -14,6 +14,8 @@ class InvoiceBase(BaseModel):
     """Core invoice fields shared by create and response models."""
     model_config = ConfigDict(populate_by_name=True)
 
+    customer_id: str | None = Field(default=None, alias="customerId", description="MongoDB ObjectId of the linked Customer")
+
     company: str = Field(..., min_length=1, max_length=300)
     contact: str = Field(default="")
     phone: str = Field(default="")
@@ -50,6 +52,7 @@ class InvoiceUpdate(BaseModel):
     """Request body for PATCH /api/invoices/{id} — all fields optional."""
     model_config = ConfigDict(populate_by_name=True)
 
+    customer_id: str | None = Field(default=None, alias="customerId")
     status: str | None = None
     recovered: bool | None = None
     amount: float | None = Field(default=None, ge=0)
@@ -71,3 +74,48 @@ class PromptRequest(BaseModel):
     invoice_data: dict | None = Field(default=None, description="The invoice details JSON")
     tone: str = Field(default="Firm Warning", description="The tone for the AI generation")
 
+# ── Customers ─────────────────────────────────────────────────────────────────
+
+class CustomerBase(BaseModel):
+    """Core customer fields."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    company: str = Field(..., min_length=1, max_length=300)
+    contact: str = Field(default="")
+    email: str = Field(default="")
+    phone: str = Field(default="")
+    city: str | None = None
+    gstin: str | None = None
+
+
+class CustomerCreate(CustomerBase):
+    """Request body for POST /api/customers."""
+    pass
+
+
+class CustomerUpdate(BaseModel):
+    """Request body for PUT /api/customers/{id} — all fields optional."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    company: str | None = None
+    contact: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    city: str | None = None
+    gstin: str | None = None
+
+
+class CustomerResponse(CustomerBase):
+    """Response body for customers."""
+    model_config = ConfigDict(populate_by_name=True, from_attributes=True)
+
+    id: str = Field(..., description="MongoDB ObjectId as a string")
+    
+    # Aggregated fields
+    total_outstanding: float = Field(default=0.0, alias="totalOutstanding")
+    total_recovered: float = Field(default=0.0, alias="totalRecovered")
+    total_amount: float = Field(default=0.0, alias="totalAmount")
+    invoice_count: int = Field(default=0, alias="invoiceCount")
+    last_activity: str | None = Field(default=None, alias="lastActivity")
+    created_at: str | None = Field(default=None, alias="createdAt")
+    updated_at: str | None = Field(default=None, alias="updatedAt")
