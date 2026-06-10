@@ -1,0 +1,34 @@
+# .coderabbit.yaml - CodeRabbit AI Configuration
+# This file tells the CodeRabbit AI how to review our code.
+
+language: "en-US"
+early_access: false
+
+reviews:
+  # Sets the AI's persona
+  profile: "senior_software_engineer"
+  
+  # Automatically review all PRs targeting the main branch
+  auto_review:
+    enabled: true
+    ignore_title_keywords:
+      - "WIP"
+      - "Draft"
+    base_branches:
+      - "main"
+      
+  # Provides a high-level summary of the PR at the top
+  high_level_summary: true
+  
+  # Disables the playful poem that CodeRabbit generates by default (keeps it professional)
+  poem: false
+  
+  # Fails the PR check if CodeRabbit finds critical issues
+  review_status: true
+  
+  # Whether to collapse the file-by-file walkthrough in the PR description
+  collapse_walkthrough: true
+
+chat:
+  # Allows us to reply to CodeRabbit's comments and have a conversation with it
+  auto_reply: true
