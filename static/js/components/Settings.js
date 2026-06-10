@@ -115,7 +115,7 @@ function Settings({ settings, setSettings, darkMode, setDarkMode }) {
                   </button>
                 )}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text3)' }}>🔒 Links are time-limited (48 hours) and debtor-specific for security.</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)' }}>🔒 Links are time-limited (7 days) and debtor-specific for security.</div>
             </div>
           </div>
 
