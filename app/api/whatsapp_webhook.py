@@ -44,6 +44,7 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.database import get_collection
 from app.services.nlp_service import process_debtor_reply
+from app.services.whatsapp_service import send_whatsapp_message as _send_whatsapp_reply
 
 logger = logging.getLogger(__name__)
 
@@ -131,42 +132,8 @@ async def _find_invoice_by_phone(phone_candidates: list[str]) -> dict | None:
 
 
 # ── WhatsApp Cloud API — Send Message ──────────────────────────────────────────
-
-async def _send_whatsapp_reply(to_number: str, text: str) -> bool:
-    """
-    Send a text message via WhatsApp Cloud API.
-    Returns True on success, False on failure.
-    Silently skips if WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN missing.
-    """
-    phone_number_id = settings.whatsapp_phone_number_id
-    access_token = settings.whatsapp_access_token
-
-    if not phone_number_id or not access_token:
-        logger.info("WA send skipped — WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN not configured")
-        return False
-
-    url = f"https://graph.facebook.com/v20.0/{phone_number_id}/messages"
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": to_number,
-        "type": "text",
-        "text": {"body": text},
-    }
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                url,
-                json=payload,
-                headers={"Authorization": f"Bearer {access_token}"},
-            )
-        if resp.status_code == 200:
-            logger.info("WA_SEND_OK | to=%s", to_number)
-            return True
-        logger.warning("WA_SEND_FAILED | to=%s | status=%d | body=%s", to_number, resp.status_code, resp.text[:200])
-        return False
-    except Exception as exc:
-        logger.error("WA_SEND_ERROR | to=%s | error=%s", to_number, exc)
-        return False
+# _send_whatsapp_reply is now imported from app.services.whatsapp_service
+# (aliased at the top of this file) so it can be shared with the drip scheduler.
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────

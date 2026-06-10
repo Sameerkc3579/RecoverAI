@@ -9,6 +9,49 @@ function WhatsAppIntegration({ invoices, settings }) {
   const [draftMsg, setDraftMsg] = React.useState('');
   const [tab, setTab] = React.useState('send'); // send | drip | status
 
+  // Drip campaign settings — loaded from backend
+  const [dripSettings, setDripSettings] = React.useState({
+    day_7: { enabled: true },
+    day_21: { enabled: true },
+    day_35: { enabled: true },
+    day_45: { enabled: true },
+  });
+  const [dripSaving, setDripSaving] = React.useState(false);
+  const [dripSaved, setDripSaved] = React.useState(false);
+
+  // Load drip settings from backend on mount
+  React.useEffect(() => {
+    authFetch('/api/users/drip-settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.drip_settings) setDripSettings(data.drip_settings);
+      })
+      .catch(() => {});
+  }, []);
+
+  function toggleDripStep(key) {
+    setDripSettings(prev => ({
+      ...prev,
+      [key]: { ...prev[key], enabled: !prev[key]?.enabled },
+    }));
+  }
+
+  async function saveDripSettings() {
+    setDripSaving(true);
+    try {
+      const res = await authFetch('/api/users/drip-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dripSettings),
+      });
+      if (res.ok) {
+        setDripSaved(true);
+        setTimeout(() => setDripSaved(false), 3000);
+      }
+    } catch (e) { console.error('Error saving drip settings:', e); }
+    setDripSaving(false);
+  }
+
   const unpaidInvoices = invoices.filter(i => !i.recovered);
 
   function connectWA() {
@@ -261,19 +304,26 @@ function WhatsAppIntegration({ invoices, settings }) {
       {tab === 'drip' && (
         <div className="card" style={{padding:28}}>
           <div style={{fontSize:17,fontWeight:900,color:'var(--text)',marginBottom:6}}>⏱ Automated Drip Campaigns</div>
-          <div style={{fontSize:13,color:'var(--text2)',marginBottom:28,lineHeight:1.7}}>
-            Configure automated WhatsApp reminders that fire at preset intervals. RecoverAI will auto-send these messages and escalate to legal notices when needed.
+          <div style={{fontSize:13,color:'var(--text2)',marginBottom:8,lineHeight:1.7}}>
+            Configure automated WhatsApp reminders that fire at preset intervals. RecoverAI will auto-send AI-crafted messages at midnight IST and escalate to legal notices when needed.
           </div>
+          {dripSaved && (
+            <div style={{marginBottom:16,padding:'10px 16px',borderRadius:10,background:'var(--green-bg)',color:'var(--green)',fontSize:13,fontWeight:700,display:'flex',alignItems:'center',gap:8}}>
+              ✅ Drip settings saved! The scheduler will use these at the next midnight run.
+            </div>
+          )}
           {[
-            {day:7,icon:'📣',title:'First Gentle Reminder',desc:'A polite WhatsApp nudge. Tone: Friendly. Mentions outstanding amount.',color:'var(--blue)'},
-            {day:21,icon:'⚠️',title:'Firm Follow-up',desc:'Firmer reminder. Warns of upcoming interest under MSMED Act. Tone: Professional.',color:'var(--amber)'},
-            {day:35,icon:'🚨',title:'Final Warning',desc:'Last reminder before legal escalation. Mentions Facilitation Council filing.',color:'var(--red)'},
-            {day:45,icon:'⚖️',title:'Auto Legal Notice PDF',desc:'Generates and emails an MSMED Act legal notice with compound interest calculation.',color:'var(--purple)'},
+            {day:7, key:'day_7', icon:'📣',title:'First Gentle Reminder',desc:'A polite WhatsApp nudge. Tone: Friendly. Mentions outstanding amount.',color:'var(--blue)'},
+            {day:21, key:'day_21', icon:'⚠️',title:'Firm Follow-up',desc:'Firmer reminder. Warns of upcoming interest under MSMED Act. Tone: Professional.',color:'var(--amber)'},
+            {day:35, key:'day_35', icon:'🚨',title:'Final Warning',desc:'Last reminder before legal escalation. Mentions Facilitation Council filing.',color:'var(--red)'},
+            {day:45, key:'day_45', icon:'⚖️',title:'Auto Legal Notice',desc:'Generates and sends an MSMED Act legal notice with compound interest calculation.',color:'var(--purple)'},
           ].map(step=>(
             <div key={step.day} style={{
               display:'flex', alignItems:'flex-start', gap:20, padding:'18px 20px',
               background:'var(--surface2)', borderRadius:12, marginBottom:12,
               border:`1px solid var(--border)`, position:'relative',
+              opacity: dripSettings[step.key]?.enabled !== false ? 1 : 0.5,
+              transition: 'opacity 0.2s',
             }}>
               <div style={{
                 width:44,height:44,borderRadius:'50%',background:`${step.color}20`,
@@ -288,12 +338,14 @@ function WhatsAppIntegration({ invoices, settings }) {
                 <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.7}}>{step.desc}</div>
               </div>
               <label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',flexShrink:0}}>
-                <input type="checkbox" defaultChecked style={{accentColor:'var(--amber)',width:16,height:16}} />
-                <span style={{fontSize:11,fontWeight:600,color:'var(--text3)'}}>Enabled</span>
+                <input type="checkbox" checked={dripSettings[step.key]?.enabled !== false} onChange={()=>toggleDripStep(step.key)} style={{accentColor:'var(--amber)',width:16,height:16}} />
+                <span style={{fontSize:11,fontWeight:600,color:'var(--text3)'}}>{dripSettings[step.key]?.enabled !== false ? 'Enabled' : 'Disabled'}</span>
               </label>
             </div>
           ))}
-          <button className="btn btn-primary" style={{marginTop:8,padding:'12px 24px'}}>💾 Save Drip Settings</button>
+          <button className="btn btn-primary" style={{marginTop:8,padding:'12px 24px'}} onClick={saveDripSettings} disabled={dripSaving}>
+            {dripSaving ? '⌛ Saving...' : dripSaved ? '✅ Saved!' : '💾 Save Drip Settings'}
+          </button>
         </div>
       )}
 

@@ -18,5 +18,7 @@ google-auth==2.30.0
 gunicorn==20.1.0
 dnspython==2.6.1
 certifi==2024.12.14
+# Drip Campaign Scheduler
+APScheduler==3.10.4
 # Email Ingester Worker dependencies
 pymupdf==1.24.11

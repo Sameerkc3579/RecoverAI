@@ -78,3 +78,51 @@ async def update_settings(
     updated_user["_id"] = str(updated_user["_id"])
     updated_user.pop("hashed_password", None)
     return updated_user
+
+
+# ── Drip Campaign Settings ────────────────────────────────────────────────────
+
+class DripStepConfig(BaseModel):
+    enabled: bool = True
+
+class DripSettingsPayload(BaseModel):
+    """User-configurable drip campaign settings."""
+    day_7: DripStepConfig = DripStepConfig(enabled=True)
+    day_21: DripStepConfig = DripStepConfig(enabled=True)
+    day_35: DripStepConfig = DripStepConfig(enabled=True)
+    day_45: DripStepConfig = DripStepConfig(enabled=True)
+
+# Default drip settings for new users who haven't configured anything yet
+_DEFAULT_DRIP = {
+    "day_7":  {"enabled": True},
+    "day_21": {"enabled": True},
+    "day_35": {"enabled": True},
+    "day_45": {"enabled": True},
+}
+
+
+@router.get("/drip-settings", summary="Get drip campaign settings")
+async def get_drip_settings(current_user: dict = Depends(get_current_user)):
+    """Return the user's saved drip campaign preferences."""
+    user_settings = current_user.get("drip_settings", _DEFAULT_DRIP)
+    return {"drip_settings": user_settings}
+
+
+@router.put("/drip-settings", summary="Save drip campaign settings")
+async def update_drip_settings(
+    payload: DripSettingsPayload,
+    current_user: dict = Depends(get_current_user),
+):
+    """Persist the user's drip campaign preferences to MongoDB."""
+    drip_data = payload.model_dump()
+
+    col = get_collection("users")
+    await col.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {
+            "drip_settings": drip_data,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }},
+    )
+    return {"status": "ok", "drip_settings": drip_data}
+

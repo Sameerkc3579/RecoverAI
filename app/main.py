@@ -46,6 +46,7 @@ from app.api.users import router as users_router
 from app.api.customers import router as customers_router
 from app.api.whatsapp_webhook import router as whatsapp_router
 from app.api.deps import get_admin_user
+from app.workers.drip_scheduler import start_scheduler, stop_scheduler
 
 # ── Logger ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -107,11 +108,25 @@ async def startup_event():
             "in this deployment. Use Redis for shared state."
         )
 
+    # ── Drip Campaign Scheduler ────────────────────────────────────────────
+    # Start the APScheduler CRON job that fires daily at midnight IST.
+    # Skipped on Vercel — serverless functions can't hold background processes.
+    if not _IS_VERCEL:
+        try:
+            start_scheduler()
+        except Exception as exc:
+            logger.warning("⚠️   Drip scheduler failed to start: %s", exc)
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown hooks."""
     logger.info("🛑  RecoveryAgent shutting down…")
+    # Stop the drip campaign scheduler gracefully
+    try:
+        stop_scheduler()
+    except Exception as exc:
+        logger.warning("⚠️   Error stopping drip scheduler: %s", exc)
     try:
         await close_db()
         logger.info("✅  MongoDB connection closed")
