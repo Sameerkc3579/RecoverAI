@@ -1,0 +1,56 @@
+# Environment & Secrets
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+# dist/ intentionally NOT ignored — the pre-built frontend is committed for Vercel deployment
+*.egg-info/
+
+# User Data
+uploads/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDE Files
+.vscode/
+.idea/
+.cursor/
+.agents/
+
+# Build & Tooling
+node_modules/
+.vite/
+
+# Local data & Backups
+backup_safe_place/
+temp_settings.json
+
+# ─── Vite / React frontend (not deployed to Vercel — Python backend serves HTML directly) ───
+/index.html
+/package.json
+/package-lock.json
+/vite.config.ts
+/tsconfig.json
+/tsconfig.node.json
+/postcss.config.mjs
+/src/
+/public/
+.env.example
+
+# Local test files & logs
+logs/
+scratch/
+*.pdf
+*.log
+*.tmp
+jwt.txt
+output.txt
+result.txt
+test_auth_results.txt
+test_ai.py

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sample Invoice</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+        .invoice-box { border: 1px solid #eee; padding: 30px; max-width: 800px; margin: auto; box-shadow: 0 0 10px rgba(0,0,0,0.15); }
+        h1 { color: #2c3e50; }
+        .details { margin-bottom: 20px; }
+        .details div { margin-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        table, th, td { border: 1px solid #ddd; }
+        th, td { padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; }
+        .total { font-weight: bold; font-size: 1.2em; text-align: right; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="invoice-box">
+        <h1>INVOICE</h1>
+        <div class="details">
+            <div><strong>Invoice Number:</strong> INV-2026-001</div>
+            <div><strong>Issue Date:</strong> 2026-06-01</div>
+            <div><strong>Due Date:</strong> 2026-06-15</div>
+            <div><strong>PO Number:</strong> PO-99823</div>
+        </div>
+        <hr>
+        <div class="details">
+            <div><strong>Billed To (Debtor):</strong></div>
+            <div>Stark Industries LLC</div>
+            <div>tony@starkindustries.com</div>
+            <div>+1 555-0198</div>
+        </div>
+        <table>
+            <tr>
+                <th>Description</th>
+                <th>Amount (INR)</th>
+            </tr>
+            <tr>
+                <td>AI Consulting Services</td>
+                <td>50000.00</td>
+            </tr>
+            <tr>
+                <td>Server Maintenance</td>
+                <td>15000.00</td>
+            </tr>
+        </table>
+        <div class="total">
+            TOTAL DUE: 65000.00
+        </div>
+        <div style="margin-top: 30px; font-size: 0.9em; color: #7f8c8d;">
+            <strong>Notes:</strong> Please remit payment immediately to avoid late fees.
+        </div>
+    </div>
+</body>
+</html>
