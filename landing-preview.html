@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RecoverAI — AI-Powered Invoice Recovery for MSMEs</title>
+    <meta name="description" content="RecoverAI sends AI-crafted WhatsApp reminders, generates MSME legal notices, and runs bulk campaigns — so you get paid faster." />
+    <style>html, body { height: 100%; margin: 0; } #root { height: 100%; }</style>
+    <script type="module" crossorigin src="/assets/index-D4qUdZdA.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-C-zgkLrM.css">
+
+    <!-- Extra sections font + tokens — mirrors app_v2.css dark theme exactly -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+      /* ── Hide the React app footer so it doesn't appear in the middle of the page ── */
+      #root footer, #root [class*="footer"], #root .bg-slate-900.py-16 { display: none !important; }
+
+      /* ── Only applied to #landing-extra and its children ── */
+      #landing-extra {
+        --bg:        #0A1428;
+        --surface:   #111f38;
+        --surface2:  #1a2d45;
+        --surface3:  #254060;
+        --text:      #EEF2F8;
+        --text2:     #C0D4E8;
+        --text3:     #8ca8c1;
+        --border:    #1a2d45;
+        --border2:   #254060;
+        --amber:     #0EA5E9;
+        --amber-bg:  rgba(14, 165, 233, 0.1);
+        --green:     #10B981;
+        --green-bg:  rgba(16, 185, 129, 0.1);
+        --blue:      #3B82F6;
+        --blue-bg:   rgba(59, 130, 246, 0.1);
+        --purple:    #8B5CF6;
+        --purple-bg: rgba(139, 92, 246, 0.1);
+        --red:       #EF4444;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background:  var(--bg);
+        color:       var(--text);
+        line-height: 1.6;
+        overflow-x:  hidden;
+      }
+
+      /* Utility */
+      #landing-extra * { box-sizing: border-box; margin: 0; padding: 0; }
+      #landing-extra .le-section     { padding: 80px 6%; background: var(--bg); }
+      #landing-extra .le-section-alt { padding: 80px 6%; background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+      #landing-extra .le-center      { text-align: center; }
+      #landing-extra .le-label {
+        display: inline-flex; align-items: center; gap: 7px;
+        font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+        color: var(--amber); margin-bottom: 14px;
+      }
+      #landing-extra .le-title {
+        font-size: clamp(26px, 4vw, 42px); font-weight: 900; letter-spacing: -0.8px;
+        color: var(--text); line-height: 1.15; margin-bottom: 14px;
+      }
+      /* Gradient on light bg: use deeper blue→indigo→purple so it stays vivid */
+      #landing-extra .le-title .le-grad {
+        background: linear-gradient(135deg, #0EA5E9 0%, #6366F1 50%, #8B5CF6 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      #landing-extra .le-sub {
+        font-size: 16px; color: var(--text3); max-width: 580px;
+        line-height: 1.75; margin: 0 auto;
+      }
+
+      /* ── Agent Cards ── */
+      #landing-extra .le-agents-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        gap: 20px; margin-top: 50px;
+      }
+      #landing-extra .le-agent-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 18px; padding: 28px; position: relative; overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+        box-shadow: 0 2px 12px rgba(10,20,40,0.06);
+      }
+      #landing-extra .le-agent-card::after {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        background: var(--card-top, linear-gradient(90deg, #0EA5E9, #6366F1));
+        opacity: 0; transition: opacity 0.3s;
+      }
+      #landing-extra .le-agent-card:hover { transform: translateY(-6px); border-color: var(--border2); box-shadow: 0 16px 40px rgba(10,20,40,0.12); }
+      #landing-extra .le-agent-card:hover::after { opacity: 1; }
+      #landing-extra .le-agent-icon {
+        width: 52px; height: 52px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 24px; margin-bottom: 18px; flex-shrink: 0;
+      }
+      #landing-extra .le-agent-num {
+        position: absolute; top: 18px; right: 18px;
+        font-size: 11px; font-weight: 800; color: var(--border2);
+        text-transform: uppercase; letter-spacing: 1px;
+      }
+      #landing-extra .le-agent-name { font-size: 16px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+      #landing-extra .le-agent-role { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+      #landing-extra .le-agent-desc { font-size: 13px; color: var(--text2); line-height: 1.75; margin-bottom: 16px; }
+      #landing-extra .le-agent-tags { display: flex; flex-wrap: wrap; gap: 7px; }
+      #landing-extra .le-tag {
+        font-size: 10px; font-weight: 700; padding: 3px 10px;
+        border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+      }
+
+      /* ── Pipeline Flow ── */
+      #landing-extra .le-pipeline {
+        display: flex; align-items: center; justify-content: center;
+        gap: 0; margin-top: 50px; flex-wrap: wrap;
+      }
+      #landing-extra .le-pipe-step {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 14px; padding: 22px 20px; text-align: center;
+        min-width: 140px; flex: 1; max-width: 180px;
+        transition: border-color 0.25s, box-shadow 0.25s;
+        box-shadow: 0 2px 8px rgba(10,20,40,0.06);
+      }
+      #landing-extra .le-pipe-step:hover { border-color: var(--amber); box-shadow: 0 6px 20px rgba(14,165,233,0.15); }
+      #landing-extra .le-pipe-icon { font-size: 28px; margin-bottom: 10px; }
+      #landing-extra .le-pipe-name { font-size: 12px; font-weight: 800; color: var(--text); margin-bottom: 5px; }
+      #landing-extra .le-pipe-desc { font-size: 11px; color: var(--text3); line-height: 1.6; }
+      #landing-extra .le-pipe-arrow {
+        font-size: 20px; color: var(--border); flex-shrink: 0;
+        padding: 0 8px;
+      }
+
+      /* ── Features 3-col ── */
+      #landing-extra .le-feat-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        gap: 18px; margin-top: 50px;
+      }
+      #landing-extra .le-feat-card {
+        padding: 22px 20px; border-radius: 14px;
+        border: 1px solid var(--border); background: var(--surface);
+        transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 2px 8px rgba(10,20,40,0.05);
+      }
+      #landing-extra .le-feat-card:hover { border-color: var(--amber); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(14,165,233,0.12); }
+      #landing-extra .le-feat-ico { font-size: 26px; margin-bottom: 12px; }
+      #landing-extra .le-feat-name { font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+      #landing-extra .le-feat-desc { font-size: 12px; color: var(--text3); line-height: 1.75; }
+
+      /* ── Security Grid ── */
+      #landing-extra .le-sec-grid {
+        display: grid; grid-template-columns: repeat(4, 1fr);
+        gap: 16px; margin-top: 40px;
+      }
+      #landing-extra .le-sec-card {
+        padding: 20px; border-radius: 12px;
+        border: 1px solid var(--border); background: var(--surface);
+        text-align: center; transition: border-color 0.2s, box-shadow 0.2s;
+        box-shadow: 0 2px 8px rgba(10,20,40,0.05);
+      }
+      #landing-extra .le-sec-card:hover { border-color: var(--amber); box-shadow: 0 6px 20px rgba(14,165,233,0.12); }
+      #landing-extra .le-sec-ico { font-size: 28px; margin-bottom: 10px; }
+      #landing-extra .le-sec-name { font-size: 12px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+      #landing-extra .le-sec-desc { font-size: 11px; color: var(--text3); line-height: 1.65; }
+
+      /* ── CTA strip — dark navy contrast section ── */
+      #landing-extra .le-cta {
+        padding: 80px 6%; text-align: center;
+        background: #071020;
+        border-top: none;
+      }
+      #landing-extra .le-cta-title {
+        font-size: clamp(26px, 4vw, 42px); font-weight: 900; letter-spacing: -0.8px;
+        margin-bottom: 14px; color: #EEF2F8;
+      }
+      #landing-extra .le-cta-sub { font-size: 16px; color: #C0D4E8; margin-bottom: 32px; }
+      #landing-extra .le-btn-primary {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: linear-gradient(135deg, #0EA5E9, #8B5CF6);
+        color: #fff; font-size: 15px; font-weight: 700;
+        padding: 14px 30px; border-radius: 10px;
+        text-decoration: none; border: none; cursor: pointer;
+        box-shadow: 0 6px 24px rgba(14,165,233,0.35);
+        transition: transform 0.2s, box-shadow 0.2s;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      }
+      #landing-extra .le-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(14,165,233,0.5); }
+      #landing-extra .le-btn-ghost {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+        color: #EEF2F8; font-size: 15px; font-weight: 600;
+        padding: 14px 30px; border-radius: 10px; margin-left: 12px;
+        text-decoration: none; cursor: pointer; transition: background 0.2s, border-color 0.2s;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      }
+      #landing-extra .le-btn-ghost:hover { background: rgba(255,255,255,0.14); border-color: #0EA5E9; }
+      #landing-extra .le-cta .le-label { color: #38BDF8; }
+
+      /* ── Footer — Light theme to match original landing page ── */
+      #landing-extra .le-footer {
+        background: var(--bg);
+        border-top: 1px solid var(--border);
+        padding: 60px 6% 40px;
+        color: var(--text3);
+      }
+      #landing-extra .le-footer-grid {
+        display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 36px; margin-bottom: 40px;
+      }
+      #landing-extra .le-footer-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+      #landing-extra .le-footer-logo-icon {
+        width: 34px; height: 34px; border-radius: 8px;
+        background: linear-gradient(135deg, #0EA5E9, #8B5CF6);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 900; font-size: 16px;
+      }
+      #landing-extra .le-footer-logo-name { font-size: 17px; font-weight: 800; color: #EEF2F8; }
+      #landing-extra .le-footer-desc { font-size: 13px; color: #608098; line-height: 1.7; margin-bottom: 18px; }
+      #landing-extra .le-footer-col-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #608098; margin-bottom: 14px; }
+      #landing-extra .le-footer-links { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+      #landing-extra .le-footer-links a { color: #C0D4E8; text-decoration: none; font-size: 13px; transition: color 0.2s; }
+      #landing-extra .le-footer-links a:hover { color: #0EA5E9; }
+      #landing-extra .le-footer-bottom {
+        border-top: 1px solid #1a2d45; padding-top: 22px;
+        display: flex; align-items: center; justify-content: space-between;
+        flex-wrap: wrap; gap: 12px;
+      }
+      #landing-extra .le-footer-copy { font-size: 12px; color: #608098; }
+      #landing-extra .le-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+      #landing-extra .le-badge {
+        display: flex; align-items: center; gap: 5px;
+        background: #0d1a30; border: 1px solid #1a2d45;
+        padding: 4px 10px; border-radius: 6px; font-size: 11px; color: #608098;
+      }
+
+      /* ── Scroll-reveal ── */
+      #landing-extra .le-reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s cubic-bezier(.4,0,.2,1), transform 0.7s cubic-bezier(.4,0,.2,1); }
+      #landing-extra .le-reveal.le-visible { opacity: 1; transform: none; }
+      #landing-extra .le-d1 { transition-delay: 0.1s; }
+      #landing-extra .le-d2 { transition-delay: 0.2s; }
+      #landing-extra .le-d3 { transition-delay: 0.3s; }
+      #landing-extra .le-d4 { transition-delay: 0.4s; }
+      #landing-extra .le-d5 { transition-delay: 0.5s; }
+      #landing-extra .le-d6 { transition-delay: 0.55s; }
+
+      /* ── Responsive ── */
+      @media (max-width: 960px) {
+        #landing-extra .le-agents-grid { grid-template-columns: 1fr 1fr; }
+        #landing-extra .le-feat-grid   { grid-template-columns: 1fr 1fr; }
+        #landing-extra .le-sec-grid    { grid-template-columns: 1fr 1fr; }
+        #landing-extra .le-footer-grid { grid-template-columns: 1fr 1fr; }
+        #landing-extra .le-pipeline    { flex-direction: column; align-items: stretch; }
+        #landing-extra .le-pipe-arrow  { transform: rotate(90deg); text-align: center; }
+        #landing-extra .le-pipe-step   { max-width: 100%; }
+      }
+      @media (max-width: 600px) {
+        #landing-extra .le-agents-grid { grid-template-columns: 1fr; }
+        #landing-extra .le-feat-grid   { grid-template-columns: 1fr; }
+        #landing-extra .le-sec-grid    { grid-template-columns: 1fr 1fr; }
+        #landing-extra .le-footer-grid { grid-template-columns: 1fr; }
+        #landing-extra .le-btn-ghost   { margin-left: 0; margin-top: 10px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         EXTRA LANDING SECTIONS — Appended below the React app.
+         The React app owns #root. Everything below is static HTML and does
+         NOT interfere with the existing Vite bundle in any way.
+    ════════════════════════════════════════════════════════════════════════ -->
+    <div id="landing-extra">
+
+      <!-- ── SECTION 1: AI AGENT PIPELINE ── -->
+      <section class="le-section le-center">
+        <div class="le-reveal">
+          <div class="le-label">✦ The AI Brain</div>
+          <h2 class="le-title">How the <span class="le-grad">RecoverAI Agent Pipeline</span> Works</h2>
+          <p class="le-sub">Every debtor reply triggers a chain of specialised AI agents that translate, classify, and act — automatically.</p>
+        </div>
+        <div class="le-pipeline">
+          <div class="le-pipe-step le-reveal le-d1">
+            <div class="le-pipe-icon">📧</div>
+            <div class="le-pipe-name">IMAP Parser Agent</div>
+            <div class="le-pipe-desc">Fetches unread invoice emails every 15 minutes via IMAP/SSL</div>
+          </div>
+          <div class="le-pipe-arrow le-reveal le-d1">→</div>
+          <div class="le-pipe-step le-reveal le-d2">
+            <div class="le-pipe-icon">🧠</div>
+            <div class="le-pipe-name">Gemini Extraction Agent</div>
+            <div class="le-pipe-desc">Reads PDF invoices, extracts debtor name, amount, due date, GSTIN</div>
+          </div>
+          <div class="le-pipe-arrow le-reveal le-d2">→</div>
+          <div class="le-pipe-step le-reveal le-d3">
+            <div class="le-pipe-icon">🗄️</div>
+            <div class="le-pipe-name">MongoDB Insertion Agent</div>
+            <div class="le-pipe-desc">Idempotent upsert — never duplicates. Logs every ingestion.</div>
+          </div>
+          <div class="le-pipe-arrow le-reveal le-d3">→</div>
+          <div class="le-pipe-step le-reveal le-d4">
+            <div class="le-pipe-icon">💬</div>
+            <div class="le-pipe-name">NLP Reply Agent</div>
+            <div class="le-pipe-desc">Translates Hindi/Hinglish replies, classifies intent in real-time</div>
+          </div>
+          <div class="le-pipe-arrow le-reveal le-d4">→</div>
+          <div class="le-pipe-step le-reveal le-d5">
+            <div class="le-pipe-icon">⚡</div>
+            <div class="le-pipe-name">Action Agent</div>
+            <div class="le-pipe-desc">Suggests follow-up, drafts WhatsApp reply, escalates to legal if needed</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SECTION 2: THE SIX AGENTS ── -->
+      <section class="le-section-alt">
+        <div class="le-center le-reveal">
+          <div class="le-label">✦ Meet the Agents</div>
+          <h2 class="le-title">6 Specialised AI Agents,<br>Working Together 24/7</h2>
+          <p class="le-sub">RecoverAI is not one AI — it's an orchestrated fleet of specialised agents, each with a precise responsibility in the recovery pipeline.</p>
+        </div>
+        <div class="le-agents-grid">
+
+          <!-- Agent 1 -->
+          <div class="le-agent-card le-reveal le-d1" style="--card-top: linear-gradient(90deg,#0EA5E9,#38BDF8);">
+            <div class="le-agent-num">Agent 01</div>
+            <div class="le-agent-icon" style="background:rgba(14,165,233,0.12);">📬</div>
+            <div class="le-agent-name">IMAP Parser Agent</div>
+            <div class="le-agent-role" style="color:#38BDF8;">Email Ingestion</div>
+            <div class="le-agent-desc">
+              Autonomously connects to your Gmail or any IMAP mailbox every 15 minutes via SSL. Scans all unread emails, extracts PDF invoice attachments, verifies the sender is a registered user (zero-trust), and passes raw PDF bytes downstream.
+              <br><br>
+              <strong style="color:var(--text);">Tech:</strong> <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px;color:var(--amber);">imaplib + asyncio.to_thread</code>
+            </div>
+            <div class="le-agent-tags">
+              <span class="le-tag" style="background:rgba(14,165,233,0.12);color:#38BDF8;">IMAP/SSL</span>
+              <span class="le-tag" style="background:rgba(14,165,233,0.12);color:#38BDF8;">Multi-tenant</span>
+              <span class="le-tag" style="background:rgba(14,165,233,0.12);color:#38BDF8;">Async</span>
+            </div>
+          </div>
+
+          <!-- Agent 2 -->
+          <div class="le-agent-card le-reveal le-d2" style="--card-top: linear-gradient(90deg,#A78BFA,#8B5CF6);">
+            <div class="le-agent-num">Agent 02</div>
+            <div class="le-agent-icon" style="background:rgba(139,92,246,0.12);">📄</div>
+            <div class="le-agent-name">Gemini Extraction Agent</div>
+            <div class="le-agent-role" style="color:#A78BFA;">PDF Intelligence</div>
+            <div class="le-agent-desc">
+              Sends raw PDF bytes to <strong style="color:var(--text);">Gemini 2.0 Flash</strong> as an inline blob (no temp files). Extracts 10 structured fields: debtor name, amount, due date, GSTIN, invoice number, PO number, email, phone, and notes. Prompt-injection hardened with strict rule set.
+              <br><br>
+              <strong style="color:var(--text);">Output:</strong> Validated <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px;color:var(--purple);">InvoiceCreate</code> Pydantic model
+            </div>
+            <div class="le-agent-tags">
+              <span class="le-tag" style="background:rgba(139,92,246,0.12);color:#A78BFA;">Gemini 2.0 Flash</span>
+              <span class="le-tag" style="background:rgba(139,92,246,0.12);color:#A78BFA;">JSON Schema</span>
+              <span class="le-tag" style="background:rgba(139,92,246,0.12);color:#A78BFA;">XSS Safe</span>
+            </div>
+          </div>
+
+          <!-- Agent 3 -->
+          <div class="le-agent-card le-reveal le-d3" style="--card-top: linear-gradient(90deg,#10B981,#34D399);">
+            <div class="le-agent-num">Agent 03</div>
+            <div class="le-agent-icon" style="background:rgba(16,185,129,0.12);">🗄️</div>
+            <div class="le-agent-name">MongoDB Insertion Agent</div>
+            <div class="le-agent-role" style="color:#10B981;">Idempotent Storage</div>
+            <div class="le-agent-desc">
+              Idempotent upsert engine — checks <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px;color:var(--green);">email_ingestion_log</code> for the exact (message_id, filename) pair before every insert. Ensures zero duplicate invoices no matter how many times the ingester runs. Assigns invoices to the correct tenant account automatically.
+              <br><br>
+              <strong style="color:var(--text);">Tech:</strong> <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:11px;color:var(--green);">Motor async + MongoDB compound index</code>
+            </div>
+            <div class="le-agent-tags">
+              <span class="le-tag" style="background:rgba(16,185,129,0.12);color:#10B981;">Idempotent</span>
+              <span class="le-tag" style="background:rgba(16,185,129,0.12);color:#10B981;">Motor Async</span>
+              <span class="le-tag" style="background:rgba(16,185,129,0.12);color:#10B981;">Multi-tenant</span>
+            </div>
+          </div>
+
+          <!-- Agent 4 -->
+          <div class="le-agent-card le-reveal le-d4" style="--card-top: linear-gradient(90deg,#F59E0B,#FBBF24);">
+            <div class="le-agent-num">Agent 04</div>
+            <div class="le-agent-icon" style="background:rgba(245,158,11,0.12);">🌐</div>
+            <div class="le-agent-name">NLP Translation Agent</div>
+            <div class="le-agent-role" style="color:#F59E0B;">Multilingual Understanding</div>
+            <div class="le-agent-desc">
+              Translates debtor WhatsApp replies from <strong style="color:var(--text);">Hindi, Hinglish, Marathi, Tamil, Telugu, Gujarati, Bengali, Punjabi</strong> into clean professional English. If the Gemini API quota is hit, it falls back to a local keyword heuristic that covers 30+ Hindi/Hinglish payment terms (kal, bhej, deta, galat, etc.) — zero downtime.
+            </div>
+            <div class="le-agent-tags">
+              <span class="le-tag" style="background:rgba(245,158,11,0.12);color:#F59E0B;">8+ Languages</span>
+              <span class="le-tag" style="background:rgba(245,158,11,0.12);color:#F59E0B;">Heuristic Fallback</span>
+              <span class="le-tag" style="background:rgba(245,158,11,0.12);color:#F59E0B;">Zero Downtime</span>
+            </div>
+          </div>
+
+          <!-- Agent 5 -->
+          <div class="le-agent-card le-reveal le-d5" style="--card-top: linear-gradient(90deg,#EC4899,#F472B6);">
+            <div class="le-agent-num">Agent 05</div>
+            <div class="le-agent-icon" style="background:rgba(236,72,153,0.12);">🎯</div>
+            <div class="le-agent-name">Intent Classification Agent</div>
+            <div class="le-agent-role" style="color:#EC4899;">Reply Intelligence</div>
+            <div class="le-agent-desc">
+              Classifies the translated reply into one of four intents: <span style="color:#10B981;font-weight:700;">promise_to_pay</span>, <span style="color:#F87171;font-weight:700;">dispute</span>, <span style="color:#F59E0B;font-weight:700;">stall</span>, or <span style="color:var(--text3);font-weight:700;">unknown</span>. Returns confidence level (high / medium / low) and a precise suggested action. Responds with a structured JSON object — validated against schema before use.
+            </div>
+            <div class="le-agent-tags">
+              <span class="le-tag" style="background:rgba(236,72,153,0.12);color:#EC4899;">4 Intent Classes</span>
+              <span class="le-tag" style="background:rgba(236,72,153,0.12);color:#EC4899;">JSON Schema</span>
+              <span class="le-tag" style="background:rgba(236,72,153,0.12);color:#EC4899;">Confidence Score</span>
+            </div>
+          </div>
+
+          <!-- Agent 6 -->
+          <div class="le-agent-card le-reveal le-d6" style="--card-top: linear-gradient(90deg,#60A5FA,#93C5FD);">
+            <div class="le-agent-num">Agent 06</div>
+            <div class="le-agent-icon" style="background:rgba(96,165,250,0.12);">🤖</div>
+            <div class="le-agent-name">AI Message Generation Agent</div>
+            <div class="le-agent-role" style="color:#60A5FA;">Recovery Drafting</div>
+            <div class="le-agent-desc">
+              Drafts WhatsApp messages, formal emails, and MSMED Act legal notices using a <strong style="color:var(--text);">3-tier Gemini model cascade:</strong> Gemini 2.0 Flash → Gemini 2.5 Flash → Gemini 1.5 Flash. Supports tone settings (firm / empathetic / legal). Generates full messages with context from invoice data including overdue days and MSMED compound interest.
+            </div>
+            <div class="le-agent-tags">
+              <span class="le-tag" style="background:rgba(96,165,250,0.12);color:#60A5FA;">3-Model Cascade</span>
+              <span class="le-tag" style="background:rgba(96,165,250,0.12);color:#60A5FA;">WhatsApp + Email</span>
+              <span class="le-tag" style="background:rgba(96,165,250,0.12);color:#60A5FA;">MSMED Legal</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ── SECTION 3: ALL FEATURES ── -->
+      <section class="le-section">
+        <div class="le-center le-reveal">
+          <div class="le-label">✦ Platform Features</div>
+          <h2 class="le-title">Everything Built to<br><span class="le-grad">Recover Every Rupee</span></h2>
+          <p class="le-sub">A complete, production-grade SaaS platform for Indian MSMEs. From invoice upload to legal notice — fully automated.</p>
+        </div>
+        <div class="le-feat-grid">
+          <div class="le-feat-card le-reveal le-d1">
+            <div class="le-feat-ico">📊</div>
+            <div class="le-feat-name">Real-Time Dashboard</div>
+            <div class="le-feat-desc">Outstanding vs. recovered bar charts, pipeline doughnut chart, recovery rate metric, and live overdue counters. Powered by Chart.js with 6-month trend views.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d2">
+            <div class="le-feat-ico">📁</div>
+            <div class="le-feat-name">Bulk CSV Import</div>
+            <div class="le-feat-desc">Drag-and-drop upload of up to 500 invoices at once. Auto column mapping with smart validation. Zero data entry for existing accounting records.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d3">
+            <div class="le-feat-ico">⚖️</div>
+            <div class="le-feat-name">MSMED Act Legal Notices</div>
+            <div class="le-feat-desc">Court-ready PDF notices with compound interest at 3× RBI Bank Rate (19.5% p.a.) calculated per Sections 15–17 of the MSMED Act 2006. Generated client-side via html2pdf.js.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d1">
+            <div class="le-feat-ico">📬</div>
+            <div class="le-feat-name">Debtor Inbox</div>
+            <div class="le-feat-desc">Unified inbox for all debtor WhatsApp and email replies. Each message is AI-classified with intent badge, confidence score, and a suggested action — right inside the UI.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d2">
+            <div class="le-feat-ico">⏱️</div>
+            <div class="le-feat-name">Drip Campaign Automation</div>
+            <div class="le-feat-desc">Preset reminder sequences: Day 7 gentle nudge → Day 21 firm follow-up → Day 35 final warning → Day 45 auto legal notice. Runs on autopilot, 24/7.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d3">
+            <div class="le-feat-ico">📈</div>
+            <div class="le-feat-name">PDF Performance Reports</div>
+            <div class="le-feat-desc">Monthly recovery performance reports downloadable as PDF. Includes total dues, amount recovered, recovery rate, average days to recover, and top debtors list.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d1">
+            <div class="le-feat-ico">👥</div>
+            <div class="le-feat-name">Customer CRM</div>
+            <div class="le-feat-desc">Full customer database with invoice history, payment behaviour score, contact info, GSTIN, and communication timeline. Filter by risk, city, or industry.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d2">
+            <div class="le-feat-ico">🔗</div>
+            <div class="le-feat-name">Tally ERP XML Export</div>
+            <div class="le-feat-desc">One-click export of all invoices to Tally-compatible XML. Import directly into Tally ERP 9 or Prime with zero reformatting. Also supports CSV and JSON export.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d3">
+            <div class="le-feat-ico">🎨</div>
+            <div class="le-feat-name">White-Label Branding</div>
+            <div class="le-feat-desc">Upload your own logo, set your brand name, tagline, and primary color. Changes apply instantly across the sidebar, legal notices, and all PDF exports.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d1">
+            <div class="le-feat-ico">🌙</div>
+            <div class="le-feat-name">Dark / Light Mode</div>
+            <div class="le-feat-desc">Full dark mode powered by CSS variables. Smooth transition between modes. Preference is persisted to localStorage across sessions.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d2">
+            <div class="le-feat-ico">👑</div>
+            <div class="le-feat-name">Admin God Mode</div>
+            <div class="le-feat-desc">Platform-wide admin dashboard. View total platform volume, all active users, system-wide recovery rates. Manage or suspend tenant accounts with full audit logs.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d3">
+            <div class="le-feat-ico">📱</div>
+            <div class="le-feat-name">Mobile Responsive</div>
+            <div class="le-feat-desc">Fully responsive layout with a slide-in mobile drawer, sticky bottom tab navigation, and adaptive card layouts. Works on all screen sizes from 320px up.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SECTION 4: SECURITY ── -->
+      <section class="le-section-alt">
+        <div class="le-center le-reveal">
+          <div class="le-label">✦ Enterprise Security</div>
+          <h2 class="le-title">Production-Grade Security,<br>Out of the Box</h2>
+          <p class="le-sub">RecoverAI was built with a full security audit — protecting your financial data with layers of hardened defences.</p>
+        </div>
+        <div class="le-sec-grid">
+          <div class="le-sec-card le-reveal le-d1">
+            <div class="le-sec-ico">🔐</div>
+            <div class="le-sec-name">Brute Force Protection</div>
+            <div class="le-sec-desc">IP-based rate limiter locks out after 5 failed login attempts in 15 minutes. Spoofing-resistant X-Forwarded-For parsing.</div>
+          </div>
+          <div class="le-sec-card le-reveal le-d2">
+            <div class="le-sec-ico">💉</div>
+            <div class="le-sec-name">NoSQL Injection Shield</div>
+            <div class="le-sec-desc">Recursive payload sanitisation strips all MongoDB operators ($) from user inputs. Protected field blocklist prevents privilege escalation.</div>
+          </div>
+          <div class="le-sec-card le-reveal le-d3">
+            <div class="le-sec-ico">🛡️</div>
+            <div class="le-sec-name">SSRF Protection</div>
+            <div class="le-sec-desc">URL parser blocks requests to private IP ranges (RFC 1918, RFC 3927), cloud metadata endpoints, and localhost — preventing server-side request forgery.</div>
+          </div>
+          <div class="le-sec-card le-reveal le-d4">
+            <div class="le-sec-ico">📁</div>
+            <div class="le-sec-name">Secure File Uploads</div>
+            <div class="le-sec-desc">MIME type + extension allowlist. UUID-renamed files eliminate path traversal. 10MB chunk-based size limit against DoS.</div>
+          </div>
+          <div class="le-sec-card le-reveal le-d1">
+            <div class="le-sec-ico">🔑</div>
+            <div class="le-sec-name">JWT Token Revocation</div>
+            <div class="le-sec-desc">In-memory JTI blacklist immediately invalidates access tokens on logout — preventing token reuse attacks even before expiry.</div>
+          </div>
+          <div class="le-sec-card le-reveal le-d2">
+            <div class="le-sec-ico">📋</div>
+            <div class="le-sec-name">Security Headers</div>
+            <div class="le-sec-desc">HSTS, CSP, X-Frame-Options, X-XSS-Protection injected on every response. Server fingerprinting stripped from all HTTP headers.</div>
+          </div>
+          <div class="le-sec-card le-reveal le-d3">
+            <div class="le-sec-ico">📝</div>
+            <div class="le-sec-name">Audit Logging</div>
+            <div class="le-sec-desc">Structured access log captures HTTP method, path, IP, latency, and status code for every request — full forensic trail.</div>
+          </div>
+          <div class="le-sec-card le-reveal le-d4">
+            <div class="le-sec-ico">🔒</div>
+            <div class="le-sec-name">HMAC Webhook Verification</div>
+            <div class="le-sec-desc">WhatsApp webhook payloads are verified via X-Hub-Signature-256 HMAC before processing — rejecting forged Meta callbacks.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── SECTION 5: TECH STACK ── -->
+      <section class="le-section">
+        <div class="le-center le-reveal">
+          <div class="le-label">✦ Tech Stack</div>
+          <h2 class="le-title">Built on a Modern,<br><span class="le-grad">Production-Ready Stack</span></h2>
+          <p class="le-sub">Every technology choice was made to maximise performance, reliability, and developer velocity.</p>
+        </div>
+        <div class="le-feat-grid" style="margin-top:40px;">
+          <div class="le-feat-card le-reveal le-d1">
+            <div class="le-feat-ico">⚡</div>
+            <div class="le-feat-name">FastAPI + Python 3.11</div>
+            <div class="le-feat-desc">Async-first ASGI backend. Full OpenAPI schema. Security middleware stack with raw ASGI to avoid ExceptionGroup crashes on Python 3.11+.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d2">
+            <div class="le-feat-ico">🍃</div>
+            <div class="le-feat-name">MongoDB Atlas + Motor</div>
+            <div class="le-feat-desc">Fully async NoSQL database layer. $facet aggregation pipelines for high-performance dashboard analytics. TTL indexes for session cleanup.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d3">
+            <div class="le-feat-ico">🤖</div>
+            <div class="le-feat-name">Google Gemini 2.0/2.5 Flash</div>
+            <div class="le-feat-desc">Primary AI engine for NLP, PDF extraction, and message generation. 3-tier model cascade ensures 99.9% uptime even during API saturation.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d1">
+            <div class="le-feat-ico">⚛️</div>
+            <div class="le-feat-name">React 18 (Zero-Build CDN)</div>
+            <div class="le-feat-desc">Modular React frontend loaded via CDN + Babel standalone. No build step required — extremely portable. Runs anywhere, deploys in seconds.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d2">
+            <div class="le-feat-ico">☁️</div>
+            <div class="le-feat-name">Vercel Serverless</div>
+            <div class="le-feat-desc">vercel.json routing matrix maps all API and frontend routes. FastAPI runs as serverless functions. Zero cold-start configuration needed.</div>
+          </div>
+          <div class="le-feat-card le-reveal le-d3">
+            <div class="le-feat-ico">🔐</div>
+            <div class="le-feat-name">JWT + Passlib + Jose</div>
+            <div class="le-feat-desc">Industry-standard JWT authentication with bcrypt password hashing. Token revocation via JTI blacklist. Strong password policy enforced server-side.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── CTA BANNER ── -->
+      <div class="le-cta le-reveal">
+        <div class="le-label" style="justify-content:center;">✦ Get Started Today</div>
+        <div class="le-cta-title">Stop Chasing Invoices.<br>Let AI Do It For You.</div>
+        <div class="le-cta-sub">Join 500+ MSMEs recovering dues 3× faster. Free to start — no credit card needed.</div>
+        <div>
+          <a href="/register" class="le-btn-primary">🚀 Start Recovering Free</a>
+          <a href="/login" class="le-btn-ghost">Sign In →</a>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-top:22px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:5px;"><span style="color:var(--green);">✓</span> No credit card</span>
+          <span style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:5px;"><span style="color:var(--green);">✓</span> MSMED Act compliant</span>
+          <span style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:5px;"><span style="color:var(--green);">✓</span> Cancel anytime</span>
+          <span style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:5px;"><span style="color:var(--green);">✓</span> Deployed on Vercel</span>
+        </div>
+      </div>
+
+      <!-- ── FOOTER ── -->
+      <footer class="le-footer">
+        <div class="le-footer-grid">
+          <div>
+            <div class="le-footer-logo">
+              <div class="le-footer-logo-icon">P</div>
+              <span class="le-footer-logo-name">RecoverAI</span>
+            </div>
+            <p class="le-footer-desc">India's AI-powered invoice recovery platform for MSMEs.</p>
+            <div class="le-status">
+              <div class="le-status-dot"></div>
+              All systems operational
+            </div>
+          </div>
+          <div>
+            <div class="le-footer-col-title">Product</div>
+            <ul class="le-footer-links">
+              <li><a href="#">Dashboard</a></li>
+              <li><a href="#">All Invoices</a></li>
+              <li><a href="#">Recovery Hub</a></li>
+              <li><a href="#">Legal Queue</a></li>
+              <li><a href="#">Campaigns</a></li>
+            </ul>
+          </div>
+          <div>
+            <div class="le-footer-col-title">Company</div>
+            <ul class="le-footer-links">
+              <li><a href="#">About</a></li>
+              <li><a href="#">Blog</a></li>
+              <li><a href="#">Careers</a></li>
+              <li><a href="#">Contact</a></li>
+            </ul>
+          </div>
+          <div>
+            <div class="le-footer-col-title">Legal</div>
+            <ul class="le-footer-links">
+              <li><a href="#">Privacy</a></li>
+              <li><a href="#">Terms</a></li>
+              <li><a href="#">Compliance</a></li>
+              <li><a href="#">Cookies</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="le-footer-bottom">
+          <div class="le-footer-copy">© 2026 RecoverAI • Made in India</div>
+          <div class="le-footer-contact">
+            <a href="mailto:support@recoverai.in">✉️ support@recoverai.in</a>
+            <a href="#">🌐 recoverai.in</a>
+          </div>
+        </div>
+      </footer>
+
+    </div><!-- end #landing-extra -->
+
+    <script>
+      /* Allow body to scroll past the full-height React app */
+      document.documentElement.style.height = 'auto';
+      document.body.style.height = 'auto';
+      document.body.style.minHeight = '100vh';
+
+      /* Scroll-reveal observer */
+      const leObs = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('le-visible'); });
+      }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+      document.querySelectorAll('#landing-extra .le-reveal').forEach(el => leObs.observe(el));
+    </script>
+  </body>
+</html>

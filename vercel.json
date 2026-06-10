@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "framework": null,
+  "builds": [
+    {
+      "src": "app/main.py",
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": [
+          "dashboard.html",
+          "static/**",
+          "RecoverAI_MVP.html",
+          "landing-preview.html",
+          "portal.html",
+          "dist/index.html",
+          "dist/assets/**",
+          "app/**",
+          "requirements.txt"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app/main.py"
+    }
+  ]
+}

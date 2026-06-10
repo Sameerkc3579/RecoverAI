@@ -1,0 +1,3 @@
+Cannot find module '@babel/core'
+Require stack:
+- D:\RecoveryAgent\[eval]
