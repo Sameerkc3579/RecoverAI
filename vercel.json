@@ -11,6 +11,7 @@
           "static/**",
           "RecoverAI_MVP.html",
           "landing-preview.html",
+          "portal.html",
           "dist/index.html",
           "dist/assets/**",
           "app/**",

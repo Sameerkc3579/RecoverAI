@@ -24,10 +24,15 @@ from app.models.schemas import PromptRequest
 logger = logging.getLogger(__name__)
 
 # ── Gemini model ────────────────────────────────────────────────────────────
-# Model cascade: fastest → most capable → legacy stable
+# Model cascade: fastest/newest → stable mid-tier → legacy stable
 MODEL           = "gemini-2.5-flash"    # primary — fast & cheap
-FALLBACK_MODEL  = "gemini-1.5-flash"    # second tier
+FALLBACK_MODEL  = "gemini-2.0-flash"    # second tier — different model family,
+                                         # genuinely independent of MODEL's quota
 LEGACY_MODEL    = "gemini-1.5-flash"    # last resort (stable, widely available)
+
+# Retry backoff (kept short — serverless functions have tight wall-clock limits)
+_RETRY_DELAY_1 = 1   # seconds, before first retry of MODEL
+_RETRY_DELAY_2 = 2   # seconds, before switching to FALLBACK_MODEL
 
 
 # Lazy client — created on first use so a bad API key only breaks AI endpoints,
@@ -49,7 +54,7 @@ IMPORTANT: You MUST generate the entire message. This includes the Subject Line,
 """
 
 # ── Transient error check ────────────────────────────────────────────────────
-_TRANSIENT_SIGNALS = ("429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE", "overloaded")
+_TRANSIENT_SIGNALS = ("429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE", "overloaded", "empty response")
 
 def _is_transient(err: str) -> bool:
     return any(sig in err for sig in _TRANSIENT_SIGNALS)
@@ -84,9 +89,9 @@ async def generate_message(prompt: str, invoice_data: dict, tone: str) -> str:
 
     Strategy
     ────────
-    1. Try MODEL (gemini-2.0-flash) immediately.
-    2. On transient error: wait 10 s, retry MODEL.
-    3. On second transient error: wait 20 s, try FALLBACK_MODEL (gemini-2.5-flash).
+    1. Try MODEL (gemini-2.5-flash) immediately.
+    2. On transient error: short wait, retry MODEL.
+    3. On second transient error: short wait, try FALLBACK_MODEL (gemini-2.0-flash).
     4. On third transient error: try LEGACY_MODEL (gemini-1.5-flash) immediately.
     5. Raise a user-friendly error if all attempts fail.
     """
@@ -109,7 +114,13 @@ async def generate_message(prompt: str, invoice_data: dict, tone: str) -> str:
             contents=context_prompt,
             config=_build_config(tone),
         )
-        return response.text
+        text = response.text
+        if not text:
+            # response.text is None/empty when Gemini returns no candidates
+            # (e.g. a safety block) — treat as a transient failure so the
+            # caller retries/falls back instead of returning null to the client.
+            raise RuntimeError(f"Gemini ({model}) returned an empty response (possible safety block).")
+        return text
 
     # ── Attempt 1: primary model ──────────────────────────────────────────────
     try:
@@ -118,20 +129,20 @@ async def generate_message(prompt: str, invoice_data: dict, tone: str) -> str:
         if not _is_transient(str(exc)):
             logger.exception("Gemini API error (non-transient): %s", exc)
             raise RuntimeError(f"Gemini API error: {exc}") from exc
-        logger.warning("[1/4] %s transient error — waiting 10 s… (%s)", MODEL, str(exc)[:80])
+        logger.warning("[1/4] %s transient error — waiting %ds… (%s)", MODEL, _RETRY_DELAY_1, str(exc)[:80])
 
-    # ── Attempt 2: retry primary after 10 s ──────────────────────────────────
-    await asyncio.sleep(10)
+    # ── Attempt 2: retry primary after a short delay ─────────────────────────
+    await asyncio.sleep(_RETRY_DELAY_1)
     try:
         return await _call(MODEL)
     except Exception as exc:
         if not _is_transient(str(exc)):
             logger.exception("Gemini retry error (non-transient): %s", exc)
             raise RuntimeError(f"Gemini API error: {exc}") from exc
-        logger.warning("[2/4] %s still overloaded — waiting 20 s, switching to %s…", MODEL, FALLBACK_MODEL)
+        logger.warning("[2/4] %s still overloaded — waiting %ds, switching to %s…", MODEL, _RETRY_DELAY_2, FALLBACK_MODEL)
 
-    # ── Attempt 3: fallback model after 20 s ─────────────────────────────────
-    await asyncio.sleep(20)
+    # ── Attempt 3: fallback model after a short delay ────────────────────────
+    await asyncio.sleep(_RETRY_DELAY_2)
     try:
         return await _call(FALLBACK_MODEL)
     except Exception as exc:

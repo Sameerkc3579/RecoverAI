@@ -30,6 +30,7 @@ WHATSAPP_ACCESS_TOKEN      — Meta System User permanent access token
 import hashlib
 import hmac
 import logging
+import re
 import time
 from datetime import datetime, timezone
 
@@ -436,9 +437,13 @@ async def send_whatsapp_message(
     # Sanitise number — digits only
     clean_number = "".join(c for c in payload.to_number if c.isdigit() or c == "+")
 
-    # Verify phone belongs to user's invoices
+    # Verify phone belongs to user's invoices.
+    # Build the regex from digits-only (last 10 digits), same as
+    # _find_invoice_by_phone, and escape it before use as a $regex.
+    digits_only = "".join(c for c in payload.to_number if c.isdigit())
+    last10 = digits_only[-10:]
     inv_col = get_collection(INVOICES_COLLECTION)
-    owner_query = {"phone": {"$regex": clean_number[-10:]}}
+    owner_query = {"phone": {"$regex": re.escape(last10), "$options": "i"}}
     if current_user.get("email") not in settings.admin_emails_list:
         owner_query["owner_id"] = current_user.get("_id")
     matching_inv = await inv_col.find_one(owner_query)

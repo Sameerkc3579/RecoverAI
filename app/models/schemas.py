@@ -46,6 +46,23 @@ class InvoiceResponse(InvoiceBase):
     id: str = Field(..., description="MongoDB ObjectId as a string")
 
 
+class InvoiceUpdate(BaseModel):
+    """Request body for PATCH /api/invoices/{id} — all fields optional."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    status: str | None = None
+    recovered: bool | None = None
+    amount: float | None = Field(default=None, ge=0)
+    days_overdue: int | None = Field(default=None, alias="daysOverdue")
+    notes: str | None = None
+    contact: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    channel: str | None = None
+    reminders: int | None = None
+    proof_url: str | None = None
+
+
 # ── AI / Chat ─────────────────────────────────────────────────────────────────
 
 class PromptRequest(BaseModel):

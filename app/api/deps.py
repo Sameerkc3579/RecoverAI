@@ -13,7 +13,7 @@ import jwt
 
 from app.core.config import settings
 from app.core.database import get_collection
-from app.core.security import is_token_revoked
+from app.core.security import is_token_revoked, JWT_AUDIENCE, JWT_ISSUER
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
             token,
             settings.secret_key,
             algorithms=[settings.algorithm],
+            audience=JWT_AUDIENCE,
+            issuer=JWT_ISSUER,
         )
 
         # Enforce token type — refresh tokens cannot be used as access tokens
@@ -72,7 +74,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     if user is None:
         raise credentials_exception
 
-    if not user.get("is_active", False):
+    if not user.get("is_active", True):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is deactivated. Please contact support.",

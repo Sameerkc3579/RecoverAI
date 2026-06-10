@@ -76,11 +76,10 @@ async def handle_debtor_reply(
         # Return 404 in both "not found" and "not yours" cases — no ownership leakage
         raise HTTPException(status_code=404, detail="Invoice not found.")
 
-    # Run the NLP pipeline
-    try:
-        analysis = await process_debtor_reply(raw_message)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=502, detail="NLP service temporarily unavailable.")
+    # Run the NLP pipeline.
+    # Note: process_debtor_reply never raises — on internal failure it returns
+    # a dict with fallback_mode: "error" instead, so no try/except is needed here.
+    analysis = await process_debtor_reply(raw_message)
 
     # Build the communication log entry
     log_entry = {

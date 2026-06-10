@@ -60,7 +60,7 @@ def _serialize(doc: dict) -> dict:
 
 class UserUpdateRequest(BaseModel):
     business_name: Optional[str] = None
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
     plan: Optional[str] = None
     phone: Optional[str] = None
@@ -114,7 +114,10 @@ async def dashboard_stats() -> dict:
                 "by_status": [
                     {"$group": {"_id": "$status", "count": {"$sum": 1}, "value": {"$sum": "$amount"}}}
                 ],
-                # Monthly recovered trend (last 6 months)
+                # Monthly recovered trend (last 6 months).
+                # NOTE: groups by `issueDate` (the invoice's issue month), not a
+                # true "recovered on" date — known limitation, no separate
+                # recovery-date field is tracked yet.
                 "monthly_recovered": [
                     {"$match": {"$or": [{"status": "recovered"}, {"recovered": True}]}},
                     {"$group": {
@@ -122,8 +125,10 @@ async def dashboard_stats() -> dict:
                         "total": {"$sum": "$amount"},
                         "count": {"$sum": 1}
                     }},
+                    # Take the most recent 6 months, then re-sort ascending for display
+                    {"$sort": {"_id": -1}},
+                    {"$limit": 6},
                     {"$sort": {"_id": 1}},
-                    {"$limit": 6}
                 ],
             }
         }
@@ -326,6 +331,9 @@ async def update_user(user_id: str, payload: UserUpdateRequest) -> dict:
     update_data = {k: v for k, v in payload.dict(exclude_unset=True).items() if v is not None}
     if "email" in update_data:
         update_data["email"] = update_data["email"].lower()
+        existing = await users_col.find_one({"email": update_data["email"], "_id": {"$ne": oid}})
+        if existing:
+            raise HTTPException(status_code=409, detail="Email already in use by another account.")
 
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")

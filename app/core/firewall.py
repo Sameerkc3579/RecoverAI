@@ -14,12 +14,16 @@ Layer 3: Honeypot Trap Endpoints
     Any IP hitting a trap gets banned for 1 hour.
 """
 
+import ipaddress
 import logging
 import re
 import time
 
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from starlette.responses import JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -69,11 +73,16 @@ HONEYPOT_PATHS = {
 HONEYPOT_BAN_SECONDS = 3600  # 1 hour
 
 
-class FirewallMiddleware(BaseHTTPMiddleware):
-    """Three-layer firewall: rate limiter -> attack blocker -> honeypot traps."""
+class FirewallMiddleware:
+    """Three-layer firewall: rate limiter -> attack blocker -> honeypot traps.
 
-    def __init__(self, app):
-        super().__init__(app)
+    Implemented as raw ASGI middleware (not BaseHTTPMiddleware) — see
+    app/core/middleware.py header for why BaseHTTPMiddleware is avoided
+    (ExceptionGroup crashes on Python 3.11+).
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
         # {ip: {"count": int, "window_start": float, "violations": int, "banned_until": float}}
         self._rate_store: dict[str, dict] = {}
         self._last_cleanup = time.time()
@@ -82,15 +91,28 @@ class FirewallMiddleware(BaseHTTPMiddleware):
 
     @staticmethod
     def _get_client_ip(request) -> str:
-        """Extract real client IP — rightmost non-private entry in X-Forwarded-For."""
+        """Extract the real client IP.
+
+        X-Forwarded-For is only trusted when TRUST_PROXY_HEADERS is set (app sits
+        behind a known proxy). Otherwise the header is attacker-controlled and is
+        ignored in favour of the socket peer — preventing rate-limit/ban bypass
+        and spoofed honeypot bans against a victim IP. The rightmost *public* IP
+        is selected using proper CIDR checks (not string prefixes, which wrongly
+        classified all of 172.0.0.0/8 as private)."""
+        direct = request.client.host if request.client else "127.0.0.1"
+        if not settings.trust_proxy_headers:
+            return direct
+
         forwarded = request.headers.get("x-forwarded-for", "")
         if forwarded:
-            ips = [ip.strip() for ip in forwarded.split(",")]
-            for ip in reversed(ips):
-                if ip and not ip.startswith(("10.", "172.", "192.168.", "127.")):
-                    return ip
-            return ips[-1]
-        return request.client.host if request.client else "127.0.0.1"
+            for raw in reversed([ip.strip() for ip in forwarded.split(",")]):
+                try:
+                    addr = ipaddress.ip_address(raw)
+                except ValueError:
+                    continue
+                if not (addr.is_private or addr.is_loopback or addr.is_link_local):
+                    return raw
+        return direct
 
     # ── Layer 1: Rate Limiter ─────────────────────────────────────────────────
 
@@ -212,23 +234,31 @@ class FirewallMiddleware(BaseHTTPMiddleware):
 
     # ── Dispatch ──────────────────────────────────────────────────────────────
 
-    async def dispatch(self, request, call_next):
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope, receive)
         path = request.url.path
         query = str(request.url.query or "")
         user_agent = request.headers.get("user-agent", "")
 
         # Skip firewall for static assets
         if path.startswith(("/static/", "/uploads/")):
-            return await call_next(request)
+            await self.app(scope, receive, send)
+            return
 
         ip = self._get_client_ip(request)
 
         # ── Layer 3: Honeypot traps (check first — instant ban) ───────────
         if self._check_honeypot(ip, path):
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=404,
                 content={"detail": "Not Found"},
             )
+            await response(scope, receive, send)
+            return
 
         # ── Layer 2: Attack pattern detection ─────────────────────────────
         attack_type = self._is_suspicious_request(path, query, user_agent)
@@ -237,18 +267,22 @@ class FirewallMiddleware(BaseHTTPMiddleware):
                 "FIREWALL_BLOCK | ip=%s | type=%s | path=%s | query=%s | ua=%s",
                 ip, attack_type, path, query[:100], user_agent[:80],
             )
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=403,
                 content={"detail": "Forbidden"},
             )
+            await response(scope, receive, send)
+            return
 
         # ── Layer 1: Rate limiting ────────────────────────────────────────
         if self._check_rate_limit(ip, path):
             logger.warning("FIREWALL_RATE_LIMIT | ip=%s | path=%s", ip, path)
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=429,
                 content={"detail": "Rate limit exceeded. Try again later."},
                 headers={"Retry-After": str(RATE_WINDOW_SECONDS)},
             )
+            await response(scope, receive, send)
+            return
 
-        return await call_next(request)
+        await self.app(scope, receive, send)
