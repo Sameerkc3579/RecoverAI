@@ -214,7 +214,7 @@ function App() {
     recovery:  <RecoveryHub invoices={invoices} openDetail={openDetail} settings={settings} />,
     legal:     <LegalQueue invoices={legalQueue} openDetail={openDetail} settings={settings} />,
     campaigns: <Campaigns invoices={invoices} settings={settings} />,
-    customers: <Customers invoices={invoices} openDetail={openDetail} />,
+    customers: <Customers token={token} invoices={invoices} openDetail={openDetail} />,
     reports:   <Reports invoices={invoices} outstanding={outstanding} recovered={recovered} recoveryRate={recoveryRate} />,
     reminders: <Reminders invoices={invoices} openDetail={openDetail} />,
     admin:     <AdminDashboard />,

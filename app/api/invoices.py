@@ -27,6 +27,7 @@ from app.core.database import get_collection
 from app.core.config import settings
 from app.models.schemas import InvoiceCreate, InvoiceResponse, InvoiceUpdate
 from app.services.recovery_logic import calculate_msme_interest
+from app.services.customer_service import upsert_customer, recalculate_customer_stats
 from app.api.deps import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -152,6 +153,11 @@ async def create_invoice(
     data = payload.model_dump(by_alias=True)
     data["owner_id"] = current_user["_id"]
     result = await col.insert_one(data)
+    
+    # Customer Upsert Logic
+    customer_id = await upsert_customer(current_user["_id"], data)
+    await col.update_one({"_id": result.inserted_id}, {"$set": {"customer_id": customer_id}})
+    
     doc = await col.find_one({"_id": result.inserted_id})
     if doc is None:
         raise HTTPException(status_code=500, detail="Failed to retrieve created invoice.")
@@ -219,6 +225,11 @@ async def update_invoice(
     doc = await col.find_one({"_id": oid, "owner_id": current_user["_id"]})
     if not doc:
         raise HTTPException(status_code=404, detail="Invoice not found.")
+        
+    # Recalculate customer stats if monetary values or status changed
+    if any(k in safe_payload for k in ("recovered", "amount", "status")) and "customer_id" in doc:
+        await recalculate_customer_stats(current_user["_id"], doc["customer_id"])
+        
     return _serialise(doc)
 
 
@@ -238,9 +249,14 @@ async def delete_invoice(
     except InvalidId:
         raise HTTPException(status_code=400, detail="Invalid invoice ID format.")
 
-    result = await col.delete_one({"_id": oid, "owner_id": current_user["_id"]})
-    if result.deleted_count == 0:
+    doc = await col.find_one({"_id": oid, "owner_id": current_user["_id"]})
+    if not doc:
         raise HTTPException(status_code=404, detail="Invoice not found.")
+
+    result = await col.delete_one({"_id": oid, "owner_id": current_user["_id"]})
+    
+    if "customer_id" in doc:
+        await recalculate_customer_stats(current_user["_id"], doc["customer_id"])
 
 
 @router.post(
