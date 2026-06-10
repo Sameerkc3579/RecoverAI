@@ -55,15 +55,42 @@ function Invoices({ invoices, openDetail, onAdd }) {
     setBulkLoading(false);
   }
 
+  // Split a single CSV line into fields. Handles quoted fields, escaped quotes
+  // ("") and commas inside quotes. The previous regex approach
+  // (/(?:"([^"]*)"|([^,]*))/g) emitted an empty-string match at every comma, so
+  // values shifted into the wrong columns and the whole import was corrupted.
+  function splitCSVLine(line) {
+    const out = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') { cur += '"'; i++; }  // escaped quote
+          else inQuotes = false;
+        } else { cur += ch; }
+      } else if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        out.push(cur); cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur);
+    return out.map(v => v.trim());
+  }
+
   // Feature #7: Parse CSV file
   function parseCSV(text) {
-    const lines = text.trim().split('\n');
+    const lines = text.trim().split(/\r?\n/);
     if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim().toLowerCase());
+    const headers = splitCSVLine(lines[0]).map(h => h.trim().toLowerCase());
     return lines.slice(1).map(line => {
-      const vals = line.match(/(?:"([^"]*)"|([^,]*))/g) || [];
+      const vals = splitCSVLine(line);
       const obj = {};
-      headers.forEach((h, i) => { obj[h] = (vals[i] || '').replace(/"/g, '').trim(); });
+      headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
       return {
         company:   obj['company'] || obj['debtor'] || obj['company name'] || '',
         contact:   obj['contact'] || obj['contact name'] || obj['person'] || '',

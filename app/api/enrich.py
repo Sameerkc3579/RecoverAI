@@ -21,6 +21,7 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, HttpUrl
+from starlette.concurrency import run_in_threadpool
 
 # Vercel Serverless compatibility fallback for curl_cffi
 try:
@@ -170,30 +171,26 @@ def _assert_url_is_safe(url_str: str) -> tuple[str, str]:
 
 
 def _fetch_html(url_str: str, resolved_ip: str, hostname: str) -> str:
-    """Fetch HTML by connecting directly to the pre-resolved IP address.
+    """Fetch HTML over the original hostname URL so TLS/SNI and certificate
+    validation work correctly.
 
-    This eliminates the TOCTOU DNS-rebinding window: the IP was already
-    validated by _assert_url_is_safe, so we reuse it here instead of
-    letting the HTTP library resolve the hostname a second time.
+    The previous implementation connected to ``https://{ip}:443`` which broke
+    certificate validation for essentially every HTTPS site (the cert is issued
+    for the hostname, not the IP literal), making enrichment fail in practice.
 
-    SSL verification is always enabled to prevent MITM attacks.
+    SSRF safety is still enforced upstream: _assert_url_is_safe() has resolved
+    the hostname and confirmed every resolved IP is public, and we disable
+    redirects so a 3xx cannot bounce us onto an internal address. A small
+    DNS-rebinding TOCTOU window remains between resolution and connect; closing
+    it fully requires pinning the socket to ``resolved_ip`` while preserving SNI
+    via a custom transport adapter (tracked separately). SSL verification stays
+    ON — re-enabling it was the original MITM fix and must not regress.
     """
-    parsed = urlparse(url_str)
-    port = parsed.port
-    scheme = parsed.scheme or "https"
-    if port is None:
-        port = 443 if scheme == "https" else 80
-    # Build a URL that connects to the resolved IP directly
-    ip_url = f"{scheme}://{resolved_ip}:{port}{parsed.path or '/'}"
-    if parsed.query:
-        ip_url += f"?{parsed.query}"
-
     session = get_session()
     session.headers.update(_CHROME_HEADERS)
-    session.headers["Host"] = hostname
     session.headers["Referer"] = f"https://www.google.com/search?q={hostname}"
 
-    response = session.get(ip_url, timeout=15, allow_redirects=False)
+    response = session.get(url_str, timeout=15, allow_redirects=False)
     response.raise_for_status()
     return response.text
 
@@ -239,7 +236,9 @@ async def enrich_contact_info(
     resolved_ip, hostname = _assert_url_is_safe(url_str)
 
     try:
-        html = _fetch_html(url_str, resolved_ip, hostname)
+        # _fetch_html uses a synchronous HTTP client; run it off the event loop
+        # so a slow site cannot block every other request for up to 15 seconds.
+        html = await run_in_threadpool(_fetch_html, url_str, resolved_ip, hostname)
     except REQ_TIMEOUT:
         logger.warning("Timeout fetching %s", url_str)
         raise HTTPException(
@@ -262,12 +261,9 @@ async def enrich_contact_info(
 
     email, phone = _extract_contacts(html)
 
-    # Smart fallback if page was blocked or empty
-    if not email:
-        domain = urlparse(url_str).netloc.replace("www.", "")
-        email = f"accounts@{domain}"
-    if not phone:
-        phone = "+91 99999 00000"
-
-    logger.info("Enrichment complete — email: %s | phone: %s", email, phone)
+    # Return ONLY what was actually scraped. Never fabricate contact details —
+    # inventing accounts@<domain> / a fake phone and returning them as if they
+    # were discovered is dangerous in a debt-collection workflow. Missing fields
+    # come back as null so the UI can show "not found".
+    logger.info("Enrichment complete — email: %s | phone: %s", email or "—", phone or "—")
     return EnrichResponse(email=email, phone=phone)

@@ -46,6 +46,8 @@ from app.core.security import (
     validate_password_strength,
     revoke_token,
     is_token_revoked,
+    JWT_AUDIENCE,
+    JWT_ISSUER,
 )
 
 logger = logging.getLogger(__name__)
@@ -121,6 +123,12 @@ def _get_client_ip(request: Request) -> str:
     fall back to the direct socket peer address.
     """
     import ipaddress
+
+    # Only honour X-Forwarded-For behind a trusted proxy. Without one, the header
+    # is attacker-controlled: spoofing it would let an attacker bypass the login
+    # brute-force limiter or frame a victim's IP. Fall back to the socket peer.
+    if not settings.trust_proxy_headers:
+        return request.client.host if request.client else "unknown"
 
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
@@ -406,6 +414,8 @@ async def logout(token: str = Depends(oauth2_scheme)) -> LogoutResponse:
             token,
             settings.secret_key,
             algorithms=[settings.algorithm],
+            audience=JWT_AUDIENCE,
+            issuer=JWT_ISSUER,
         )
         jti = payload.get("jti")
         email = payload.get("sub", "unknown")
@@ -445,6 +455,8 @@ async def refresh_access_token(payload: RefreshRequest) -> TokenResponse:
             payload.refresh_token,
             settings.secret_key,
             algorithms=[settings.algorithm],
+            audience=JWT_AUDIENCE,
+            issuer=JWT_ISSUER,
         )
 
         if decoded.get("type") != "refresh":

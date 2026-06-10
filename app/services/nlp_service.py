@@ -36,7 +36,19 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 # ── Gemini client (shared config) ─────────────────────────────────────────────
-_client = genai.Client(api_key=settings.gemini_api_key)
+# Lazy client — created on first use so a bad/missing API key only breaks the
+# NLP endpoints, not module import (mirrors app/services/ai_service.py).
+_client = None
+
+
+def _get_client():
+    """Return the Gemini async client, initialising it on first call."""
+    global _client
+    if _client is None:
+        _client = genai.Client(api_key=settings.gemini_api_key)
+    return _client
+
+
 # Use gemini-2.0-flash (GA / stable). Switch to gemini-2.5-flash once it
 # has fully ramped its capacity and is no longer returning 503 UNAVAILABLE.
 MODEL = "gemini-2.0-flash"
@@ -173,7 +185,7 @@ async def _translate(raw_text: str) -> str:
     """Stage 1: Translate raw debtor reply to professional English."""
     logger.info("NLP Stage 1 — translating %d chars", len(raw_text))
     try:
-        response = await _client.aio.models.generate_content(
+        response = await _get_client().aio.models.generate_content(
             model=MODEL,
             contents=raw_text,
             config=types.GenerateContentConfig(
@@ -198,7 +210,7 @@ async def _classify_intent(english_text: str) -> dict:
     """Stage 2: Classify the translated text into an intent category."""
     logger.info("NLP Stage 2 — classifying intent")
     try:
-        response = await _client.aio.models.generate_content(
+        response = await _get_client().aio.models.generate_content(
             model=MODEL,
             contents=f"Debtor reply: \"{english_text}\"",
             config=types.GenerateContentConfig(
