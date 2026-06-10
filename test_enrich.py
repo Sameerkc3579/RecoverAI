@@ -6,8 +6,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 1. login
-username = os.getenv("TEST_USERNAME", "admin@example.com")
-password = os.getenv("TEST_PASSWORD", "password123")
+username = os.getenv("TEST_USERNAME")
+password = os.getenv("TEST_PASSWORD")
+
+if not username or not password:
+    print("❌ TEST_USERNAME/TEST_PASSWORD not set in environment/.env")
+    sys.exit(1)
 
 login_res = requests.post(
     'http://127.0.0.1:8000/api/auth/login',
