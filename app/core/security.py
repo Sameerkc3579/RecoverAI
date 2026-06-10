@@ -16,6 +16,13 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
+# ── JWT issuer / audience ─────────────────────────────────────────────────────
+# These MUST match the values validated in every jwt.decode() call (deps.py,
+# auth.py). They are emitted as the `iss` / `aud` claims at token creation; if a
+# decode site omits them, PyJWT raises InvalidAudienceError and rejects the token.
+JWT_ISSUER = "recoverai"
+JWT_AUDIENCE = "recoverai-api"
+
 # ── Password Hashing ──────────────────────────────────────────────────────────
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -117,8 +124,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
         "iat": datetime.now(timezone.utc),
         "jti": str(uuid.uuid4()),          # Unique token ID for revocation
         "type": "access",
-        "iss": "recoverai",
-        "aud": "recoverai-api",
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
     })
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
@@ -137,7 +144,7 @@ def create_refresh_token(data: dict) -> str:
         "iat": datetime.now(timezone.utc),
         "jti": str(uuid.uuid4()),
         "type": "refresh",
-        "iss": "recoverai",
-        "aud": "recoverai-api",
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
     })
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)

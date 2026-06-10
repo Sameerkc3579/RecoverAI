@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:3000,http://localhost:5173,http://localhost:8000"
     debug: bool = False                        # Defaults to False — safe production default
 
+    # ── Proxy / Networking ────────────────────────────────────────────────────
+    # Only trust X-Forwarded-For when the app is behind a known reverse proxy or
+    # load balancer. Default False — when running uvicorn directly, XFF is fully
+    # attacker-controlled and must NOT be used for rate limiting or banning.
+    trust_proxy_headers: bool = False
+
     # ── Google OAuth ──────────────────────────────────────────────────────────
     google_client_id: str = ""
 

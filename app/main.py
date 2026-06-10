@@ -93,6 +93,20 @@ async def startup_event():
     except Exception as exc:
         logger.warning("⚠️   MongoDB unavailable (%s) — continuing without DB", exc)
 
+    # SECURITY/RELIABILITY NOTE (bug #14): the JWT revocation blacklist,
+    # login rate limiter, and firewall ban store are all in-memory, per-process
+    # dicts. On serverless platforms (Vercel) — or any multi-worker deployment —
+    # each instance/worker has its own copy, so logout revocation, brute-force
+    # lockouts, and IP bans do NOT work consistently across instances.
+    # Recommended fix: back these stores with Redis (or another shared store).
+    if os.environ.get("VERCEL") or (os.environ.get("WEB_CONCURRENCY", "1") != "1"):
+        logger.warning(
+            "⚠️   In-memory security state (JWT blacklist, login rate limiter, "
+            "firewall bans) is per-process and NOT shared across serverless "
+            "instances/workers — these protections are largely ineffective "
+            "in this deployment. Use Redis for shared state."
+        )
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -131,23 +145,24 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # ── Security Middleware Stack ─────────────────────────────────────────────────
-# Order matters — outermost middleware runs first on request, last on response.
+# Order matters — Starlette adds middleware innermost-first, so the LAST
+# `add_middleware` call becomes the OUTERMOST layer (runs first on request,
+# last on response). To get the runtime order:
+#   AuditLog -> SecurityHeaders -> CORS -> Firewall -> RequestSizeLimit -> app
+# we must ADD them in the reverse order, innermost first.
 
-# 1. Audit logging (outermost — logs every request including blocked ones)
-app.add_middleware(AuditLogMiddleware)
+# 1. Request size limit (innermost — closest to the app)
+# Global cap is the upload limit + headroom for multipart/form overhead
+# (boundaries, headers, field names) so a max-size proof upload isn't 413'd
+# before reaching the handler. The true per-file cap is still enforced by
+# the chunked read in POST /api/invoices/upload-proof.
+app.add_middleware(RequestSizeLimitMiddleware, max_size_mb=settings.max_upload_size_mb + 2)
 
-# 2. Request size limit (blocks oversized payloads early)
-app.add_middleware(RequestSizeLimitMiddleware, max_size_mb=settings.max_upload_size_mb)
-
-# 3. Security response headers (innermost — applied to all responses)
-app.add_middleware(SecurityHeadersMiddleware)
-
-# 4. Firewall (outermost after CORS — runs first on every request)
+# 2. Firewall
 #    Layer 1: IP rate limiter  |  Layer 2: Attack pattern blocker  |  Layer 3: Honeypot traps
 app.add_middleware(FirewallMiddleware)
 
-
-# ── CORS Middleware ───────────────────────────────────────────────────────────
+# 3. CORS
 # SECURITY FIX: Changed from allow_origins=["*"] to explicit allowlist.
 # Only origins listed in ALLOWED_ORIGINS environment variable are permitted.
 app.add_middleware(
@@ -157,6 +172,12 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
 )
+
+# 4. Security response headers
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 5. Audit logging (outermost — logs every request including blocked ones)
+app.add_middleware(AuditLogMiddleware)
 
 
 # ── Routers ───────────────────────────────────────────────────────────────────
@@ -216,6 +237,13 @@ _LANDING_PATHS = [
 LANDING_HTML: Path | None = next((p for p in _LANDING_PATHS if p.exists()), None)
 logger.info("🌐  Landing HTML resolved to: %s", LANDING_HTML)
 
+# ── Public debtor portal page (magic-link, no auth) ───────────────────────────
+_PORTAL_PATHS = [
+    BASE_DIR / "portal.html",
+    Path("portal.html"),
+    Path("/var/task/portal.html"),
+]
+
 # ── App shell (SPA) HTML path candidates ──────────────────────────────────────
 # Prefer new modular dashboard.html, fallback to legacy RecoverAI_MVP.html
 _CANDIDATE_PATHS = [
@@ -263,7 +291,7 @@ async def startup_check(_admin=Depends(get_admin_user)):
         "imports": {},
         "html_file": {},
     }
-    for mod in ["fastapi", "motor", "jose", "passlib", "google.genai", "pymongo"]:
+    for mod in ["fastapi", "motor", "jwt", "passlib", "google.genai", "pymongo"]:
         try:
             __import__(mod)
             checks["imports"][mod] = "ok"
@@ -307,7 +335,6 @@ async def fs_debug(_admin=Depends(get_admin_user)):
 @app.get("/dashboard", tags=["System"], summary="Frontend App", include_in_schema=False)
 @app.get("/dashboard.html", tags=["System"], include_in_schema=False)
 @app.get("/RecoverAI_MVP.html", tags=["System"], include_in_schema=False)
-@app.get("/index.html", tags=["System"], include_in_schema=False)
 @app.get("/inbox", tags=["Frontend"], include_in_schema=False)
 @app.get("/invoices", tags=["Frontend"], include_in_schema=False)
 @app.get("/recovery", tags=["Frontend"], include_in_schema=False)
@@ -343,6 +370,28 @@ async def dashboard():
     return JSONResponse(
         status_code=200,
         content={"status": "ok", "message": "RecoveryAgent API is running."},
+    )
+
+
+@app.get("/portal", tags=["Frontend"], summary="Debtor Portal", include_in_schema=False)
+async def serve_portal():
+    """Serve the public debtor portal page.
+
+    The page reads the magic-link token from the query string and calls
+    GET /api/invoices/portal/{token} to render a read-only invoice view.
+    No authentication — the token itself is the credential.
+    """
+    no_cache_headers = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    }
+    for path in _PORTAL_PATHS:
+        if path.exists():
+            return HTMLResponse(content=path.read_bytes(), status_code=200, headers=no_cache_headers)
+    return JSONResponse(
+        status_code=404,
+        content={"error": "Portal page not found."},
     )
 
 

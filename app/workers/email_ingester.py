@@ -104,6 +104,14 @@ IMAP_MAILBOX: str = os.getenv("IMAP_MAILBOX", "INBOX")
 IMAP_PROCESSED_FOLDER: str = os.getenv("IMAP_PROCESSED_FOLDER", "Processed")
 MOVE_TO_FOLDER: bool = os.getenv("MOVE_TO_FOLDER", "false").lower() == "true"
 
+# Require the mail provider's SPF/DKIM/DMARC verdict to confirm the sender's
+# domain before trusting the `From` header for tenant routing. The `From` header
+# is trivially spoofable, so without this an attacker who knows a customer's
+# email could inject invoices into that customer's account. Fail-closed by
+# default; set REQUIRE_SENDER_AUTH=false only if your IMAP provider does not
+# stamp Authentication-Results (Gmail always does).
+REQUIRE_SENDER_AUTH: bool = os.getenv("REQUIRE_SENDER_AUTH", "true").lower() == "true"
+
 # ── Zero-Trust Security Settings ──────────────────────────────────────────────
 SECURITY_LOG_FILE: str = os.getenv("SECURITY_LOG_FILE", "logs/security_audit.log")
 
@@ -246,7 +254,11 @@ class IMAPParserAgent:
                 # Zero-Trust Sender Verification
                 email_match = re.search(r'<([^>]+)>', from_addr_raw)
                 sender_email = email_match.group(1).lower().strip() if email_match else from_addr_raw.lower().strip()
-                
+
+                # Anti-spoofing: confirm the provider authenticated this sender's
+                # domain before we trust `From` to route the invoice to a tenant.
+                authenticated = _verify_sender_authentication(msg, sender_email)
+
                 attachments = _extract_pdf_attachments(msg)
                 if not attachments:
                     logger.info(
@@ -263,6 +275,7 @@ class IMAPParserAgent:
                     "subject": subject,
                     "from": from_addr_raw,
                     "sender_email": sender_email,
+                    "authenticated": authenticated,
                     "attachments": attachments,
                 })
             except Exception as exc:
@@ -316,6 +329,42 @@ class IMAPParserAgent:
             await asyncio.to_thread(self._mark_processed, uid)
         finally:
             await asyncio.to_thread(self._disconnect)
+
+
+# ── Sender authentication (anti-spoofing) ─────────────────────────────────────
+
+def _verify_sender_authentication(msg: email.message.Message, sender_email: str) -> bool:
+    """Best-effort anti-spoofing check using the provider's Authentication-Results.
+
+    The IMAP mailbox (Gmail by default) stamps `Authentication-Results` with the
+    SPF / DKIM / DMARC verdicts it computed when it received the message. We trust
+    `From` for tenant routing only when one of these confirms the sender's own
+    domain:
+      • dmarc=pass                          (domain-aligned by definition), or
+      • dkim=pass referencing the From domain, or
+      • spf=pass  referencing the From domain.
+
+    Fail-closed: if no Authentication-Results header is present, or none passes
+    with alignment, the message is rejected. This is a heuristic, not a full
+    DMARC evaluator, but it closes the trivial `From`-spoofing hole.
+    """
+    domain = sender_email.rsplit("@", 1)[-1].lower().strip()
+    if not domain:
+        return False
+
+    results = " ".join(msg.get_all("Authentication-Results", [])).lower()
+    if not results:
+        # No provider verdict available — cannot trust From. Fail closed.
+        return False
+
+    if "dmarc=pass" in results:
+        return True
+    # SPF/DKIM pass that references the sender's own domain (alignment heuristic).
+    if "dkim=pass" in results and domain in results:
+        return True
+    if "spf=pass" in results and domain in results:
+        return True
+    return False
 
 
 # ── PDF attachment extractor (pure, sync) ─────────────────────────────────────
@@ -664,6 +713,19 @@ class EmailIngesterOrchestrator:
                 email_from = msg_info["from"]
                 sender_email = msg_info["sender_email"]
                 attachments = msg_info["attachments"]
+
+                # ── Anti-Spoofing Gate ────────────────────────────────────────
+                # Reject senders whose domain was not authenticated by the mail
+                # provider (SPF/DKIM/DMARC). `From` alone is forgeable and must
+                # not decide which tenant an invoice is filed under.
+                if REQUIRE_SENDER_AUTH and not msg_info.get("authenticated", False):
+                    sec_logger.warning("SPOOFED_SENDER_REJECTED | %s | %s", sender_email, subject)
+                    logger.warning(
+                        "Auth ⛔ Sender failed SPF/DKIM/DMARC alignment — rejecting: %s",
+                        sender_email,
+                    )
+                    await imap_agent_mark.mark_processed(uid)
+                    continue
 
                 # ── Multi-Tenant Auth Check ───────────────────────────────────
                 user = await self._mongo_agent.get_user_by_email(sender_email)

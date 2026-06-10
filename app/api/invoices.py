@@ -17,7 +17,7 @@ import logging
 import os
 import tempfile
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -25,7 +25,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Request
 
 from app.core.database import get_collection
 from app.core.config import settings
-from app.models.schemas import InvoiceCreate, InvoiceResponse
+from app.models.schemas import InvoiceCreate, InvoiceResponse, InvoiceUpdate
 from app.services.recovery_logic import calculate_msme_interest
 from app.api.deps import get_current_user
 
@@ -33,6 +33,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/invoices", tags=["Invoices"])
 
 COLLECTION = "invoices"
+PORTAL_TOKENS_COLLECTION = "portal_tokens"
+PORTAL_TOKEN_TTL_DAYS = 7
 
 # ── File Upload Security Constants ────────────────────────────────────────────
 # Strict allowlist of permitted file extensions for proof-of-delivery documents
@@ -178,21 +180,24 @@ async def list_invoices(current_user: dict = Depends(get_current_user)):
 )
 async def update_invoice(
     invoice_id: str,
-    payload: dict,
+    payload: InvoiceUpdate,
     current_user: dict = Depends(get_current_user),
 ) -> InvoiceResponse:
     """
     Update an invoice owned by the current user.
 
-    Security: The payload is sanitized to strip MongoDB operators and
-    protected fields before being applied to the database.
+    Security: The payload is a typed model (only known, well-typed fields are
+    accepted), and is additionally run through the Mongo-operator sanitizer
+    as defense-in-depth before being applied to the database.
     """
+    update_data = payload.model_dump(by_alias=True, exclude_unset=True)
+
     # Reject empty payloads
-    if not payload:
+    if not update_data:
         raise HTTPException(status_code=400, detail="Update payload cannot be empty.")
 
-    # Sanitize payload — strip MongoDB operators and protected fields
-    safe_payload = _sanitize_update_payload(payload)
+    # Sanitize payload — strip MongoDB operators and protected fields (defense-in-depth)
+    safe_payload = _sanitize_update_payload(update_data)
 
     if not safe_payload:
         raise HTTPException(
@@ -289,7 +294,13 @@ async def upload_proof(
         if file_header.startswith(magic):
             detected_type = mime
             break
-    if detected_type and detected_type != file.content_type:
+    # Normalize image/jpg <-> image/jpeg before comparing — magic bytes always
+    # map JPEGs to "image/jpeg", but browsers/clients may declare "image/jpg".
+    _JPEG_ALIASES = {"image/jpeg", "image/jpg"}
+    declared_type = file.content_type
+    if detected_type in _JPEG_ALIASES and declared_type in _JPEG_ALIASES:
+        pass  # both are JPEG — treat as a match
+    elif detected_type and detected_type != declared_type:
         raise HTTPException(status_code=400, detail="File content does not match declared type.")
 
     # 3. Read file in chunks, enforcing size limit
@@ -349,7 +360,69 @@ async def generate_portal_link(
         raise HTTPException(status_code=404, detail="Invoice not found.")
 
     token = "tok_" + str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(days=PORTAL_TOKEN_TTL_DAYS)
+
+    tokens_col = get_collection(PORTAL_TOKENS_COLLECTION)
+    await tokens_col.insert_one({
+        "token": token,
+        "invoice_id": oid,
+        "owner_id": current_user["_id"],
+        "created_at": now.isoformat(),
+        "expires_at": expires_at.isoformat(),
+    })
 
     base_url = str(request.base_url).rstrip("/")
+    # TODO: the frontend `/portal` SPA page that consumes this link does not
+    # exist yet — only the backend lookup route below is implemented.
     portal_url = f"{base_url}/portal?token={token}"
     return {"token": token, "portal_url": portal_url}
+
+
+@router.get(
+    "/portal/{token}",
+    response_model=dict,
+    summary="Public debtor portal — view invoice via magic link (no auth)",
+)
+async def get_portal_invoice(token: str) -> dict:
+    """
+    Resolve a magic-link token to a minimal, owner-data-safe view of the
+    associated invoice. No authentication required — the token itself is
+    the credential. Returns 404 if the token is unknown or expired.
+    """
+    tokens_col = get_collection(PORTAL_TOKENS_COLLECTION)
+    token_doc = await tokens_col.find_one({"token": token})
+    if not token_doc:
+        raise HTTPException(status_code=404, detail="Invalid or expired link.")
+
+    expires_at = token_doc.get("expires_at")
+    if expires_at:
+        try:
+            expiry_dt = datetime.fromisoformat(expires_at)
+            if expiry_dt.tzinfo is None:
+                expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) > expiry_dt:
+                raise HTTPException(status_code=404, detail="Invalid or expired link.")
+        except ValueError:
+            raise HTTPException(status_code=404, detail="Invalid or expired link.")
+
+    col = get_collection(COLLECTION)
+    doc = await col.find_one({"_id": token_doc["invoice_id"]})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Invalid or expired link.")
+
+    # Minimal, owner-data-safe public view — never leak owner_id or internal fields
+    enriched = _enrich_with_interest(dict(doc))
+    interest_data = enriched.get("interest_data") or {}
+    return {
+        "company": enriched.get("company"),
+        "amount": enriched.get("amount"),
+        # Invoices are stored with camelCase aliases (by_alias=True), so prefer
+        # those keys and fall back to snake_case for any legacy documents.
+        "invoiceNo": enriched.get("invoiceNo") or enriched.get("invoice_no"),
+        "dueDate": enriched.get("dueDate") or enriched.get("due_date"),
+        "daysOverdue": enriched.get("daysOverdue"),
+        "status": enriched.get("status"),
+        "interestAccrued": interest_data.get("interest_accrued"),
+        "totalPayable": interest_data.get("total_claim"),
+    }

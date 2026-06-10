@@ -44,6 +44,15 @@ def calculate_msme_interest(principal: float, due_date_str: str) -> dict:
         annual_rate_pct  – the applied annual rate (19.5%)
         legal_basis      – statutory reference string
     """
+    # Coerce principal to a float — a non-numeric `amount` (e.g. a string from
+    # a malformed PATCH/import) must not crash the interest calculation and
+    # 500 the entire invoice list.
+    try:
+        principal = float(principal)
+    except (TypeError, ValueError):
+        logger.warning("Invalid principal '%r', returning zero interest.", principal)
+        return _zero_result(0.0)
+
     try:
         due_date = _parse_date(due_date_str)
     except (ValueError, TypeError):

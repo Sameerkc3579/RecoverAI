@@ -62,7 +62,11 @@ async def update_settings(
     if "city" in update_data:
         set_fields["city"] = update_data["city"]
 
-    set_fields["settings"] = update_data
+    # Merge into the existing `settings` sub-document using dotted keys instead of
+    # replacing it wholesale. A wholesale replace ($set settings = update_data)
+    # wiped every previously-saved setting whenever the user changed one field.
+    for k, v in update_data.items():
+        set_fields[f"settings.{k}"] = v
 
     col = get_collection("users")
     await col.update_one(
