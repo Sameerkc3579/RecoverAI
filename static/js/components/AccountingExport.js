@@ -146,7 +146,7 @@ ${ledgerEntries}
         </div>
       </div>
 
-      <div style={{display:'flex',gap:4,margin:'4px 0 20px',background:'var(--surface2)',padding:4,borderRadius:12,width:'fit-content'}}>
+      <div style={{display:'flex',gap:4,margin:'4px 0 20px',background:'var(--surface2)',padding:4,borderRadius:12,width:'fit-content',flexWrap:'wrap'}}>
         {[['export','📤 Export Data'],['sync','☁️ Zoho Sync']].map(([id,label])=>(
           <button key={id} onClick={()=>setTab(id)} style={{
             padding:'8px 18px',borderRadius:8,border:'none',cursor:'pointer',
@@ -160,12 +160,12 @@ ${ledgerEntries}
       </div>
 
       {tab === 'export' && (
-        <div style={{display:'grid',gridTemplateColumns:'1fr 320px',gap:20}}>
-          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+        <div style={{display:'flex',flexWrap:'wrap',gap:20}}>
+          <div style={{display:'flex',flexDirection:'column',gap:16,flex:'1 1 400px'}}>
             {/* Format Selection */}
             <div className="card" style={{padding:24}}>
               <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:16}}>Export Format</div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
                 {[
                   {id:'tally_xml',icon:'📒',name:'Tally XML',desc:'Import directly into Tally ERP 9 / Prime'},
                   {id:'csv',icon:'📊',name:'CSV Spreadsheet',desc:'Open in Excel, Zoho Sheets, or Google Sheets'},
@@ -188,7 +188,7 @@ ${ledgerEntries}
             {/* Filters */}
             <div className="card" style={{padding:24}}>
               <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:16}}>Filter Invoices</div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:14}}>
                 <div>
                   <label style={{fontSize:11,fontWeight:700,color:'var(--text3)',display:'block',marginBottom:6,textTransform:'uppercase',letterSpacing:1}}>Status</label>
                   <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} className="form-input" style={{width:'100%'}}>
@@ -223,7 +223,7 @@ ${ledgerEntries}
           </div>
 
           {/* Summary & Export Button */}
-          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          <div style={{display:'flex',flexDirection:'column',gap:16,flex:'1 1 320px'}}>
             <div className="card" style={{padding:24}}>
               <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:16}}>Export Summary</div>
               <div style={{display:'flex',flexDirection:'column',gap:12,marginBottom:20}}>

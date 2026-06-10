@@ -82,15 +82,15 @@ function WhiteLabel({ settings, setSettings }) {
         </div>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 360px',gap:20,marginTop:4}}>
+      <div style={{display:'flex',flexWrap:'wrap',gap:20,marginTop:4}}>
         {/* FORM */}
-        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+        <div style={{display:'flex',flexDirection:'column',gap:16,flex:'1 1 400px'}}>
 
           {/* Logo Upload */}
           <div className="card" style={{padding:24}}>
             <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:4}}>Company Logo</div>
             <div style={{fontSize:13,color:'var(--text2)',marginBottom:20}}>Uploaded logo appears in the sidebar, legal notices, and PDF reports.</div>
-            <div style={{display:'flex',alignItems:'center',gap:20}}>
+            <div style={{display:'flex',alignItems:'center',gap:20,flexWrap:'wrap'}}>
               <div style={{
                 width:100,height:100,borderRadius:16,border:'2px dashed var(--border)',
                 background:'var(--surface2)',display:'flex',alignItems:'center',justifyContent:'center',
@@ -125,7 +125,7 @@ function WhiteLabel({ settings, setSettings }) {
           {/* Brand Name & Tagline */}
           <div className="card" style={{padding:24}}>
             <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:16}}>Brand Identity</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))',gap:14}}>
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:'var(--text3)',display:'block',marginBottom:6,textTransform:'uppercase',letterSpacing:1}}>Platform Name</label>
                 <input value={brandName} onChange={e=>setBrandName(e.target.value)} className="form-input" style={{width:'100%'}} placeholder="RecoverAI" maxLength={30} />
@@ -197,7 +197,7 @@ function WhiteLabel({ settings, setSettings }) {
         </div>
 
         {/* LIVE PREVIEW */}
-        <div style={{position:'sticky',top:80}}>
+        <div style={{position:'sticky',top:80,flex:'1 1 320px'}}>
           <div className="card" style={{padding:20}}>
             <div style={{fontSize:13,fontWeight:800,color:'var(--text)',marginBottom:14,textTransform:'uppercase',letterSpacing:1}}>🖥️ Live Sidebar Preview</div>
             <div style={{
