@@ -63,8 +63,12 @@ def _verify_whatsapp_signature(raw_body: bytes, signature_header: str) -> bool:
     """
     secret = settings.whatsapp_webhook_secret
     if not secret:
-        logger.warning("WHATSAPP_WEBHOOK_SECRET not configured — accepting unverified webhook (dev mode)")
-        return True  # Allow in dev; in prod, set the secret and this will enforce it
+        from app.core.config import settings as cfg
+        if cfg.debug:
+            logger.warning("WHATSAPP_WEBHOOK_SECRET not configured — accepting unverified webhook (dev mode)")
+            return True
+        logger.error("WHATSAPP_WEBHOOK_SECRET not configured — rejecting webhook (production mode)")
+        return False
 
     expected_prefix = "sha256="
     if not signature_header.startswith(expected_prefix):
@@ -431,6 +435,15 @@ async def send_whatsapp_message(
 
     # Sanitise number — digits only
     clean_number = "".join(c for c in payload.to_number if c.isdigit() or c == "+")
+
+    # Verify phone belongs to user's invoices
+    inv_col = get_collection(INVOICES_COLLECTION)
+    owner_query = {"phone": {"$regex": clean_number[-10:]}}
+    if current_user.get("email") not in settings.admin_emails_list:
+        owner_query["owner_id"] = current_user.get("_id")
+    matching_inv = await inv_col.find_one(owner_query)
+    if not matching_inv:
+        raise HTTPException(status_code=403, detail="Phone number not associated with any of your invoices.")
 
     success = await _send_whatsapp_reply(clean_number, payload.message)
     if not success:

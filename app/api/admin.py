@@ -17,6 +17,7 @@ POST /api/admin/users/{id}/send-notice — send a manual notice to user email
 GET  /api/admin/search                 — search users by name/email
 """
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -192,8 +193,8 @@ async def list_users(
     match_stage = {}
     if search:
         match_stage["$or"] = [
-            {"business_name": {"$regex": search, "$options": "i"}},
-            {"email": {"$regex": search, "$options": "i"}},
+            {"business_name": {"$regex": re.escape(search), "$options": "i"}},
+            {"email": {"$regex": re.escape(search), "$options": "i"}},
         ]
     if status_filter == "active":
         match_stage["is_active"] = True
@@ -202,7 +203,7 @@ async def list_users(
 
     pipeline = [
         *([ {"$match": match_stage} ] if match_stage else []),
-        {"$project": {"hashed_password": 0}},
+        {"$project": {"hashed_password": 0}},  # nosec B105
         {
             "$lookup": {
                 "from": "invoices",
@@ -278,7 +279,7 @@ async def get_user_details(user_id: str) -> dict:
     users_col = get_collection("users")
     inv_col = get_collection("invoices")
 
-    user = await users_col.find_one({"_id": oid}, {"hashed_password": 0})
+    user = await users_col.find_one({"_id": oid}, {"hashed_password": 0})  # nosec B105
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user["_id"] = str(user["_id"])
@@ -475,10 +476,10 @@ async def search_users(q: str = Query(..., min_length=1)) -> list[dict]:
     col = get_collection("users")
     cursor = col.find(
         {"$or": [
-            {"business_name": {"$regex": q, "$options": "i"}},
-            {"email": {"$regex": q, "$options": "i"}},
+            {"business_name": {"$regex": re.escape(q), "$options": "i"}},
+            {"email": {"$regex": re.escape(q), "$options": "i"}},
         ]},
-        {"hashed_password": 0}
+        {"hashed_password": 0}  # nosec B105
     ).limit(20)
     users = await cursor.to_list(20)
     for u in users:
@@ -556,7 +557,7 @@ async def export_users() -> list[dict]:
     """Returns a flat user list suitable for CSV generation in the frontend."""
     col = get_collection("users")
     pipeline = [
-        {"$project": {"hashed_password": 0}},
+        {"$project": {"hashed_password": 0}},  # nosec B105
         {
             "$lookup": {
                 "from": "invoices",

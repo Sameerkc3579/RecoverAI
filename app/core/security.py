@@ -11,7 +11,7 @@ import uuid
 import re
 from datetime import datetime, timedelta, timezone
 
-from jose import jwt
+import jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
@@ -117,6 +117,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
         "iat": datetime.now(timezone.utc),
         "jti": str(uuid.uuid4()),          # Unique token ID for revocation
         "type": "access",
+        "iss": "recoverai",
+        "aud": "recoverai-api",
     })
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
@@ -135,5 +137,7 @@ def create_refresh_token(data: dict) -> str:
         "iat": datetime.now(timezone.utc),
         "jti": str(uuid.uuid4()),
         "type": "refresh",
+        "iss": "recoverai",
+        "aud": "recoverai-api",
     })
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)

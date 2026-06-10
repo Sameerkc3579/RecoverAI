@@ -15,6 +15,7 @@ Security Fixes Applied:
 """
 import logging
 import os
+import tempfile
 import uuid
 from datetime import date, datetime
 
@@ -93,7 +94,7 @@ def _sanitize_update_payload(payload: dict) -> dict:
 def _get_upload_dir() -> str:
     """Return the upload directory path (Vercel-compatible)."""
     is_vercel = bool(os.environ.get("VERCEL"))
-    return "/tmp/uploads" if is_vercel else "uploads"
+    return os.path.join(tempfile.gettempdir(), "uploads") if is_vercel else "uploads"
 
 
 def _serialise(doc: dict) -> InvoiceResponse:
@@ -123,7 +124,7 @@ def _enrich_with_interest(doc: dict) -> dict:
             if due_dt:
                 doc["daysOverdue"] = max(0, (date.today() - due_dt).days)
         except Exception:
-            pass
+            logger.debug("Silenced exception parsing due date", exc_info=True)
 
     principal = doc.get("amount", 0)
     interest_data = calculate_msme_interest(principal, due_date_str)
@@ -275,6 +276,22 @@ async def upload_proof(
             detail=f"MIME type '{content_type}' is not allowed.",
         )
 
+    # Validate file magic bytes
+    file_header = await file.read(8)
+    await file.seek(0)
+    MAGIC_BYTES = {
+        b'%PDF': 'application/pdf',
+        b'\xff\xd8\xff': 'image/jpeg',
+        b'\x89PNG': 'image/png',
+    }
+    detected_type = None
+    for magic, mime in MAGIC_BYTES.items():
+        if file_header.startswith(magic):
+            detected_type = mime
+            break
+    if detected_type and detected_type != file.content_type:
+        raise HTTPException(status_code=400, detail="File content does not match declared type.")
+
     # 3. Read file in chunks, enforcing size limit
     max_size = settings.max_upload_size_mb * 1024 * 1024
     chunks = []
@@ -320,23 +337,18 @@ async def generate_portal_link(
     request: Request,
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    """Generate a magic link for a specific invoice.
-    Uses 'demo' for frontend preview purposes."""
-    if invoice_id == "demo":
-        token = "demo_" + str(uuid.uuid4())[:8]
-    else:
-        col = get_collection(COLLECTION)
-        try:
-            oid = ObjectId(invoice_id)
-        except InvalidId:
-            raise HTTPException(status_code=400, detail="Invalid invoice ID format.")
+    """Generate a magic link for a specific invoice."""
+    col = get_collection(COLLECTION)
+    try:
+        oid = ObjectId(invoice_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid invoice ID format.")
 
-        doc = await col.find_one({"_id": oid, "owner_id": current_user["_id"]})
-        if not doc:
-            raise HTTPException(status_code=404, detail="Invoice not found.")
+    doc = await col.find_one({"_id": oid, "owner_id": current_user["_id"]})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Invoice not found.")
 
-        # In a real system, you'd store this token in a DB with an expiry.
-        token = "tok_" + str(uuid.uuid4())
+    token = "tok_" + str(uuid.uuid4())
 
     base_url = str(request.base_url).rstrip("/")
     portal_url = f"{base_url}/portal?token={token}"

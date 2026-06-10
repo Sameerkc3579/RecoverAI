@@ -192,7 +192,7 @@ class IMAPParserAgent:
             try:
                 self._conn.logout()
             except Exception:
-                pass
+                logger.debug("IMAP logout failed, ignoring", exc_info=True)
             self._conn = None
             logger.info("IMAP ▶ Disconnected")
 

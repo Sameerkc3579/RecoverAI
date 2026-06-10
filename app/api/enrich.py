@@ -105,10 +105,13 @@ def _is_private_ip(ip_str: str) -> bool:
         return True  # Fail closed on parse error
 
 
-def _assert_url_is_safe(url_str: str) -> None:
+def _assert_url_is_safe(url_str: str) -> tuple[str, str]:
     """
     Resolve the hostname in the URL to an IP address and block any request
     that would hit a private, loopback, or link-local network.
+
+    Returns (resolved_ip, hostname) on success so the caller can connect
+    directly to the resolved IP, eliminating the TOCTOU DNS-rebinding window.
 
     Raises HTTPException 422 if the URL is not safe to fetch.
     """
@@ -130,14 +133,18 @@ def _assert_url_is_safe(url_str: str) -> None:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="The provided URL resolves to a restricted IP address.",
             )
+        return str(addr), hostname
     except ValueError:
         pass  # hostname is not a literal IP — resolve it
 
     # Resolve hostname → IPs and block if any resolve to a private range
     try:
         infos = socket.getaddrinfo(hostname, None)
+        first_ip = None
         for info in infos:
             resolved_ip = info[4][0]
+            if first_ip is None:
+                first_ip = resolved_ip
             if _is_private_ip(resolved_ip):
                 logger.warning(
                     "SSRF_BLOCKED | url=%s | hostname=%s | resolved_ip=%s",
@@ -147,6 +154,12 @@ def _assert_url_is_safe(url_str: str) -> None:
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="The provided URL resolves to a restricted IP address.",
                 )
+        if not first_ip:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Could not resolve the hostname. Please check the URL.",
+            )
+        return first_ip, hostname
     except HTTPException:
         raise
     except OSError:
@@ -156,17 +169,31 @@ def _assert_url_is_safe(url_str: str) -> None:
         )
 
 
-def _fetch_html(url_str: str) -> str:
-    """Fetch HTML from a URL using a session with realistic browser headers.
+def _fetch_html(url_str: str, resolved_ip: str, hostname: str) -> str:
+    """Fetch HTML by connecting directly to the pre-resolved IP address.
+
+    This eliminates the TOCTOU DNS-rebinding window: the IP was already
+    validated by _assert_url_is_safe, so we reuse it here instead of
+    letting the HTTP library resolve the hostname a second time.
+
     SSL verification is always enabled to prevent MITM attacks.
     """
+    parsed = urlparse(url_str)
+    port = parsed.port
+    scheme = parsed.scheme or "https"
+    if port is None:
+        port = 443 if scheme == "https" else 80
+    # Build a URL that connects to the resolved IP directly
+    ip_url = f"{scheme}://{resolved_ip}:{port}{parsed.path or '/'}"
+    if parsed.query:
+        ip_url += f"?{parsed.query}"
+
     session = get_session()
     session.headers.update(_CHROME_HEADERS)
-    domain = url_str.split("/")[2] if "/" in url_str else url_str
-    session.headers["Referer"] = f"https://www.google.com/search?q={domain}"
+    session.headers["Host"] = hostname
+    session.headers["Referer"] = f"https://www.google.com/search?q={hostname}"
 
-    # verify=True (default) — SSL certs are always verified
-    response = session.get(url_str, timeout=15, allow_redirects=True)
+    response = session.get(ip_url, timeout=15, allow_redirects=False)
     response.raise_for_status()
     return response.text
 
@@ -209,10 +236,10 @@ async def enrich_contact_info(
     logger.info("Enriching contact data from: %s | user=%s", url_str, current_user.get("email"))
 
     # ── SSRF Guard: resolve hostname and block private IPs ────────────────────
-    _assert_url_is_safe(url_str)
+    resolved_ip, hostname = _assert_url_is_safe(url_str)
 
     try:
-        html = _fetch_html(url_str)
+        html = _fetch_html(url_str, resolved_ip, hostname)
     except REQ_TIMEOUT:
         logger.warning("Timeout fetching %s", url_str)
         raise HTTPException(

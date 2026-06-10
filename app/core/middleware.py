@@ -56,13 +56,15 @@ class SecurityHeadersMiddleware:
                     "https://*.google.com https://fonts.googleapis.com https://cdn.jsdelivr.net "
                     "https://cdnjs.cloudflare.com https://cdn.tailwindcss.com; "
                     "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
-                    "img-src 'self' data: https:; "
+                    "img-src 'self' data: https://lh3.googleusercontent.com https://www.google.com https://accounts.google.com; "
                     "connect-src 'self' https://*.google.com https://accounts.google.com https://recover-ai-lyart.vercel.app; "
                     "frame-src https://*.google.com https://accounts.google.com; "
                     "object-src 'none'; "
                     "base-uri 'self';"
                 )
                 headers["X-XSS-Protection"] = "1; mode=block"
+                headers["Cross-Origin-Opener-Policy"] = "same-origin"
+                headers["Cross-Origin-Resource-Policy"] = "same-origin"
                 # Remove server fingerprinting (MutableHeaders uses del, not pop)
                 try:
                     del headers["server"]

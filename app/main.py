@@ -20,6 +20,7 @@ Startup order
 """
 import logging
 import os
+import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Depends
@@ -34,6 +35,7 @@ from app.core.middleware import (
     RequestSizeLimitMiddleware,
     AuditLogMiddleware,
 )
+from app.core.firewall import FirewallMiddleware
 from app.api.invoices import router as invoices_router
 from app.api.chat import router as chat_router
 from app.api.webhook import router as webhook_router
@@ -55,7 +57,7 @@ logger = logging.getLogger(__name__)
 # ── Paths ─────────────────────────────────────────────────────────────────────
 _IS_VERCEL = bool(os.environ.get("VERCEL"))
 BASE_DIR = Path(__file__).resolve().parent.parent
-_UPLOAD_DIR = "/tmp/uploads" if _IS_VERCEL else "uploads"
+_UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "uploads") if _IS_VERCEL else "uploads"
 os.makedirs(_UPLOAD_DIR, exist_ok=True)
 
 
@@ -140,6 +142,10 @@ app.add_middleware(RequestSizeLimitMiddleware, max_size_mb=settings.max_upload_s
 # 3. Security response headers (innermost — applied to all responses)
 app.add_middleware(SecurityHeadersMiddleware)
 
+# 4. Firewall (outermost after CORS — runs first on every request)
+#    Layer 1: IP rate limiter  |  Layer 2: Attack pattern blocker  |  Layer 3: Honeypot traps
+app.add_middleware(FirewallMiddleware)
+
 
 # ── CORS Middleware ───────────────────────────────────────────────────────────
 # SECURITY FIX: Changed from allow_origins=["*"] to explicit allowlist.
@@ -197,8 +203,8 @@ if not _IS_VERCEL:
     if _uploads_dir.exists():
         app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 else:
-    os.makedirs("/tmp/uploads", exist_ok=True)
-    app.mount("/uploads", StaticFiles(directory="/tmp/uploads"), name="uploads")
+    os.makedirs(os.path.join(tempfile.gettempdir(), "uploads"), exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=os.path.join(tempfile.gettempdir(), "uploads")), name="uploads")
 
 
 # ── Landing page path candidates ─────────────────────────────────────────────
@@ -326,7 +332,6 @@ async def dashboard():
                     content=html_content, 
                     status_code=200,
                     headers={
-                        "X-Source-File": str(path.name),
                         "Cache-Control": "no-cache, no-store, must-revalidate",
                         "Pragma": "no-cache",
                         "Expires": "0"
@@ -340,11 +345,6 @@ async def dashboard():
         content={"status": "ok", "message": "RecoveryAgent API is running."},
     )
 
-@app.get("/debug-error", tags=["System"], include_in_schema=False)
-async def debug_error():
-    """Endpoint to test error handling (only works in debug mode)."""
-    if not settings.debug:
-        return JSONResponse(status_code=404, content={"detail": "Not found"})
 
 @app.get("/", tags=["Frontend"], summary="Landing Page", include_in_schema=False)
 async def serve_landing():

@@ -8,11 +8,11 @@ pydantic==2.11.1
 pydantic-settings==2.8.1
 pydantic[email]==2.11.1
 httpx==0.28.1
-python-jose[cryptography]==3.3.0
+PyJWT==2.10.1
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.20
 beautifulsoup4==4.12.3
-requests==2.31.0
+requests>=2.32.3
 curl_cffi==0.7.4
 google-auth==2.30.0
 gunicorn==20.1.0

@@ -108,6 +108,19 @@ function sendViaWhatsApp(phone, messageText) {
   window.open(url, '_blank');
 }
 
+/* ── Security Helpers ────────────────────────────────────── */
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str || ''));
+  return div.innerHTML;
+}
+
+function sanitizeCSV(val) {
+  const s = String(val || '');
+  if (/^[=+\-@\t\r]/.test(s)) return "'" + s;
+  return s;
+}
+
 /* ── Legal PDF Generator ─────────────────────────────────── */
 async function generateLegalPDF(inv, settings) {
   const id = inv.interest_data || {};
@@ -116,29 +129,46 @@ async function generateLegalPDF(inv, settings) {
   const days = id.days_overdue || inv.daysOverdue || 0;
   const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 
+  // Sanitize all user-controlled values to prevent XSS via innerHTML
+  const safe = {
+    businessName: escapeHTML(settings?.businessName || 'RecoverAI Legal Services'),
+    ownerName: escapeHTML(settings?.ownerName || ''),
+    phone: escapeHTML(settings?.phone || ''),
+    email: escapeHTML(settings?.email || ''),
+    gstin: escapeHTML(settings?.gstin || ''),
+    company: escapeHTML(inv.company || ''),
+    contact: escapeHTML(inv.contact || 'The Proprietor / Director'),
+    invGstin: escapeHTML(inv.gstin || ''),
+    invEmail: escapeHTML(inv.email || ''),
+    invPhone: escapeHTML(inv.phone || ''),
+    invoiceNo: escapeHTML(inv.invoiceNo || ''),
+    issueDate: escapeHTML(inv.issueDate || 'N/A'),
+    dueDate: escapeHTML(inv.dueDate || 'N/A'),
+  };
+
   const el = document.createElement('div');
   el.innerHTML = `
     <div style="font-family: 'Times New Roman', Georgia, serif; padding: 48px 56px; color: #1a1a1a; font-size: 13px; line-height: 1.8; max-width: 210mm;">
       <div style="text-align: center; border-bottom: 3px double #8B0000; padding-bottom: 16px; margin-bottom: 24px;">
-        <div style="font-size: 20px; font-weight: bold; color: #8B0000; letter-spacing: 1px; text-transform: uppercase;">${settings?.businessName || 'RecoverAI Legal Services'}</div>
-        <div style="font-size: 11px; color: #555; margin-top: 4px;">${settings?.ownerName || ''} &nbsp;|&nbsp; ${settings?.phone || ''} &nbsp;|&nbsp; ${settings?.email || ''}</div>
-        ${settings?.gstin ? `<div style="font-size: 10px; color: #777; margin-top: 2px;">GSTIN: ${settings.gstin}</div>` : ''}
+        <div style="font-size: 20px; font-weight: bold; color: #8B0000; letter-spacing: 1px; text-transform: uppercase;">${safe.businessName}</div>
+        <div style="font-size: 11px; color: #555; margin-top: 4px;">${safe.ownerName} &nbsp;|&nbsp; ${safe.phone} &nbsp;|&nbsp; ${safe.email}</div>
+        ${safe.gstin ? `<div style="font-size: 10px; color: #777; margin-top: 2px;">GSTIN: ${safe.gstin}</div>` : ''}
       </div>
       <div style="text-align: right; font-size: 12px; color: #555; margin-bottom: 20px;">Date: <strong>${today}</strong></div>
       <div style="text-align: center; font-size: 16px; font-weight: bold; color: #8B0000; margin-bottom: 4px; text-decoration: underline;">LEGAL NOTICE</div>
       <div style="text-align: center; font-size: 11px; color: #555; margin-bottom: 24px;">Under the Micro, Small and Medium Enterprises Development Act, 2006</div>
       <div style="margin-bottom: 20px;">
         <strong>To,</strong><br/>
-        <strong>${inv.company}</strong><br/>
-        Attn: ${inv.contact || 'The Proprietor / Director'}<br/>
-        ${inv.gstin ? 'GSTIN: ' + inv.gstin + '<br/>' : ''}
-        ${inv.email ? 'Email: ' + inv.email + '<br/>' : ''}
-        ${inv.phone ? 'Phone: ' + inv.phone : ''}
+        <strong>${safe.company}</strong><br/>
+        Attn: ${safe.contact}<br/>
+        ${safe.invGstin ? 'GSTIN: ' + safe.invGstin + '<br/>' : ''}
+        ${safe.invEmail ? 'Email: ' + safe.invEmail + '<br/>' : ''}
+        ${safe.invPhone ? 'Phone: ' + safe.invPhone : ''}
       </div>
-      <div style="margin-bottom: 16px;"><strong>Subject: Demand for Payment of Invoice No. ${inv.invoiceNo} and Accrued Interest under MSMED Act, 2006</strong></div>
+      <div style="margin-bottom: 16px;"><strong>Subject: Demand for Payment of Invoice No. ${safe.invoiceNo} and Accrued Interest under MSMED Act, 2006</strong></div>
       <div style="margin-bottom: 14px;">Dear Sir/Madam,</div>
-      <div style="margin-bottom: 14px; text-align: justify;">Under instructions from my client, <strong>${settings?.businessName || '[Creditor Business Name]'}</strong>${settings?.gstin ? ' (GSTIN: ' + settings.gstin + ')' : ''}, I hereby serve this Legal Notice upon you as required under the <strong>Micro, Small and Medium Enterprises Development Act, 2006</strong> ("MSMED Act").</div>
-      <div style="margin-bottom: 14px; text-align: justify;">My client supplied goods/services to your company as evidenced by <strong>Invoice No. ${inv.invoiceNo}</strong>, dated <strong>${inv.issueDate || 'N/A'}</strong>, for an amount of <strong>₹${Number(inv.amount).toLocaleString('en-IN')}</strong>. The said amount became due and payable on <strong>${inv.dueDate || 'N/A'}</strong>. As of the date of this notice, the payment is overdue by <strong>${days} days</strong>.</div>
+      <div style="margin-bottom: 14px; text-align: justify;">Under instructions from my client, <strong>${safe.businessName}</strong>${safe.gstin ? ' (GSTIN: ' + safe.gstin + ')' : ''}, I hereby serve this Legal Notice upon you as required under the <strong>Micro, Small and Medium Enterprises Development Act, 2006</strong> ("MSMED Act").</div>
+      <div style="margin-bottom: 14px; text-align: justify;">My client supplied goods/services to your company as evidenced by <strong>Invoice No. ${safe.invoiceNo}</strong>, dated <strong>${safe.issueDate}</strong>, for an amount of <strong>₹${Number(inv.amount).toLocaleString('en-IN')}</strong>. The said amount became due and payable on <strong>${safe.dueDate}</strong>. As of the date of this notice, the payment is overdue by <strong>${days} days</strong>.</div>
       <div style="margin: 20px 0; border: 1.5px solid #8B0000; border-radius: 4px; overflow: hidden;">
         <div style="background: #8B0000; color: white; padding: 8px 16px; font-weight: bold; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Statement of Claim</div>
         <div style="display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #ddd;"><span>Base Invoice Amount</span><strong>₹${Number(inv.amount).toLocaleString('en-IN')}</strong></div>
@@ -154,10 +184,10 @@ async function generateLegalPDF(inv, settings) {
       </div>
       <div style="margin-bottom: 8px;">Yours faithfully,</div>
       <div style="margin-top: 36px;">
-        <strong>${settings?.ownerName || '[Authorised Signatory]'}</strong><br/>
-        ${settings?.businessName || '[Business Name]'}<br/>
-        ${settings?.phone ? 'Phone: ' + settings.phone + '<br/>' : ''}
-        ${settings?.email ? 'Email: ' + settings.email : ''}
+        <strong>${safe.ownerName || '[Authorised Signatory]'}</strong><br/>
+        ${safe.businessName || '[Business Name]'}<br/>
+        ${safe.phone ? 'Phone: ' + safe.phone + '<br/>' : ''}
+        ${safe.email ? 'Email: ' + safe.email : ''}
       </div>
       <div style="margin-top: 40px; padding-top: 12px; border-top: 1px solid #ccc; font-size: 9px; color: #999; text-align: center;">
         This notice has been issued under the provisions of the MSMED Act, 2006 and is without prejudice to all other rights and remedies available to the creditor under applicable laws.

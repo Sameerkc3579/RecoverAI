@@ -27,7 +27,7 @@ from threading import Lock
 from fastapi import APIRouter, HTTPException, status, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from pydantic import BaseModel, EmailStr, Field
-from jose import JWTError, jwt
+import jwt
 
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -198,8 +198,10 @@ class AuthConfigResponse(BaseModel):
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user",
 )
-async def register(payload: RegisterRequest) -> RegisterResponse:
+async def register(payload: RegisterRequest, request: Request) -> RegisterResponse:
     """Create a new user account with enforced strong password policy."""
+    client_ip = _get_client_ip(request)
+    _check_rate_limit(client_ip)
 
     # Validate password strength BEFORE hitting the database
     ok, reason = validate_password_strength(payload.password)
@@ -270,10 +272,12 @@ async def login(
     )
 
     if not user:
+        _record_failed_login(client_ip)
         raise AUTH_ERROR
 
     if not verify_password(form_data.password, user["hashed_password"]):
         logger.warning("FAILED_LOGIN | email=%s | ip=%s", form_data.username.lower(), client_ip)
+        _record_failed_login(client_ip)
         raise AUTH_ERROR
 
     if not user.get("is_active", True):
@@ -295,7 +299,7 @@ async def login(
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        token_type="bearer",
+        token_type="bearer",  # nosec B106
         is_admin=is_admin,
         business_name=user.get("business_name"),
         email=user["email"],
@@ -353,7 +357,7 @@ async def google_login(payload: GoogleAuthRequest) -> TokenResponse:
         user_doc = {
             "business_name": business_name,
             "email": email,
-            "hashed_password": None,
+            "hashed_password": None,  # nosec B105
             "created_at": datetime.now(timezone.utc).isoformat(),
             "is_active": True,
             "auth_provider": "google",
@@ -378,7 +382,7 @@ async def google_login(payload: GoogleAuthRequest) -> TokenResponse:
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        token_type="bearer",
+        token_type="bearer",  # nosec B106
         is_admin=is_admin,
         business_name=user.get("business_name"),
         email=user["email"],
@@ -408,7 +412,7 @@ async def logout(token: str = Depends(oauth2_scheme)) -> LogoutResponse:
         if jti:
             revoke_token(jti)
             logger.info("LOGOUT | email=%s | jti=%s", email, jti)
-    except JWTError:
+    except jwt.InvalidTokenError:
         pass  # Expired/invalid token — logout is a no-op, that's fine
 
     return LogoutResponse()
@@ -455,7 +459,7 @@ async def refresh_access_token(payload: RefreshRequest) -> TokenResponse:
         if is_token_revoked(jti):
             raise credentials_exception
 
-    except JWTError:
+    except jwt.InvalidTokenError:
         raise credentials_exception
 
     col = get_collection(USERS_COLLECTION)
@@ -476,7 +480,7 @@ async def refresh_access_token(payload: RefreshRequest) -> TokenResponse:
     return TokenResponse(
         access_token=new_access,
         refresh_token=new_refresh,
-        token_type="bearer",
+        token_type="bearer",  # nosec B106
         is_admin=user["email"] in settings.admin_emails_list,
         business_name=user.get("business_name"),
         email=user["email"],

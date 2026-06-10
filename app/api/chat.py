@@ -11,12 +11,15 @@ Security Fix:
     unauthenticated, allowing any anonymous user to exhaust the Gemini API key.
 """
 import asyncio
+import logging
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.models.schemas import PromptRequest
 from app.services.ai_service import generate_message as ai_generate_message
 from app.api.deps import get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["AI Generation"])
 
@@ -37,7 +40,8 @@ async def generate_message(
     try:
         text = await ai_generate_message(payload.prompt, payload.invoice_data or {}, payload.tone)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=str(exc))
+        logger.error("AI generation failed: %s", exc)
+        raise HTTPException(status_code=502, detail="AI service temporarily unavailable. Please try again.")
     return {"message": text}
 
 
@@ -61,7 +65,8 @@ async def bulk_generate_messages(
         try:
             return {"message": await ai_generate_message(payload.prompt, payload.invoice_data or {}, payload.tone)}
         except Exception as exc:
-            return {"error": str(exc), "message": None}
+            logger.error("AI generation failed: %s", exc)
+            return {"error": "AI generation failed for this item.", "message": None}
 
     results = await asyncio.gather(*(process_one(p) for p in payloads))
     return list(results)

@@ -9,7 +9,7 @@ import logging
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+import jwt
 
 from app.core.config import settings
 from app.core.database import get_collection
@@ -64,7 +64,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
             logger.warning("REVOKED_TOKEN_USED | email=%s | jti=%s", email, jti)
             raise credentials_exception
 
-    except JWTError:
+    except jwt.InvalidTokenError:
         raise credentials_exception
 
     col = get_collection(USERS_COLLECTION)
@@ -72,7 +72,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
     if user is None:
         raise credentials_exception
 
-    if not user.get("is_active", True):
+    if not user.get("is_active", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is deactivated. Please contact support.",
