@@ -75,7 +75,7 @@ Create a `.env` file in the root directory mapping the following parameters:
 # ── Server Config ──────────────────────
 DEBUG=true
 ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
-ADMIN_EMAILS=imexperiment4@gmail.com,youradmin@domain.com
+ADMIN_EMAILS=admin@example.com,backup-admin@example.com
 
 # ── Gemini ─────────────────────────────
 GEMINI_API_KEY=your_gemini_api_key_here

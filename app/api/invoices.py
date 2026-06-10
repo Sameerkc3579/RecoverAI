@@ -373,8 +373,7 @@ async def generate_portal_link(
     })
 
     base_url = str(request.base_url).rstrip("/")
-    # TODO: the frontend `/portal` SPA page that consumes this link does not
-    # exist yet — only the backend lookup route below is implemented.
+    # Frontend debtor portal page is served at GET /portal (see app/main.py).
     portal_url = f"{base_url}/portal?token={token}"
     return {"token": token, "portal_url": portal_url}
 

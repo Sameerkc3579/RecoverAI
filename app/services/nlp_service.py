@@ -308,7 +308,7 @@ async def process_debtor_reply(raw_text: str) -> dict:
                 logger.warning(
                     "⚡ Quota error in CLASSIFICATION — activating heuristic fallback on translated text."
                 )
-                result = _heuristic_classify(raw_text)
+                result = _heuristic_classify(translated_text)
                 return {
                     "translated_text": translated_text,
                     "intent": result["intent"],

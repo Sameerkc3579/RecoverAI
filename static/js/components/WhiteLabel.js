@@ -31,8 +31,9 @@ function WhiteLabel({ settings, setSettings }) {
     localStorage.setItem('recoverai_brand_color', primaryColor);
     localStorage.setItem('recoverai_brand_name', brandName);
     localStorage.setItem('recoverai_brand_tagline', tagline);
-    // Apply CSS variable instantly
+    // Apply CSS variables instantly (app_v2.css uses amber, amber-light, amber-dark)
     document.documentElement.style.setProperty('--amber', primaryColor);
+    document.documentElement.style.setProperty('--amber-light', primaryColor);
     document.documentElement.style.setProperty('--amber-dark', primaryColor);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
@@ -48,6 +49,7 @@ function WhiteLabel({ settings, setSettings }) {
     setBrandName('RecoverAI');
     setTagline('MSME Invoice Recovery');
     document.documentElement.style.removeProperty('--amber');
+    document.documentElement.style.removeProperty('--amber-light');
     document.documentElement.style.removeProperty('--amber-dark');
   }
 
