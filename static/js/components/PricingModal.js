@@ -18,10 +18,20 @@ function PricingModal({ currentPlan, onClose, onUpgrade }) {
     },
   ];
 
+  const timerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   function handlePlanSelect(plan) {
     if (plan.id === currentPlan) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    
     setSelected(plan); setStep('processing');
-    setTimeout(() => { setStep('success'); onUpgrade(plan.id); }, 3000);
+    timerRef.current = setTimeout(() => { setStep('success'); onUpgrade(plan.id); }, 3000);
   }
 
   return (
