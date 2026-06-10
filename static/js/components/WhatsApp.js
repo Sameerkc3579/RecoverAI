@@ -137,14 +137,14 @@ function WhatsAppIntegration({ invoices, settings }) {
           margin:'20px 0', padding:24,
           background:'linear-gradient(135deg,rgba(37,211,102,0.08),rgba(14,165,233,0.08))',
           border:'1px solid rgba(37,211,102,0.2)', borderRadius:16,
-          display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, alignItems:'end'
+          display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:16, alignItems:'start'
         }}>
           <div>
             <div style={{fontSize:18,fontWeight:900,color:'var(--text)',marginBottom:6}}>🔗 Connect WhatsApp Business API</div>
             <div style={{fontSize:13,color:'var(--text2)',marginBottom:20,lineHeight:1.7}}>
               Connect your Meta WhatsApp Business account to start sending AI-crafted reminders directly. Get your credentials from <strong style={{color:'var(--amber)'}}>Meta Business Suite → WhatsApp → API Setup</strong>.
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))',gap:12}}>
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:'var(--text3)',display:'block',marginBottom:6,textTransform:'uppercase',letterSpacing:1}}>Phone Number ID</label>
                 <input value={phoneId} onChange={e=>setPhoneId(e.target.value)} placeholder="1234567890123456" className="form-input" style={{width:'100%'}} />
@@ -167,7 +167,7 @@ function WhatsAppIntegration({ invoices, settings }) {
       )}
 
       {/* Tab Bar */}
-      <div style={{display:'flex',gap:4,margin:'16px 0 20px',background:'var(--surface2)',padding:4,borderRadius:12,width:'fit-content'}}>
+      <div style={{display:'flex',gap:4,margin:'16px 0 20px',background:'var(--surface2)',padding:4,borderRadius:12,width:'fit-content',flexWrap:'wrap'}}>
         {[['send','📤 Send Message'],['drip','⏱ Drip Campaigns'],['status','📊 Sent Messages']].map(([id,label])=>(
           <button key={id} onClick={()=>setTab(id)} style={{
             padding:'8px 18px', borderRadius:8, border:'none', cursor:'pointer',
@@ -182,7 +182,7 @@ function WhatsAppIntegration({ invoices, settings }) {
 
       {/* SEND TAB */}
       {tab === 'send' && (
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',gap:20}}>
           <div className="card" style={{padding:24}}>
             <div style={{fontSize:15,fontWeight:800,color:'var(--text)',marginBottom:16}}>Compose Message</div>
             <div style={{marginBottom:14}}>

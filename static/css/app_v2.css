@@ -132,8 +132,10 @@ body {
   flex-direction: column;
   position: sticky;
   top: 0;
-  height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  transform: translateZ(0);
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
   flex-shrink: 0;
@@ -2274,14 +2276,20 @@ select.form-input {
   top: 0;
   left: -260px;
   width: 240px;
-  height: 100vh;
+  height: 100dvh;
   background: var(--surface);
   box-shadow: inset -1px 0 0 var(--border);
   z-index: 50;
   transition: left 0.25s cubic-bezier(.4, 0, .2, 1);
   display: flex;
   flex-direction: column;
-  overflow-y: auto
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transform: translateZ(0);
+}
+
+body:has(.mobile-drawer.open) {
+  overflow: hidden;
 }
 
 .mobile-drawer.open {
