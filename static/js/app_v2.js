@@ -219,7 +219,7 @@ function App() {
     reminders: <Reminders invoices={invoices} openDetail={openDetail} />,
     admin:     <AdminDashboard />,
     settings:  <Settings settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} />,
-    whatsapp:  <WhatsAppIntegration invoices={invoices} settings={settings} />,
+    whatsapp:  <WhatsAppIntegration token={token} invoices={invoices} settings={settings} />,
     whitelabel:<WhiteLabel settings={settings} setSettings={setSettings} />,
     accounting:<AccountingExport invoices={invoices} settings={settings} />,
   };

@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     # Example: ADMIN_EMAILS=admin@yourcompany.com,backup-admin@yourcompany.com
     admin_emails: str = ""
 
+    # ── Gmail SMTP ────────────────────────────────────────────────────────────
+    gmail_user: str = ""
+    gmail_app_password: str = ""
+
     # ── File Upload ───────────────────────────────────────────────────────────
     max_upload_size_mb: int = 10
 

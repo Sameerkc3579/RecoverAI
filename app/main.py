@@ -45,7 +45,11 @@ from app.api.admin import router as admin_router
 from app.api.users import router as users_router
 from app.api.customers import router as customers_router
 from app.api.whatsapp_webhook import router as whatsapp_router
+from app.api.drip import router as drip_router
 from app.api.deps import get_admin_user
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from app.workers.drip_scheduler import run_daily_drips
 
 # ── Logger ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -78,6 +82,9 @@ app = FastAPI(
     openapi_url="/openapi.json" if settings.debug else None,
 )
 
+# Global scheduler instance
+scheduler = AsyncIOScheduler()
+
 
 # ── Startup / Shutdown ────────────────────────────────────────────────────────
 @app.on_event("startup")
@@ -92,6 +99,11 @@ async def startup_event():
         logger.info("✅  MongoDB connected  →  db: %s", settings.db_name)
     except Exception as exc:
         logger.warning("⚠️   MongoDB unavailable (%s) — continuing without DB", exc)
+
+    # Start the drip campaign scheduler
+    scheduler.add_job(run_daily_drips, 'cron', hour=0, minute=0, timezone='Asia/Kolkata')
+    scheduler.start()
+    logger.info("✅  Drip Campaign Scheduler started (Midnight IST)")
 
     # SECURITY/RELIABILITY NOTE (bug #14): the JWT revocation blacklist,
     # login rate limiter, and firewall ban store are all in-memory, per-process
@@ -117,6 +129,9 @@ async def shutdown_event():
         logger.info("✅  MongoDB connection closed")
     except Exception as exc:
         logger.warning("⚠️   Error closing MongoDB: %s", exc)
+        
+    scheduler.shutdown()
+    logger.info("✅  Drip Campaign Scheduler stopped")
 
 
 # ── Global Error Handler ──────────────────────────────────────────────────────
@@ -190,6 +205,7 @@ app.include_router(admin_router)
 app.include_router(users_router)
 app.include_router(customers_router)
 app.include_router(whatsapp_router)
+app.include_router(drip_router)
 
 
 # ── Static Files ──────────────────────────────────────────────────────────────
