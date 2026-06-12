@@ -3,7 +3,7 @@ import asyncio
 from datetime import datetime, timezone
 from app.core.database import get_collection
 from app.services.email_service import send_reminder_email
-from app.services.ai_service import generate_auto_reply
+from app.services.ai_service import generate_message
 from bson import ObjectId
 
 logger = logging.getLogger(__name__)
@@ -98,8 +98,8 @@ async def process_drip_for_user(user: dict):
             }
             
             # Re-use the existing AI generator but spoof the incoming context
-            message_body = await generate_auto_reply(
-                incoming_text=f"Please generate a payment reminder for {inv_ctx['company']}. They are {days_overdue} days overdue.",
+            message_body = await generate_message(
+                prompt=f"Please generate a payment reminder for {inv_ctx['company']}. They are {days_overdue} days overdue.",
                 invoice_data=inv_ctx,
                 tone=tone
             )
