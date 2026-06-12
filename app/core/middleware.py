@@ -63,8 +63,8 @@ class SecurityHeadersMiddleware:
                     "base-uri 'self';"
                 )
                 headers["X-XSS-Protection"] = "1; mode=block"
-                headers["Cross-Origin-Opener-Policy"] = "same-origin"
-                headers["Cross-Origin-Resource-Policy"] = "same-origin"
+                headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
+                headers["Cross-Origin-Resource-Policy"] = "same-site"
                 # Remove server fingerprinting (MutableHeaders uses del, not pop)
                 try:
                     del headers["server"]
