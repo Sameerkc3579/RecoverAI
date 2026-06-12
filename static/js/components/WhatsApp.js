@@ -1,5 +1,5 @@
 /* ─── WhatsApp Business API Integration Component ─── */
-function WhatsAppIntegration({ invoices, settings }) {
+function WhatsAppIntegration({ invoices, settings, token }) {
   const [waStatus, setWaStatus] = React.useState('disconnected'); // disconnected | connected | error
   const [phoneId, setPhoneId] = React.useState('');
   const [accessToken, setAccessToken] = React.useState('');
@@ -8,6 +8,49 @@ function WhatsAppIntegration({ invoices, settings }) {
   const [sentMessages, setSentMessages] = React.useState([]);
   const [draftMsg, setDraftMsg] = React.useState('');
   const [tab, setTab] = React.useState('send'); // send | drip | status
+
+  // Drip Campaign State
+  const [dripConfig, setDripConfig] = React.useState({});
+  const [loadingDrip, setLoadingDrip] = React.useState(true);
+  const [savingDrip, setSavingDrip] = React.useState(false);
+
+  React.useEffect(() => {
+    if (tab === 'drip') {
+      fetch('/api/drip-settings', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+      .then(res => res.json())
+      .then(data => {
+        setDripConfig(data);
+        setLoadingDrip(false);
+      })
+      .catch(err => {
+        console.error(err);
+        setLoadingDrip(false);
+      });
+    }
+  }, [tab, token]);
+
+  async function saveDripSettings() {
+    setSavingDrip(true);
+    try {
+      const res = await fetch('/api/drip-settings', {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ settings: dripConfig })
+      });
+      if (!res.ok) throw new Error('Failed to save settings');
+      alert('Drip settings saved successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Error saving settings.');
+    } finally {
+      setSavingDrip(false);
+    }
+  }
 
   const unpaidInvoices = invoices.filter(i => !i.recovered);
 
@@ -262,38 +305,56 @@ function WhatsAppIntegration({ invoices, settings }) {
         <div className="card" style={{padding:28}}>
           <div style={{fontSize:17,fontWeight:900,color:'var(--text)',marginBottom:6}}>⏱ Automated Drip Campaigns</div>
           <div style={{fontSize:13,color:'var(--text2)',marginBottom:28,lineHeight:1.7}}>
-            Configure automated WhatsApp reminders that fire at preset intervals. RecoverAI will auto-send these messages and escalate to legal notices when needed.
+            Configure automated WhatsApp/Email reminders that fire at preset intervals. RecoverAI will auto-send these messages and escalate to legal notices when needed.
           </div>
-          {[
-            {day:7,icon:'📣',title:'First Gentle Reminder',desc:'A polite WhatsApp nudge. Tone: Friendly. Mentions outstanding amount.',color:'var(--blue)'},
-            {day:21,icon:'⚠️',title:'Firm Follow-up',desc:'Firmer reminder. Warns of upcoming interest under MSMED Act. Tone: Professional.',color:'var(--amber)'},
-            {day:35,icon:'🚨',title:'Final Warning',desc:'Last reminder before legal escalation. Mentions Facilitation Council filing.',color:'var(--red)'},
-            {day:45,icon:'⚖️',title:'Auto Legal Notice PDF',desc:'Generates and emails an MSMED Act legal notice with compound interest calculation.',color:'var(--purple)'},
-          ].map(step=>(
-            <div key={step.day} style={{
-              display:'flex', alignItems:'flex-start', gap:20, padding:'18px 20px',
-              background:'var(--surface2)', borderRadius:12, marginBottom:12,
-              border:`1px solid var(--border)`, position:'relative',
-            }}>
-              <div style={{
-                width:44,height:44,borderRadius:'50%',background:`${step.color}20`,
-                color:step.color,display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:20,flexShrink:0,
-              }}>{step.icon}</div>
-              <div style={{flex:1}}>
-                <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:4}}>
-                  <span style={{fontSize:14,fontWeight:800,color:'var(--text)'}}>{step.title}</span>
-                  <span style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:6,background:`${step.color}20`,color:step.color}}>Day {step.day}</span>
+          {loadingDrip ? (
+            <div style={{textAlign: 'center', padding: '40px', color: 'var(--text3)'}}>Loading settings...</div>
+          ) : (
+            <>
+              {[
+                {day:7,icon:'📣',title:'First Gentle Reminder',desc:'A polite nudge via Email. Tone: Friendly. Mentions outstanding amount.',color:'var(--blue)'},
+                {day:21,icon:'⚠️',title:'Firm Follow-up',desc:'Firmer reminder. Warns of upcoming interest under MSMED Act. Tone: Professional.',color:'var(--amber)'},
+                {day:35,icon:'🚨',title:'Final Warning',desc:'Last reminder before legal escalation. Mentions Facilitation Council filing.',color:'var(--red)'},
+                {day:45,icon:'⚖️',title:'Auto Legal Notice PDF',desc:'Generates and emails an MSMED Act legal notice with compound interest calculation.',color:'var(--purple)'},
+              ].map(step=>(
+                <div key={step.day} style={{
+                  display:'flex', alignItems:'flex-start', gap:20, padding:'18px 20px',
+                  background:'var(--surface2)', borderRadius:12, marginBottom:12,
+                  border:`1px solid var(--border)`, position:'relative',
+                }}>
+                  <div style={{
+                    width:44,height:44,borderRadius:'50%',background:`${step.color}20`,
+                    color:step.color,display:'flex',alignItems:'center',justifyContent:'center',
+                    fontSize:20,flexShrink:0,
+                  }}>{step.icon}</div>
+                  <div style={{flex:1}}>
+                    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:4}}>
+                      <span style={{fontSize:14,fontWeight:800,color:'var(--text)'}}>{step.title}</span>
+                      <span style={{fontSize:11,fontWeight:700,padding:'2px 8px',borderRadius:6,background:`${step.color}20`,color:step.color}}>Day {step.day}</span>
+                    </div>
+                    <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.7}}>{step.desc}</div>
+                  </div>
+                  <label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',flexShrink:0}}>
+                    <input 
+                      type="checkbox" 
+                      checked={dripConfig[step.day]?.enabled || false}
+                      onChange={(e) => {
+                        setDripConfig(prev => ({
+                          ...prev,
+                          [step.day]: { ...prev[step.day], enabled: e.target.checked }
+                        }));
+                      }}
+                      style={{accentColor:'var(--amber)',width:16,height:16}} 
+                    />
+                    <span style={{fontSize:11,fontWeight:600,color:'var(--text3)'}}>Enabled</span>
+                  </label>
                 </div>
-                <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.7}}>{step.desc}</div>
-              </div>
-              <label style={{display:'flex',alignItems:'center',gap:6,cursor:'pointer',flexShrink:0}}>
-                <input type="checkbox" defaultChecked style={{accentColor:'var(--amber)',width:16,height:16}} />
-                <span style={{fontSize:11,fontWeight:600,color:'var(--text3)'}}>Enabled</span>
-              </label>
-            </div>
-          ))}
-          <button className="btn btn-primary" style={{marginTop:8,padding:'12px 24px'}}>💾 Save Drip Settings</button>
+              ))}
+              <button onClick={saveDripSettings} disabled={savingDrip} className="btn btn-primary" style={{marginTop:8,padding:'12px 24px'}}>
+                {savingDrip ? '💾 Saving...' : '💾 Save Drip Settings'}
+              </button>
+            </>
+          )}
         </div>
       )}
 

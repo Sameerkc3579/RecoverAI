@@ -94,10 +94,41 @@ function App() {
     localStorage.removeItem('recoverai_user_details');
     localStorage.removeItem('recoverai_is_admin');
     localStorage.removeItem('recoverai_settings');
+    localStorage.removeItem('recoverai_login_time');
     setUserDetails(null);
     // Always redirect to landing page (/) — same page user sees on first visit
     window.location.replace('/');
   }
+
+  // Enforce strict 15-minute login limit
+  useEffect(() => {
+    const checkTimeout = () => {
+      const loginTimeStr = localStorage.getItem('recoverai_login_time');
+      if (loginTimeStr && getToken()) {
+        const loginTime = parseInt(loginTimeStr, 10);
+        // 15 minutes = 15 * 60 * 1000 = 900000 ms
+        if (Date.now() - loginTime > 900000) {
+          handleLogout();
+        }
+      }
+    };
+
+    // Check periodically every minute
+    const interval = setInterval(checkTimeout, 60000);
+    
+    // Check immediately when visibility changes (switching back to tab) or window gains focus
+    document.addEventListener('visibilitychange', checkTimeout);
+    window.addEventListener('focus', checkTimeout);
+    
+    // Check on initial load
+    checkTimeout();
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', checkTimeout);
+      window.removeEventListener('focus', checkTimeout);
+    };
+  }, []);
 
   // Persist settings to localStorage
   useEffect(() => {
@@ -219,7 +250,7 @@ function App() {
     reminders: <Reminders invoices={invoices} openDetail={openDetail} />,
     admin:     <AdminDashboard />,
     settings:  <Settings settings={settings} setSettings={setSettings} darkMode={darkMode} setDarkMode={setDarkMode} />,
-    whatsapp:  <WhatsAppIntegration invoices={invoices} settings={settings} />,
+    whatsapp:  <WhatsAppIntegration token={token} invoices={invoices} settings={settings} />,
     whitelabel:<WhiteLabel settings={settings} setSettings={setSettings} />,
     accounting:<AccountingExport invoices={invoices} settings={settings} />,
   };

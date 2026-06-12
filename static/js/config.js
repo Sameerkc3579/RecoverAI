@@ -17,35 +17,14 @@ async function authFetch(url, opts = {}) {
   }
   let res = await fetch(url, { ...opts, headers });
 
-  // Auto-refresh on 401
+  // Auto-logout on 401 (token expired or invalid)
   if (res.status === 401) {
-    const refresh = localStorage.getItem('recoverai_refresh');
-    if (refresh) {
-      try {
-        const rRes = await fetch('/api/auth/refresh', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: refresh }),
-        });
-        if (rRes.ok) {
-          const rData = await rRes.json();
-          setToken(rData.access_token);
-          localStorage.setItem('recoverai_refresh', rData.refresh_token);
-          headers['Authorization'] = 'Bearer ' + rData.access_token;
-          res = await fetch(url, { ...opts, headers });
-        } else {
-          // Refresh failed — force logout
-          setToken(null);
-          localStorage.removeItem('recoverai_refresh');
-          localStorage.removeItem('recoverai_user_details');
-          localStorage.removeItem('recoverai_is_admin');
-          window.location.replace('/');
-          return res;
-        }
-      } catch (e) {
-        console.error('Token refresh error:', e);
-      }
-    }
+    setToken(null);
+    localStorage.removeItem('recoverai_refresh');
+    localStorage.removeItem('recoverai_user_details');
+    localStorage.removeItem('recoverai_is_admin');
+    localStorage.removeItem('recoverai_login_time');
+    window.location.replace('/');
   }
   return res;
 }
