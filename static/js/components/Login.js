@@ -54,9 +54,7 @@ function LoginScreen({ onLogin }) {
       const res = await fetch('/api/auth/login', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Login failed');
-      setToken(data.access_token);
-      if (data.refresh_token) localStorage.setItem('recoverai_refresh', data.refresh_token);
-      setIsAdmin(data.is_admin);
+      localStorage.setItem('recoverai_login_time', Date.now().toString());
       onLogin(data.access_token, data.is_admin, data.business_name, data.email);
     } catch (e) { setErr(e.message); }
     setLoading(false);
@@ -72,8 +70,8 @@ function LoginScreen({ onLogin }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Registration failed');
-      setTab('login'); setErr('');
-      alert('Account created! Please log in.');
+      localStorage.setItem('recoverai_login_time', Date.now().toString());
+      onLogin(data.access_token, data.is_admin, data.business_name, data.email);
     } catch (e) { setErr(e.message); }
     setLoading(false);
   }
