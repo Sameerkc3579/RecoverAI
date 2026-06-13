@@ -44,7 +44,7 @@ from app.api.enrich import router as enrich_router
 from app.api.admin import router as admin_router
 from app.api.users import router as users_router
 from app.api.customers import router as customers_router
-from app.api.whatsapp_webhook import router as whatsapp_router
+from app.api.whatsapp import router as whatsapp_router
 from app.api.drip import router as drip_router
 from app.api.deps import get_admin_user
 
