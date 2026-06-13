@@ -1,3 +1,5 @@
+import hmac
+import hashlib
 import logging
 from fastapi import APIRouter, Request, HTTPException, Query, BackgroundTasks
 from app.core.config import settings
@@ -7,6 +9,37 @@ from app.services.whatsapp_service import _validate_phone, _mask_phone
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
+
+
+def _verify_signature(payload_bytes: bytes, signature_header: str | None) -> bool:
+    """
+    Verify the X-Hub-Signature-256 HMAC sent by Meta.
+    Returns True if signature is valid, or if no webhook secret is configured
+    (fail-closed in production, logged warning in dev).
+    """
+    secret = getattr(settings, "WHATSAPP_WEBHOOK_SECRET", "") or getattr(settings, "webhook_secret", "")
+    
+    if not secret:
+        if settings.debug:
+            logger.warning("SECURITY: No WHATSAPP_WEBHOOK_SECRET configured — accepting unverified webhook (dev mode only)")
+            return True
+        else:
+            logger.error("SECURITY: No WHATSAPP_WEBHOOK_SECRET configured — rejecting webhook in production")
+            return False
+
+    if not signature_header or not signature_header.startswith("sha256="):
+        logger.warning("SECURITY: Missing or malformed X-Hub-Signature-256 header")
+        return False
+
+    expected_sig = signature_header[7:]  # Strip "sha256=" prefix
+    computed_sig = hmac.new(
+        secret.encode("utf-8"),
+        payload_bytes,
+        hashlib.sha256
+    ).hexdigest()
+    
+    return hmac.compare_digest(computed_sig, expected_sig)
+
 
 @router.get("/webhook")
 async def verify_webhook(
@@ -28,8 +61,18 @@ async def handle_incoming_message(request: Request, background_tasks: Background
     """
     Meta incoming message webhook.
     Receives all incoming WhatsApp messages sent to the Business Number.
+    Verifies HMAC signature before processing.
     """
-    payload = await request.json()
+    # 0. HMAC Signature Verification — reject forged payloads
+    payload_bytes = await request.body()
+    signature = request.headers.get("X-Hub-Signature-256")
+    
+    if not _verify_signature(payload_bytes, signature):
+        logger.warning("SECURITY: Rejected webhook with invalid HMAC signature")
+        raise HTTPException(status_code=403, detail="Invalid signature")
+    
+    import json
+    payload = json.loads(payload_bytes)
     
     # 1. Parse the standard WhatsApp Cloud API payload structure
     try:
@@ -47,7 +90,7 @@ async def handle_incoming_message(request: Request, background_tasks: Background
         
         # Validate phone number format
         if not from_phone or not _validate_phone(from_phone):
-            logger.warning(f"Invalid or missing phone number in webhook payload")
+            logger.warning("Invalid or missing phone number in webhook payload")
             return {"status": "dropped", "reason": "Invalid phone format"}
         
         logger.info(f"Received WhatsApp message from {_mask_phone(from_phone)}")
@@ -59,7 +102,6 @@ async def handle_incoming_message(request: Request, background_tasks: Background
     # 2. PRIVACY FILTER: Only process messages from known debtors in the database
     invoices_col = get_collection("invoices")
     
-    # Search the database for any invoice matching this contact's phone number
     # Use exact match instead of regex to prevent ReDoS attacks
     debtor_invoice = await invoices_col.find_one({"contact": from_phone})
     

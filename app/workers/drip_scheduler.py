@@ -23,7 +23,7 @@ async def process_drip_for_user(user: dict):
     cursor = invoices_col.find({
         "owner_id": owner_id,
         "recovered": False,
-        "due_date": {"$exists": True, "$ne": None, "$ne": ""}
+        "due_date": {"$exists": True, "$nin": [None, ""]}
     })
     
     today = datetime.now(timezone.utc).date()

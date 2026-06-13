@@ -290,7 +290,7 @@ async def get_user_details(user_id: str) -> dict:
     user["_id"] = str(user["_id"])
 
     invoices_cursor = inv_col.find({"owner_id": oid}).sort("issueDate", -1)
-    invoices = await invoices_cursor.to_list(None)
+    invoices = await invoices_cursor.to_list(10000)
     for inv in invoices:
         inv["_id"] = str(inv["_id"])
         if "owner_id" in inv:
@@ -436,7 +436,7 @@ async def get_user_invoices(user_id: str) -> list[dict]:
     oid = _parse_oid(user_id)
     inv_col = get_collection("invoices")
 
-    invoices = await inv_col.find({"owner_id": oid}).sort("issueDate", -1).to_list(None)
+    invoices = await inv_col.find({"owner_id": oid}).sort("issueDate", -1).to_list(10000)
     for inv in invoices:
         inv["_id"] = str(inv["_id"])
         if "owner_id" in inv:

@@ -226,7 +226,7 @@ async def register(payload: RegisterRequest, request: Request) -> RegisterRespon
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="A user with this email already exists.",
+            detail="Registration could not be completed. Please try again or use a different email.",
         )
 
     user_doc = {
