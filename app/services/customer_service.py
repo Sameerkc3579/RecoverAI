@@ -1,3 +1,4 @@
+import re
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -21,7 +22,7 @@ async def upsert_customer(owner_id: str, invoice_data: dict) -> str:
     # Try to find existing customer (case-insensitive match)
     existing = await col.find_one({
         "owner_id": ObjectId(owner_id) if isinstance(owner_id, str) else owner_id,
-        "company": {"$regex": f"^{company}$", "$options": "i"}
+        "company": {"$regex": f"^{re.escape(company)}$", "$options": "i"}
     })
 
     if existing:
@@ -115,7 +116,10 @@ async def recalculate_customer_stats(owner_id: str, customer_id: str) -> None:
         }
         
     await customers_col.update_one(
-        {"_id": ObjectId(customer_id)},
+        {
+            "_id": ObjectId(customer_id),
+            "owner_id": ObjectId(owner_id) if isinstance(owner_id, str) else owner_id
+        },
         {"$set": update_data}
     )
     logger.info("Recalculated stats for customer %s", customer_id)

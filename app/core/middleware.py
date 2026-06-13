@@ -47,7 +47,7 @@ class SecurityHeadersMiddleware:
                 )
                 headers["Content-Security-Policy"] = (
                     "default-src 'self'; "
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+                    "script-src 'self' 'unsafe-inline' "
                     "https://*.google.com https://accounts.google.com https://apis.google.com "
                     "https://cdn.jsdelivr.net https://cdn.tailwindcss.com "
                     "https://cdnjs.cloudflare.com https://unpkg.com "
@@ -152,7 +152,8 @@ class AuditLogMiddleware:
         headers = dict(scope.get("headers", []))
         client = scope.get("client")
         forwarded = headers.get(b"x-forwarded-for", b"").decode()
-        ip = forwarded.split(",")[0].strip() if forwarded else (client[0] if client else "unknown")
+        # Use rightmost IP (closest trusted proxy) to prevent XFF spoofing
+        ip = forwarded.split(",")[-1].strip() if forwarded else (client[0] if client else "unknown")
         ua = headers.get(b"user-agent", b"").decode()[:120]
         method = scope.get("method", "")
 

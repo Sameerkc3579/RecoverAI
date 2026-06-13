@@ -70,9 +70,13 @@ class InvoiceUpdate(BaseModel):
 
 class PromptRequest(BaseModel):
     """Request body for POST /api/generate-message."""
-    prompt: str = Field(..., description="The contextual prompt to send to the AI")
+    prompt: str = Field(..., max_length=5000, description="The contextual prompt to send to the AI")
     invoice_data: dict | None = Field(default=None, description="The invoice details JSON")
-    tone: str = Field(default="Firm Warning", description="The tone for the AI generation")
+    tone: str = Field(
+        default="Firm Warning",
+        pattern=r"^(Friendly|Firm Warning|Final Notice|Legal Threat)$",
+        description="The tone for the AI generation"
+    )
 
 # ── Customers ─────────────────────────────────────────────────────────────────
 

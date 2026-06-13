@@ -53,4 +53,14 @@ jwt.txt
 output.txt
 result.txt
 test_auth_results.txt
-test_ai.py
+test_auth_output.txt
+repos.json
+
+# Dev/test scripts (should not ship to production)
+test_*.py
+demo_*.py
+fetch.py
+execute_nlp.py
+simulate_*.py
+start_ngrok_tunnel.py
+migrate_customers.py
