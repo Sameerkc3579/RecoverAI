@@ -3,6 +3,7 @@ import asyncio
 from datetime import datetime, timezone
 from app.core.database import get_collection
 from app.services.ai_service import generate_message
+from app.services.whatsapp_service import _validate_phone, _mask_phone
 from bson import ObjectId
 
 logger = logging.getLogger(__name__)
@@ -75,6 +76,11 @@ async def process_drip_for_user(user: dict):
             if not contact_phone:
                 logger.warning(f"Skipping drip for invoice {invoice_id} (no phone number)")
                 continue
+            
+            # Validate phone number format
+            if not _validate_phone(contact_phone):
+                logger.warning(f"Skipping drip for invoice {invoice_id} (invalid phone format: {_mask_phone(contact_phone)})")
+                continue
                 
             # 3. Determine Tone
             tone_map = {
@@ -115,6 +121,7 @@ async def process_drip_for_user(user: dict):
             # 5. Draft Mode: Save to whatsapp_drafts collection
             drafts_col = get_collection("whatsapp_drafts")
             await drafts_col.insert_one({
+                "owner_id": owner_id,
                 "invoice_id": invoice_id,
                 "contact_phone": contact_phone,
                 "incoming_message": "SYSTEM_DRIP_CAMPAIGN",
@@ -139,7 +146,7 @@ async def process_drip_for_user(user: dict):
                 {"$inc": {"reminders": 1}}
             )
             sent_count += 1
-            logger.info(f"Successfully drafted Day {days_overdue} WhatsApp message for invoice {invoice_id}")
+            logger.info(f"Successfully drafted Day {days_overdue} WhatsApp message for invoice {invoice_id} (phone: {_mask_phone(contact_phone)})")
                 
         except Exception as e:
             logger.error(f"Error processing invoice {invoice.get('_id')} for drip: {e}", exc_info=True)
