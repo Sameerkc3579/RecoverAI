@@ -2,8 +2,7 @@ import logging
 import asyncio
 from datetime import datetime, timezone
 from app.core.database import get_collection
-from app.services.email_service import send_reminder_email
-from app.services.ai_service import generate_auto_reply
+from app.services.ai_service import generate_message
 from bson import ObjectId
 
 logger = logging.getLogger(__name__)
@@ -72,9 +71,9 @@ async def process_drip_for_user(user: dict):
                 continue
                 
             # We need to send a message.
-            contact_email = invoice.get("email")
-            if not contact_email:
-                logger.warning(f"Skipping drip for invoice {invoice_id} (no email address)")
+            contact_phone = invoice.get("contact")
+            if not contact_phone:
+                logger.warning(f"Skipping drip for invoice {invoice_id} (no phone number)")
                 continue
                 
             # 3. Determine Tone
@@ -90,16 +89,21 @@ async def process_drip_for_user(user: dict):
             # Build invoice context
             inv_ctx = {
                 "company": invoice.get("company"),
-                "contact": invoice.get("contact", ""),
+                "contact": contact_phone,
                 "amount": invoice.get("amount"),
-                "invoiceNo": invoice.get("invoice_no", ""),
-                "dueDate": due_date_str,
-                "daysOverdue": days_overdue
+                "invoice_no": invoice.get("invoice_no", ""),
+                "status": invoice.get("status", "pending")
             }
             
-            # Re-use the existing AI generator but spoof the incoming context
-            message_body = await generate_auto_reply(
-                incoming_text=f"Please generate a payment reminder for {inv_ctx['company']}. They are {days_overdue} days overdue.",
+            prompt = f"""
+            You are an AI recovery agent representing our company.
+            The debtor ({inv_ctx['company']}) is {days_overdue} days overdue on Invoice {inv_ctx['invoice_no']} (Amount: {inv_ctx['amount']}).
+            Draft a short, professional, and {tone.lower()} WhatsApp reminder message.
+            Return ONLY the drafted WhatsApp message, no extra conversational text.
+            """
+            
+            message_body = await generate_message(
+                prompt=prompt,
                 invoice_data=inv_ctx,
                 tone=tone
             )
@@ -108,38 +112,34 @@ async def process_drip_for_user(user: dict):
                 logger.error(f"Failed to generate AI message for invoice {invoice_id}")
                 continue
                 
-            sender_business = user.get("settings", {}).get("businessName", "RecoverAI")
+            # 5. Draft Mode: Save to whatsapp_drafts collection
+            drafts_col = get_collection("whatsapp_drafts")
+            await drafts_col.insert_one({
+                "invoice_id": invoice_id,
+                "contact_phone": contact_phone,
+                "incoming_message": "SYSTEM_DRIP_CAMPAIGN",
+                "draft_reply": message_body,
+                "status": "pending_approval",
+                "created_at": datetime.now(timezone.utc),
+                "drip_day": days_overdue
+            })
             
-            # 5. Send Email
-            success = await send_reminder_email(
-                to_email=contact_email,
-                debtor_company=invoice.get("company", "Valued Client"),
-                invoice_no=invoice.get("invoice_no", "N/A"),
-                amount=invoice.get("amount", 0.0),
-                days_overdue=days_overdue,
-                due_date=due_date_str,
-                tone=tone,
-                message_body=message_body,
-                sender_business=sender_business
+            # 6. Log success and increment reminder count
+            await drip_log_col.insert_one({
+                "owner_id": owner_id,
+                "invoice_id": invoice_id,
+                "days_overdue": days_overdue,
+                "channel": "whatsapp",
+                "sent_at": datetime.now(timezone.utc),
+                "status": "drafted"
+            })
+            
+            await invoices_col.update_one(
+                {"_id": invoice_id},
+                {"$inc": {"reminders": 1}}
             )
-            
-            if success:
-                # 6. Log success and increment reminder count
-                await drip_log_col.insert_one({
-                    "owner_id": owner_id,
-                    "invoice_id": invoice_id,
-                    "days_overdue": days_overdue,
-                    "channel": "email",
-                    "sent_at": datetime.now(timezone.utc),
-                    "status": "sent"
-                })
-                
-                await invoices_col.update_one(
-                    {"_id": invoice_id},
-                    {"$inc": {"reminders": 1}}
-                )
-                sent_count += 1
-                logger.info(f"Successfully sent Day {days_overdue} drip for invoice {invoice_id}")
+            sent_count += 1
+            logger.info(f"Successfully drafted Day {days_overdue} WhatsApp message for invoice {invoice_id}")
                 
         except Exception as e:
             logger.error(f"Error processing invoice {invoice.get('_id')} for drip: {e}", exc_info=True)
