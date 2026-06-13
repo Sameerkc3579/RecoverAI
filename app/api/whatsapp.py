@@ -8,7 +8,7 @@ from app.workers.whatsapp_reply_worker import process_incoming_whatsapp
 from app.services.whatsapp_service import _validate_phone, _mask_phone
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
+router = APIRouter(prefix="/api/whatsapp", tags=["WhatsApp"])
 
 
 def _verify_signature(payload_bytes: bytes, signature_header: str | None) -> bool:
