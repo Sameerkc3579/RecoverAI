@@ -69,14 +69,13 @@ function App() {
   const sidebarUserRole = tokenEmail || userDetails?.email || settings.email || 'Logged in';
   const sidebarInitials = sidebarUserName.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'ME';
 
-  function handleLogin(tok, adminStatus, bizName, email) {
-    setToken(tok); setTokenState(tok);
+  // onLogin is called with (isAdmin, bizName, email) — no token arg since it's in HttpOnly cookie
+  function handleLogin(adminStatus, bizName, email) {
     setIsAdmin(adminStatus); setIsAdminState(adminStatus);
-    if (tok) localStorage.setItem('recoverai_token', tok);
-    // Store login identity SEPARATELY — do NOT pollute settings.email (business email)
+    // Store login identity — do NOT store token (now in HttpOnly cookie, inaccessible to JS)
     const userObj = { name: bizName, business_name: bizName, email: email };
     localStorage.setItem('recoverai_user_details', JSON.stringify(userObj));
-    setUserDetails(userObj); // <-- reactive update so sidebar shows immediately
+    setUserDetails(userObj); // reactive update so sidebar shows immediately
     // Only pre-fill business name if settings are blank
     if (bizName) setSettings(prev => ({
       ...prev,
@@ -88,15 +87,22 @@ function App() {
     }
   }
 
-  function handleLogout() {
-    localStorage.removeItem('recoverai_token');
-    localStorage.removeItem('recoverai_refresh');
+  async function handleLogout() {
+    try {
+      // Tell the server to revoke the token and clear cookies
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    } catch (e) { /* ignore network errors on logout */ }
+    // Clear non-sensitive user metadata from localStorage
     localStorage.removeItem('recoverai_user_details');
     localStorage.removeItem('recoverai_is_admin');
     localStorage.removeItem('recoverai_settings');
     localStorage.removeItem('recoverai_login_time');
     setUserDetails(null);
-    // Always redirect to landing page (/) — same page user sees on first visit
+    // Redirect to landing page
     window.location.replace('/');
   }
 

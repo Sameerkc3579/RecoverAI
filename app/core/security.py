@@ -5,16 +5,25 @@ Provides:
   - Password hashing (bcrypt)
   - Password strength validation
   - JWT access + refresh token creation (with jti claim for revocation)
-  - Token revocation blacklist (in-memory, Redis-ready)
+  - Token revocation blacklist:
+      * Redis-backed when REDIS_URL is configured (multi-worker safe)
+      * In-memory fallback when Redis is unavailable (single-worker only)
+  - Redis-backed rate limiter with in-memory fallback
 """
 import uuid
 import re
+import time
+import logging
 from datetime import datetime, timedelta, timezone
+from collections import defaultdict
+from threading import Lock
 
 import jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 # ── JWT issuer / audience ─────────────────────────────────────────────────────
 # These MUST match the values validated in every jwt.decode() call (deps.py,
@@ -66,42 +75,167 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     return True, ""
 
 
-# ── Token Revocation Blacklist ────────────────────────────────────────────────
-# In-memory dict mapping revoked JWT IDs (jti) -> expiry timestamp.
-# Expired entries are pruned on each lookup to prevent unbounded memory growth.
-# In production with multiple workers, replace this with a Redis SET + EXPIREAT.
-# The interface (revoke_token / is_token_revoked) is identical to a Redis backend.
+# ── Redis Connection (optional, lazy) ────────────────────────────────────────
+# If REDIS_URL is set in .env, all rate limiting and token blacklist operations
+# use Redis (multi-worker safe). Otherwise falls back to in-memory (single-worker).
 
-_REVOKED_TOKENS: dict[str, float] = {}  # jti -> unix expiry timestamp
+_redis_client = None
+_redis_checked = False
+
+
+def _get_redis():
+    """Return a Redis client or None if not configured."""
+    global _redis_client, _redis_checked
+    if _redis_checked:
+        return _redis_client
+    _redis_checked = True
+
+    if not settings.redis_url:
+        logger.info(
+            "REDIS_URL not set — using in-memory token blacklist and rate limiter "
+            "(safe for single-worker deployments only)."
+        )
+        return None
+
+    try:
+        import redis.asyncio as aioredis  # type: ignore
+        _redis_client = aioredis.from_url(
+            settings.redis_url,
+            encoding="utf-8",
+            decode_responses=True,
+            socket_connect_timeout=2,
+        )
+        logger.info("Redis connected — using Redis-backed security store.")
+    except Exception as exc:
+        logger.warning("Redis connection failed (%s) — falling back to in-memory store.", exc)
+        _redis_client = None
+
+    return _redis_client
+
+
+# ── Token Revocation Blacklist ────────────────────────────────────────────────
+
+_REVOKED_TOKENS: dict[str, float] = {}  # jti -> unix expiry timestamp (memory fallback)
+_REVOKED_LOCK = Lock()
 
 
 def _prune_revoked_tokens() -> None:
-    """Remove expired entries from the blacklist (called on each check)."""
-    import time
+    """Remove expired entries from the in-memory blacklist."""
     now = time.time()
-    expired = [jti for jti, exp in _REVOKED_TOKENS.items() if exp < now]
-    for jti in expired:
-        del _REVOKED_TOKENS[jti]
+    with _REVOKED_LOCK:
+        expired = [jti for jti, exp in _REVOKED_TOKENS.items() if exp < now]
+        for jti in expired:
+            del _REVOKED_TOKENS[jti]
 
 
 def revoke_token(jti: str, expires_at: float | None = None) -> None:
-    """Add a JWT ID to the revocation blacklist with an optional expiry time.
+    """Add a JWT ID to the revocation blacklist.
+
+    Uses Redis SETEX if available, otherwise in-memory dict.
 
     Args:
         jti: The JWT ID to revoke.
         expires_at: Unix timestamp when this token naturally expires.
                     If None, defaults to 30 days from now (safe upper bound).
     """
-    import time
     if expires_at is None:
-        expires_at = time.time() + 30 * 24 * 3600  # 30-day fallback
-    _REVOKED_TOKENS[jti] = expires_at
+        expires_at = time.time() + 30 * 24 * 3600
+
+    redis = _get_redis()
+    if redis is not None:
+        import asyncio
+        ttl = max(1, int(expires_at - time.time()))
+
+        async def _do_revoke():
+            try:
+                await redis.setex(f"blacklist:{jti}", ttl, "1")
+            except Exception as exc:
+                logger.warning("Redis revoke_token failed (%s) — memory fallback.", exc)
+                with _REVOKED_LOCK:
+                    _REVOKED_TOKENS[jti] = expires_at
+
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.ensure_future(_do_revoke())
+            else:
+                loop.run_until_complete(_do_revoke())
+        except RuntimeError:
+            with _REVOKED_LOCK:
+                _REVOKED_TOKENS[jti] = expires_at
+    else:
+        with _REVOKED_LOCK:
+            _REVOKED_TOKENS[jti] = expires_at
 
 
 def is_token_revoked(jti: str) -> bool:
-    """Return True if the given JWT ID has been revoked and not yet expired."""
+    """Sync check — falls back to memory if Redis unavailable."""
     _prune_revoked_tokens()
     return jti in _REVOKED_TOKENS
+
+
+async def is_token_revoked_async(jti: str) -> bool:
+    """Async check — uses Redis if available, otherwise memory."""
+    redis = _get_redis()
+    if redis is not None:
+        try:
+            result = await redis.get(f"blacklist:{jti}")
+            return result is not None
+        except Exception as exc:
+            logger.warning("Redis is_token_revoked_async failed (%s) — memory fallback.", exc)
+    _prune_revoked_tokens()
+    return jti in _REVOKED_TOKENS
+
+
+# ── Redis Rate Limiter ────────────────────────────────────────────────────────
+
+_RATE_LIMIT_WINDOW_SECONDS = 900  # 15 minutes
+_MAX_ATTEMPTS = 5
+_rate_limit_store: dict[str, dict] = defaultdict(lambda: {"count": 0, "window_start": 0.0})
+_rate_limit_lock = Lock()
+
+
+async def rate_limit_check(ip: str) -> tuple[bool, int]:
+    """Check if IP exceeded failed-login limit. Returns (exceeded, retry_after_seconds)."""
+    redis = _get_redis()
+    now = time.time()
+
+    if redis is not None:
+        try:
+            key = f"ratelimit:{ip}"
+            count = await redis.incr(key)
+            if count == 1:
+                await redis.expire(key, _RATE_LIMIT_WINDOW_SECONDS)
+            if count > _MAX_ATTEMPTS:
+                ttl = await redis.ttl(key)
+                return True, max(0, ttl)
+            return False, 0
+        except Exception as exc:
+            logger.warning("Redis rate_limit_check failed (%s) — memory fallback.", exc)
+
+    with _rate_limit_lock:
+        record = _rate_limit_store[ip]
+        if now - record["window_start"] > _RATE_LIMIT_WINDOW_SECONDS:
+            record["count"] = 0
+            record["window_start"] = now
+        record["count"] += 1
+        if record["count"] > _MAX_ATTEMPTS:
+            retry_after = int(_RATE_LIMIT_WINDOW_SECONDS - (now - record["window_start"]))
+            return True, max(0, retry_after)
+        return False, 0
+
+
+async def rate_limit_clear(ip: str) -> None:
+    """Reset rate limit counter for IP after successful login."""
+    redis = _get_redis()
+    if redis is not None:
+        try:
+            await redis.delete(f"ratelimit:{ip}")
+            return
+        except Exception as exc:
+            logger.warning("Redis rate_limit_clear failed (%s) — memory fallback.", exc)
+    with _rate_limit_lock:
+        _rate_limit_store.pop(ip, None)
 
 
 # ── JWT Token Creation ────────────────────────────────────────────────────────

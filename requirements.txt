@@ -16,6 +16,7 @@ requests>=2.33.0
 curl_cffi>=0.15.0
 google-auth==2.30.0
 gunicorn==23.0.0
+redis[hiredis]>=5.0.0
 dnspython==2.6.1
 certifi==2025.1.31
 # Email Ingester Worker dependencies
