@@ -14,14 +14,14 @@ function LoginScreen({ onLogin }) {
         const res = await fetch('/api/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',  // SECURITY: ensure cookies are sent/received
           body: JSON.stringify({ credential: response.credential })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Google Login failed');
-        setToken(data.access_token);
-        if (data.refresh_token) localStorage.setItem('recoverai_refresh', data.refresh_token);
+        // Token is now in HttpOnly cookie — do NOT store in localStorage
         setIsAdmin(data.is_admin);
-        onLogin(data.access_token, data.is_admin, data.business_name, data.email);
+        onLogin(data.is_admin, data.business_name, data.email);
       } catch (e) {
         setErr(e.message || 'Google Login failed');
       } finally { setLoading(false); }
@@ -51,11 +51,16 @@ function LoginScreen({ onLogin }) {
     try {
       const fd = new FormData();
       fd.append('username', email); fd.append('password', password);
-      const res = await fetch('/api/auth/login', { method: 'POST', body: fd });
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        credentials: 'include',  // SECURITY: allow browser to store HttpOnly cookie
+        body: fd
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Login failed');
-      localStorage.setItem('recoverai_login_time', Date.now().toString());
-      onLogin(data.access_token, data.is_admin, data.business_name, data.email);
+      // Token is now an HttpOnly cookie — do NOT store in localStorage
+      setIsAdmin(data.is_admin);
+      onLogin(data.is_admin, data.business_name, data.email);
     } catch (e) { setErr(e.message); }
     setLoading(false);
   }
@@ -66,12 +71,15 @@ function LoginScreen({ onLogin }) {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ business_name: bizName, email, password })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Registration failed');
-      localStorage.setItem('recoverai_login_time', Date.now().toString());
-      onLogin(data.access_token, data.is_admin, data.business_name, data.email);
+      // After register, redirect user to login tab to sign in
+      setTab('login');
+      setErr('');
+      setPassword('');
     } catch (e) { setErr(e.message); }
     setLoading(false);
   }

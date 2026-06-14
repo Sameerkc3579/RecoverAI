@@ -15,23 +15,27 @@ function escapeHTML(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
 }
 
-/* ── Authenticated Fetch (with auto-refresh) ─────────────── */
+/* ── Authenticated Fetch (cookie-based, with 401 auto-redirect) ─── */
+// SECURITY: credentials:'include' tells the browser to send the HttpOnly
+// access_token cookie automatically on every request. The token is never
+// readable by JavaScript, making XSS token theft impossible.
 async function authFetch(url, opts = {}) {
-  const token = getToken();
   const headers = { ...(opts.headers || {}) };
-  if (token) headers['Authorization'] = 'Bearer ' + token;
   // Don't set Content-Type for FormData (browser sets it with boundary)
   if (!(opts.body instanceof FormData) && !headers['Content-Type'] && opts.method && opts.method !== 'GET') {
     // caller sets Content-Type if needed
   }
-  let res = await fetch(url, { ...opts, headers });
+  let res = await fetch(url, {
+    ...opts,
+    headers,
+    credentials: 'include',  // SECURITY: send HttpOnly cookie automatically
+  });
 
-  // Auto-logout on 401 (token expired or invalid)
+  // Auto-redirect on 401 (token expired, cookie cleared)
   if (res.status === 401) {
-    setToken(null);
-    localStorage.removeItem('recoverai_refresh');
     localStorage.removeItem('recoverai_user_details');
     localStorage.removeItem('recoverai_is_admin');
+    localStorage.removeItem('recoverai_settings');
     localStorage.removeItem('recoverai_login_time');
     window.location.replace('/');
   }

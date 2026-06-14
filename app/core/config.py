@@ -71,6 +71,17 @@ class Settings(BaseSettings):
     # ── Webhook Security ──────────────────────────────────────────────────────
     webhook_secret: str = ""   # HMAC secret for verifying external webhook calls
 
+    # ── Redis (optional — for multi-worker rate limiting & token blacklist) ──────
+    # Leave blank to use the safe in-memory fallback (single-worker only).
+    # Example: REDIS_URL=redis://localhost:6379
+    redis_url: str = ""
+
+    # ── Cookie Security ───────────────────────────────────────────────────────────
+    # Set cookie_secure=True in production (HTTPS only).
+    # Set cookie_secure=False only in local dev (HTTP).
+    cookie_secure: bool = True
+    cookie_domain: str = ""    # Leave blank to use browser default (current domain)
+
     @field_validator("secret_key")
     @classmethod
     def secret_key_must_be_strong(cls, v: str) -> str:

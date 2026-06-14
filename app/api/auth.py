@@ -24,8 +24,9 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from threading import Lock
 
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr, Field
 import jwt
 
@@ -45,7 +46,9 @@ from app.core.security import (
     create_refresh_token,
     validate_password_strength,
     revoke_token,
-    is_token_revoked,
+    is_token_revoked_async,
+    rate_limit_check,
+    rate_limit_clear,
     JWT_AUDIENCE,
     JWT_ISSUER,
 )
@@ -55,57 +58,6 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 USERS_COLLECTION = "users"
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-
-
-# ── Rate Limiter (In-Memory, Per IP) ─────────────────────────────────────────
-# Structure: { ip: {"count": N, "window_start": float} }
-# Allows 5 failed attempts per 15-minute window per IP address.
-# In production with multiple workers → replace with Redis INCR + EXPIRE.
-
-_RATE_LIMIT_WINDOW_SECONDS = 900  # 15 minutes
-_MAX_ATTEMPTS = 5
-_rate_limit_store: dict[str, dict] = defaultdict(lambda: {"count": 0, "window_start": 0.0})
-_rate_limit_lock = Lock()
-
-
-def _check_rate_limit(ip: str) -> None:
-    """
-    Check if this IP has exceeded the failed-login limit.
-    Does NOT increment the counter (call _record_failed_login on failure).
-    Raises HTTP 429 if at or above limit.
-    """
-    now = time.time()
-    with _rate_limit_lock:
-        record = _rate_limit_store[ip]
-        if now - record["window_start"] > _RATE_LIMIT_WINDOW_SECONDS:
-            record["count"] = 0
-            record["window_start"] = now
-        if record["count"] >= _MAX_ATTEMPTS:
-            retry_after = int(_RATE_LIMIT_WINDOW_SECONDS - (now - record["window_start"]))
-            logger.warning(
-                "RATE_LIMIT_TRIGGERED | ip=%s | attempts=%d | retry_after=%ds",
-                ip, record["count"], retry_after,
-            )
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=(
-                    f"Too many failed login attempts. "
-                    f"Please try again in {retry_after // 60} minute(s)."
-                ),
-                headers={"Retry-After": str(retry_after)},
-            )
-
-
-def _record_failed_login(ip: str) -> None:
-    """Increment failed-login counter. Call only after credentials are verified wrong."""
-    with _rate_limit_lock:
-        _rate_limit_store[ip]["count"] += 1
-
-
-def _clear_rate_limit(ip: str) -> None:
-    """Reset the rate limit counter for an IP after a successful login."""
-    with _rate_limit_lock:
-        _rate_limit_store.pop(ip, None)
 
 
 def _get_client_ip(request: Request) -> str:
@@ -209,7 +161,13 @@ class AuthConfigResponse(BaseModel):
 async def register(payload: RegisterRequest, request: Request) -> RegisterResponse:
     """Create a new user account with enforced strong password policy."""
     client_ip = _get_client_ip(request)
-    _check_rate_limit(client_ip)
+    exceeded, retry_after = await rate_limit_check(client_ip)
+    if exceeded:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many attempts. Please try again in {retry_after // 60} minute(s).",
+            headers={"Retry-After": str(retry_after)},
+        )
 
     # Validate password strength BEFORE hitting the database
     ok, reason = validate_password_strength(payload.password)
@@ -267,7 +225,16 @@ async def login(
     client_ip = _get_client_ip(request)
 
     # Enforce rate limit BEFORE DB lookup (prevents timing-based enumeration too)
-    _check_rate_limit(client_ip)
+    exceeded, retry_after = await rate_limit_check(client_ip)
+    if exceeded:
+        logger.warning(
+            "RATE_LIMIT_TRIGGERED | ip=%s | retry_after=%ds", client_ip, retry_after
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many failed login attempts. Please try again in {retry_after // 60} minute(s).",
+            headers={"Retry-After": str(retry_after)},
+        )
 
     col = get_collection(USERS_COLLECTION)
     user = await col.find_one({"email": form_data.username.lower()})
@@ -280,16 +247,14 @@ async def login(
     )
 
     if not user:
-        _record_failed_login(client_ip)
-        # SECURITY: Run dummy bcrypt verification even when user doesn't exist.
-        # Without this, non-existent emails return ~5ms faster than wrong passwords
-        # (which run bcrypt ~100ms) — a timing side-channel that reveals user existence.
+        await rate_limit_check(client_ip)  # count the failure
+        # SECURITY: Run dummy bcrypt even when user doesn't exist to prevent timing attack.
         verify_password(form_data.password, "$2b$12$notarealhashjustpaddingtomatch..")
         raise AUTH_ERROR
 
     if not verify_password(form_data.password, user["hashed_password"]):
         logger.warning("FAILED_LOGIN | email=%s | ip=%s", form_data.username.lower(), client_ip)
-        _record_failed_login(client_ip)
+        await rate_limit_check(client_ip)  # count the failure
         raise AUTH_ERROR
 
     if not user.get("is_active", True):
@@ -299,7 +264,7 @@ async def login(
         )
 
     # Successful login — clear rate limit counter
-    _clear_rate_limit(client_ip)
+    await rate_limit_clear(client_ip)
 
     token_data = {"sub": user["email"]}
     access_token = create_access_token(data=token_data)
@@ -308,14 +273,20 @@ async def login(
 
     logger.info("LOGIN_SUCCESS | email=%s | ip=%s | is_admin=%s", user["email"], client_ip, is_admin)
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",  # nosec B106
-        is_admin=is_admin,
-        business_name=user.get("business_name"),
-        email=user["email"],
-    )
+    # Build JSON response with non-sensitive fields only
+    response = JSONResponse(content={
+        "token_type": "bearer",
+        "is_admin": is_admin,
+        "business_name": user.get("business_name"),
+        "email": user["email"],
+        # access_token also included for backward-compat; will be removed once
+        # all clients switch to cookie-only mode
+        "access_token": access_token,
+    })
+
+    # Set HttpOnly, Secure cookies — inaccessible to JavaScript (XSS-safe)
+    _set_auth_cookies(response, access_token, refresh_token)
+    return response
 
 
 @router.post(
@@ -391,14 +362,15 @@ async def google_login(payload: GoogleAuthRequest) -> TokenResponse:
 
     logger.info("GOOGLE_LOGIN_SUCCESS | email=%s | is_admin=%s", email, is_admin)
 
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",  # nosec B106
-        is_admin=is_admin,
-        business_name=user.get("business_name"),
-        email=user["email"],
-    )
+    response = JSONResponse(content={
+        "token_type": "bearer",
+        "is_admin": is_admin,
+        "business_name": user.get("business_name"),
+        "email": user["email"],
+        "access_token": access_token,
+    })
+    _set_auth_cookies(response, access_token, refresh_token)
+    return response
 
 
 class LogoutBody(BaseModel):
@@ -451,7 +423,25 @@ async def logout(
         except jwt.InvalidTokenError:
             pass  # Already expired — that's fine
 
-    return LogoutResponse()
+    response = JSONResponse(content={"message": "Logged out successfully"})
+    # Clear both auth cookies from the browser
+    response.delete_cookie("access_token", httponly=True, samesite="lax")
+    response.delete_cookie("refresh_token", httponly=True, samesite="lax")
+    return response
+
+
+def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    """Set HttpOnly, Secure, SameSite=Lax cookies for access and refresh tokens."""
+    access_max_age = settings.access_token_expire_minutes * 60
+    refresh_max_age = settings.refresh_token_expire_days * 24 * 3600
+    cookie_kwargs = dict(
+        httponly=True,
+        secure=settings.cookie_secure,
+        samesite="lax",
+        domain=settings.cookie_domain or None,
+    )
+    response.set_cookie("access_token", access_token, max_age=access_max_age, **cookie_kwargs)
+    response.set_cookie("refresh_token", refresh_token, max_age=refresh_max_age, **cookie_kwargs)
 
 
 @router.post(
@@ -494,7 +484,7 @@ async def refresh_access_token(payload: RefreshRequest) -> TokenResponse:
         if not jti or not email:
             raise credentials_exception
 
-        if is_token_revoked(jti):
+        if await is_token_revoked_async(jti):
             raise credentials_exception
 
     except jwt.InvalidTokenError:
@@ -515,14 +505,15 @@ async def refresh_access_token(payload: RefreshRequest) -> TokenResponse:
 
     logger.info("TOKEN_REFRESHED | email=%s", email)
 
-    return TokenResponse(
-        access_token=new_access,
-        refresh_token=new_refresh,
-        token_type="bearer",  # nosec B106
-        is_admin=user["email"] in settings.admin_emails_list,
-        business_name=user.get("business_name"),
-        email=user["email"],
-    )
+    response = JSONResponse(content={
+        "token_type": "bearer",
+        "is_admin": user["email"] in settings.admin_emails_list,
+        "business_name": user.get("business_name"),
+        "email": user["email"],
+        "access_token": new_access,
+    })
+    _set_auth_cookies(response, new_access, new_refresh)
+    return response
 
 
 @router.get(
