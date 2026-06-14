@@ -96,7 +96,7 @@ async def handle_debtor_reply(
     # Push to the invoice's communication_log array (owner-scoped)
     result = await coll.update_one(
         {"_id": oid, "owner_id": current_user["_id"]},
-        {"$push": {"communication_log": log_entry}},
+        {"$push": {"communication_log": {"$each": [log_entry], "$slice": -500}}},
     )
     db_updated = result.modified_count == 1
 

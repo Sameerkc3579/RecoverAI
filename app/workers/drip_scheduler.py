@@ -65,14 +65,14 @@ async def process_drip_for_user(user: dict):
             already_sent = await drip_log_col.find_one({
                 "invoice_id": invoice_id,
                 "days_overdue": days_overdue,
-                "status": "sent"
+                "status": "drafted"
             })
             
             if already_sent:
                 continue
                 
             # We need to send a message.
-            contact_phone = invoice.get("contact")
+            contact_phone = invoice.get("phone")
             if not contact_phone:
                 logger.warning(f"Skipping drip for invoice {invoice_id} (no phone number)")
                 continue
@@ -95,7 +95,7 @@ async def process_drip_for_user(user: dict):
             # Build invoice context
             inv_ctx = {
                 "company": invoice.get("company"),
-                "contact": contact_phone,
+                "phone": contact_phone,
                 "amount": invoice.get("amount"),
                 "invoice_no": invoice.get("invoice_no", ""),
                 "status": invoice.get("status", "pending")

@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import datetime, timezone
 
 from app.core.database import get_collection
@@ -8,28 +8,73 @@ from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
+# Explicit allowlist of user-writable settings keys — prevents arbitrary key injection
+_ALLOWED_SETTINGS_KEYS = {
+    "businessName", "ownerName", "phone", "city", "email",
+    "gstin", "autoReminder", "whatsappEnabled", "emailEnabled",
+    "legalAtDays", "reminderDays", "commissionRate"
+}
+
 class UserSettingsUpdate(BaseModel):
-    businessName: Optional[str] = None
-    ownerName: Optional[str] = None
-    phone: Optional[str] = None
-    city: Optional[str] = None
-    email: Optional[str] = None  # Contact email, not login email
-    gstin: Optional[str] = None
+    businessName: Optional[str] = Field(None, max_length=300)
+    ownerName: Optional[str] = Field(None, max_length=200)
+    phone: Optional[str] = Field(None, max_length=20)
+    city: Optional[str] = Field(None, max_length=100)
+    email: Optional[EmailStr] = None  # Contact email — validated format
+    gstin: Optional[str] = Field(None, max_length=20)
     autoReminder: Optional[bool] = None
     whatsappEnabled: Optional[bool] = None
     emailEnabled: Optional[bool] = None
-    legalAtDays: Optional[int] = None
+    legalAtDays: Optional[int] = Field(None, ge=1, le=365)  # 1–365 days
     reminderDays: Optional[list[int]] = None
-    commissionRate: Optional[float] = None
+    commissionRate: Optional[float] = Field(None, ge=0.0, le=100.0)  # 0–100%
     # NOTE: `plan` is intentionally excluded — subscription plan changes are admin-only.
-    # A user setting their own plan would be a privilege escalation vulnerability.
+
+    @field_validator("reminderDays")
+    @classmethod
+    def validate_reminder_days(cls, v):
+        if v is not None:
+            if len(v) > 10:
+                raise ValueError("Maximum 10 reminder days allowed")
+            for day in v:
+                if not (1 <= day <= 365):
+                    raise ValueError(f"Each reminder day must be between 1 and 365, got {day}")
+        return v
+
+# Safe user profile response — only expose fields that are safe to return
+class UserProfileResponse(BaseModel):
+    id: str
+    business_name: Optional[str] = None
+    email: str
+    is_active: bool = True
+    plan: Optional[str] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    auth_provider: Optional[str] = None
+    created_at: Optional[str] = None
+    settings: Optional[dict] = None
+    drip_settings: Optional[dict] = None
+
+    class Config:
+        extra = "ignore"  # Silently drop any DB fields not in this model
 
 @router.get("/me", summary="Get current user profile & settings")
-async def get_me(current_user: dict = Depends(get_current_user)):
-    user = dict(current_user)
-    user["_id"] = str(user["_id"])
-    user.pop("hashed_password", None)
-    return user
+async def get_me(current_user: dict = Depends(get_current_user)) -> dict:
+    """Return a curated user profile — never exposes internal DB fields."""
+    safe_fields = {
+        "id": str(current_user["_id"]),
+        "business_name": current_user.get("business_name"),
+        "email": current_user.get("email"),
+        "is_active": current_user.get("is_active", True),
+        "plan": current_user.get("plan"),
+        "phone": current_user.get("phone"),
+        "city": current_user.get("city"),
+        "auth_provider": current_user.get("auth_provider"),
+        "created_at": current_user.get("created_at"),
+        "settings": current_user.get("settings", {}),
+        "drip_settings": current_user.get("drip_settings", {}),
+    }
+    return safe_fields
 
 @router.put("/me/settings", summary="Update current user settings")
 async def update_settings(
@@ -39,22 +84,19 @@ async def update_settings(
     update_data = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None}
 
     # SECURITY: Explicitly block any privileged fields that must not be user-writable.
-    # These should only be modified via admin endpoints.
     _BLOCKED_USER_FIELDS = {"plan", "is_active", "hashed_password", "_id", "owner_id", "auth_provider"}
     for blocked in _BLOCKED_USER_FIELDS:
         update_data.pop(blocked, None)
 
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No fields provided to update")
+    # SECURITY: Only write keys that are in the explicit allowlist — prevents arbitrary key injection
+    update_data = {k: v for k, v in update_data.items() if k in _ALLOWED_SETTINGS_KEYS}
 
-    # The payload uses camelCase, but the DB might use snake_case for some fields. 
-    # For now, let's store settings in a nested "settings" object or just top level.
-    # To keep it compatible with existing settings logic, we'll store it in a `settings` object
-    # inside the user document, and we might map some fields to the root level (like business_name).
-    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid fields provided to update")
+
     set_fields = {"updated_at": datetime.now(timezone.utc).isoformat()}
     
-    # Also update root level business_name, phone, city if they exist in payload
+    # Update root-level fields
     if "businessName" in update_data:
         set_fields["business_name"] = update_data["businessName"]
     if "phone" in update_data:
@@ -62,9 +104,7 @@ async def update_settings(
     if "city" in update_data:
         set_fields["city"] = update_data["city"]
 
-    # Merge into the existing `settings` sub-document using dotted keys instead of
-    # replacing it wholesale. A wholesale replace ($set settings = update_data)
-    # wiped every previously-saved setting whenever the user changed one field.
+    # Merge into the `settings` sub-document
     for k, v in update_data.items():
         set_fields[f"settings.{k}"] = v
 
@@ -74,7 +114,14 @@ async def update_settings(
         {"$set": set_fields}
     )
     
+    # Return curated response — not raw DB document
     updated_user = await col.find_one({"_id": current_user["_id"]})
-    updated_user["_id"] = str(updated_user["_id"])
-    updated_user.pop("hashed_password", None)
-    return updated_user
+    return {
+        "id": str(updated_user["_id"]),
+        "business_name": updated_user.get("business_name"),
+        "email": updated_user.get("email"),
+        "is_active": updated_user.get("is_active", True),
+        "plan": updated_user.get("plan"),
+        "settings": updated_user.get("settings", {}),
+        "drip_settings": updated_user.get("drip_settings", {}),
+    }

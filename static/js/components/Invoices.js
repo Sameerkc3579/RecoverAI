@@ -110,6 +110,8 @@ function Invoices({ invoices, openDetail, onAdd }) {
 
   function handleCSVFile(file) {
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert('CSV file too large (max 5MB).'); return; }
+    if (!file.name.toLowerCase().endsWith('.csv')) { alert('Please upload a CSV file.'); return; }
     const reader = new FileReader();
     reader.onload = e => {
       const rows = parseCSV(e.target.result);
@@ -168,7 +170,7 @@ function Invoices({ invoices, openDetail, onAdd }) {
           <div style={{ fontSize: '28px' }}>✨</div>
           <div>
             <div style={{ fontSize: '14px', fontWeight: '800', color: '#0A1428', marginBottom: '4px' }}>AI Email Ingestion is Active!</div>
-            <div style={{ fontSize: '13px', color: '#334155' }}>Forward your PDF invoices to <strong style={{ color: '#0EA5E9' }}>itssamproj@gmail.com</strong> from your registered email account, and our Zero-Trust AI will automatically extract and map them to this dashboard.</div>
+            <div style={{ fontSize: '13px', color: '#334155' }}>Forward your PDF invoices to <strong style={{ color: '#0EA5E9' }}>your-configured-inbox@gmail.com</strong> from your registered email account, and our Zero-Trust AI will automatically extract and map them to this dashboard.</div>
           </div>
         </div>
 

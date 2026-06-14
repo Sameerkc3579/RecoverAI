@@ -165,11 +165,11 @@
       const dynamicActivity = [];
       [...invoices].slice(0, 5).forEach((inv, idx) => {
         if (inv.recovered) {
-          dynamicActivity.push({ id: 'rec_'+inv.id, type: 'recovery', text: `<strong>Invoice recovered</strong> — ${inv.company} paid ₹${inv.amount.toLocaleString('en-IN')}`, time: 'Recently', color: '#DCFCE7', iconColor: '#10B981', icon: '✅', amount: inv.amount });
+          dynamicActivity.push({ id: 'rec_'+inv.id, type: 'recovery', text: `<strong>Invoice recovered</strong> — ${escapeHTML(inv.company)} paid ₹${escapeHTML(String(inv.amount.toLocaleString('en-IN')))}`, time: 'Recently', color: '#DCFCE7', iconColor: '#10B981', icon: '✅', amount: inv.amount });
         } else if (inv.daysOverdue >= 45) {
-          dynamicActivity.push({ id: 'leg_'+inv.id, type: 'legal', text: `<strong>Legal notice ready</strong> for ${inv.company} (₹${inv.amount.toLocaleString('en-IN')})`, time: 'Action Required', color: '#FEE2E2', iconColor: '#EF4444', icon: '⚖️', amount: inv.amount });
+          dynamicActivity.push({ id: 'leg_'+inv.id, type: 'legal', text: `<strong>Legal notice ready</strong> for ${escapeHTML(inv.company)} (₹${escapeHTML(String(inv.amount.toLocaleString('en-IN')))})`, time: 'Action Required', color: '#FEE2E2', iconColor: '#EF4444', icon: '⚖️', amount: inv.amount });
         } else {
-          dynamicActivity.push({ id: 'new_'+inv.id, type: 'new', text: `<strong>Active invoice tracked</strong> — ${inv.company} ₹${inv.amount.toLocaleString('en-IN')} (${inv.invoiceNo})`, time: 'Ongoing', color: '#DBEAFE', iconColor: '#3B82F6', icon: '📄', amount: inv.amount });
+          dynamicActivity.push({ id: 'new_'+inv.id, type: 'new', text: `<strong>Active invoice tracked</strong> — ${escapeHTML(inv.company)} ₹${escapeHTML(String(inv.amount.toLocaleString('en-IN')))} (${escapeHTML(inv.invoiceNo)})`, time: 'Ongoing', color: '#DBEAFE', iconColor: '#3B82F6', icon: '📄', amount: inv.amount });
         }
       });
       if (dynamicActivity.length === 0) {
