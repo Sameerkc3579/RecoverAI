@@ -158,7 +158,7 @@ class RegisterRequest(BaseModel):
     business_name: str = Field(..., min_length=1, max_length=300)
     email: EmailStr
     # Removed min_length here — strength is validated by validate_password_strength()
-    password: str = Field(..., max_length=128)
+    password: str = Field(..., min_length=8, max_length=128)
 
 
 class GoogleAuthRequest(BaseModel):
@@ -281,6 +281,10 @@ async def login(
 
     if not user:
         _record_failed_login(client_ip)
+        # SECURITY: Run dummy bcrypt verification even when user doesn't exist.
+        # Without this, non-existent emails return ~5ms faster than wrong passwords
+        # (which run bcrypt ~100ms) — a timing side-channel that reveals user existence.
+        verify_password(form_data.password, "$2b$12$notarealhashjustpaddingtomatch..")
         raise AUTH_ERROR
 
     if not verify_password(form_data.password, user["hashed_password"]):
@@ -397,12 +401,20 @@ async def google_login(payload: GoogleAuthRequest) -> TokenResponse:
     )
 
 
+class LogoutBody(BaseModel):
+    """Optional body for POST /api/auth/logout to also revoke refresh token."""
+    refresh_token: Optional[str] = None
+
+
 @router.post(
     "/logout",
     response_model=LogoutResponse,
     summary="Revoke current access token (logout)",
 )
-async def logout(token: str = Depends(oauth2_scheme)) -> LogoutResponse:
+async def logout(
+    token: str = Depends(oauth2_scheme),
+    body: LogoutBody = LogoutBody(),
+) -> LogoutResponse:
     """
     Revokes the current JWT by adding its jti to the blacklist.
 
@@ -424,6 +436,20 @@ async def logout(token: str = Depends(oauth2_scheme)) -> LogoutResponse:
             logger.info("LOGOUT | email=%s | jti=%s", email, jti)
     except jwt.InvalidTokenError:
         pass  # Expired/invalid token — logout is a no-op, that's fine
+
+    # Also revoke the refresh token if provided
+    body_refresh = getattr(body, 'refresh_token', None)
+    if body_refresh:
+        try:
+            refresh_payload = jwt.decode(
+                body_refresh, settings.secret_key, algorithms=[settings.algorithm]
+            )
+            refresh_jti = refresh_payload.get("jti")
+            refresh_exp = refresh_payload.get("exp")
+            if refresh_jti:
+                revoke_token(refresh_jti, float(refresh_exp) if refresh_exp else None)
+        except jwt.InvalidTokenError:
+            pass  # Already expired — that's fine
 
     return LogoutResponse()
 

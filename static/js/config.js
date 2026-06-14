@@ -3,8 +3,17 @@
 /* ── Token Store ─────────────────────────────────────────── */
 function getToken() { return localStorage.getItem('recoverai_token'); }
 function setToken(t) { if (t) localStorage.setItem('recoverai_token', t); else localStorage.removeItem('recoverai_token'); }
-function getIsAdmin() { return localStorage.getItem('recoverai_is_admin') === 'true'; }
+function getIsAdmin() { 
+    // SECURITY NOTE: Admin status in localStorage is UI-only (for showing/hiding nav elements).
+    // ALL admin API endpoints enforce server-side authorization via get_admin_user() dependency.
+    return localStorage.getItem('recoverai_is_admin') === 'true'; 
+}
 function setIsAdmin(v) { localStorage.setItem('recoverai_is_admin', String(v)); }
+
+function escapeHTML(str) {
+    if (str == null) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+}
 
 /* ── Authenticated Fetch (with auto-refresh) ─────────────── */
 async function authFetch(url, opts = {}) {
@@ -220,6 +229,9 @@ Key rules:
 - Include specific invoice number, amount, and due date in every message
 - Sign off messages as "[Business Name] Collections Team"`;
 
+// NOTE: All text strings in ACTIVITY_LOG are hardcoded static content (not user-controlled data).
+// They are safe to render via dangerouslySetInnerHTML without escaping.
+// Any future dynamic entries MUST use escapeHTML() (defined above) on all user-supplied values.
 const ACTIVITY_LOG = [
   { id: 1, type: 'legal',    text: '<strong>Legal notice generated</strong> for Navi Mumbai Exports (₹1,20,000)',  time: '2 hours ago',      color: '#FEE2E2', iconColor: '#EF4444' },
   { id: 2, type: 'recovery', text: '<strong>Invoice recovered</strong> — Thane IT Solutions paid ₹67,000',          time: 'Yesterday, 3:42 PM', color: '#DCFCE7', iconColor: '#10B981' },

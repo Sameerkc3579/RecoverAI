@@ -388,7 +388,14 @@ async def generate_portal_link(
         "expires_at": expires_at.isoformat(),
     })
 
-    base_url = str(request.base_url).rstrip("/")
+    # SECURITY: Use settings.base_url instead of request.base_url to prevent
+    # Host header injection attacks where attacker sets Host: evil.com
+    base_url = getattr(settings, 'base_url', None) or getattr(settings, 'BASE_URL', None)
+    if not base_url:
+        # Fallback: use request.base_url but validate it is one of our allowed origins
+        candidate = str(request.base_url).rstrip("/")
+        allowed = [o.rstrip("/") for o in settings.allowed_origins.split(",")]
+        base_url = candidate if candidate in allowed else allowed[0] if allowed else candidate
     # Frontend debtor portal page is served at GET /portal (see app/main.py).
     portal_url = f"{base_url}/portal?token={token}"
     return {"token": token, "portal_url": portal_url}

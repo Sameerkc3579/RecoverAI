@@ -64,11 +64,7 @@ def _verify_whatsapp_signature(raw_body: bytes, signature_header: str) -> bool:
     """
     secret = settings.whatsapp_webhook_secret
     if not secret:
-        from app.core.config import settings as cfg
-        if cfg.debug:
-            logger.warning("WHATSAPP_WEBHOOK_SECRET not configured — accepting unverified webhook (dev mode)")
-            return True
-        logger.error("WHATSAPP_WEBHOOK_SECRET not configured — rejecting webhook (production mode)")
+        logger.error("SECURITY: WHATSAPP_WEBHOOK_SECRET not configured — rejecting webhook. Set this in .env.")
         return False
 
     expected_prefix = "sha256="
