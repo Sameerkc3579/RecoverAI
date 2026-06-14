@@ -2,13 +2,14 @@ import hmac
 import hashlib
 import logging
 from fastapi import APIRouter, Request, HTTPException, Query, BackgroundTasks
+from fastapi.responses import PlainTextResponse
 from app.core.config import settings
 from app.core.database import get_collection
 from app.workers.whatsapp_reply_worker import process_incoming_whatsapp
 from app.services.whatsapp_service import _validate_phone, _mask_phone
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/whatsapp", tags=["WhatsApp"])
+router = APIRouter(prefix="/api/whatsapp", tags=["WhatsApp"])
 
 
 def _verify_signature(payload_bytes: bytes, signature_header: str | None) -> bool:
@@ -17,7 +18,7 @@ def _verify_signature(payload_bytes: bytes, signature_header: str | None) -> boo
     Returns True if signature is valid, or if no webhook secret is configured
     (fail-closed in production, logged warning in dev).
     """
-    secret = getattr(settings, "WHATSAPP_WEBHOOK_SECRET", "") or getattr(settings, "webhook_secret", "")
+    secret = getattr(settings, "whatsapp_webhook_secret", "") or getattr(settings, "webhook_secret", "")
     
     if not secret:
         if settings.debug:
@@ -51,9 +52,9 @@ async def verify_webhook(
     Meta Webhook Verification Endpoint.
     Meta will send a GET request here to verify ownership of the webhook URL.
     """
-    if hub_mode == "subscribe" and hub_verify_token == settings.WHATSAPP_VERIFY_TOKEN:
+    if hub_mode == "subscribe" and hub_verify_token == settings.whatsapp_verify_token:
         logger.info("WhatsApp Webhook verified successfully!")
-        return int(hub_challenge)
+        return PlainTextResponse(content=str(hub_challenge))
     raise HTTPException(status_code=403, detail="Invalid verification token")
 
 @router.post("/webhook")
