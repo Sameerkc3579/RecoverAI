@@ -7,7 +7,7 @@ Provides:
 """
 import logging
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 
@@ -17,12 +17,12 @@ from app.core.security import is_token_revoked, JWT_AUDIENCE, JWT_ISSUER
 
 logger = logging.getLogger(__name__)
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 USERS_COLLECTION = "users"
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
+async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)) -> dict:
     """
     Decode a JWT Bearer token and return the authenticated user document.
 
@@ -42,9 +42,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+    actual_token = request.cookies.get("access_token") or token
+    if not actual_token:
+        raise credentials_exception
+
     try:
         payload = jwt.decode(
-            token,
+            actual_token,
             settings.secret_key,
             algorithms=[settings.algorithm],
             audience=JWT_AUDIENCE,
