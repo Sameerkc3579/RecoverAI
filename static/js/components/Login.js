@@ -76,10 +76,18 @@ function LoginScreen({ onLogin }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Registration failed');
-      // After register, redirect user to login tab to sign in
-      setTab('login');
-      setErr('');
-      setPassword('');
+      // After register, automatically log the user in
+      const fd = new FormData();
+      fd.append('username', email); fd.append('password', password);
+      const loginRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd
+      });
+      const loginData = await loginRes.json();
+      if (!loginRes.ok) throw new Error(loginData.detail || 'Auto-login failed after registration');
+      setIsAdmin(loginData.is_admin);
+      onLogin(loginData.is_admin, loginData.business_name, loginData.email);
     } catch (e) { setErr(e.message); }
     setLoading(false);
   }
