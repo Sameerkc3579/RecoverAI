@@ -69,19 +69,26 @@ function App() {
   const sidebarUserRole = tokenEmail || userDetails?.email || settings.email || 'Logged in';
   const sidebarInitials = sidebarUserName.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'ME';
 
-  // onLogin is called with (isAdmin, bizName, email) — no token arg since it's in HttpOnly cookie
+  // onLogin is called with (isAdmin, bizName, email)
   function handleLogin(adminStatus, bizName, email) {
     setIsAdmin(adminStatus); setIsAdminState(adminStatus);
-    // Store login identity — do NOT store token (now in HttpOnly cookie, inaccessible to JS)
+    
+    // Set a frontend session flag so React knows we are logged in. 
+    // The actual secure JWT is in the HttpOnly cookie.
+    localStorage.setItem('recoverai_token', 'active');
+    setTokenState('active');
+    
     const userObj = { name: bizName, business_name: bizName, email: email };
     localStorage.setItem('recoverai_user_details', JSON.stringify(userObj));
     setUserDetails(userObj); // reactive update so sidebar shows immediately
+    
     // Only pre-fill business name if settings are blank
     if (bizName) setSettings(prev => ({
       ...prev,
       businessName: prev.businessName || bizName,
       ownerName: prev.ownerName || bizName,
     }));
+    
     if (page === 'login' || page === 'register') {
       setPage('dashboard');
     }
@@ -101,7 +108,9 @@ function App() {
     localStorage.removeItem('recoverai_is_admin');
     localStorage.removeItem('recoverai_settings');
     localStorage.removeItem('recoverai_login_time');
+    localStorage.removeItem('recoverai_token');
     setUserDetails(null);
+    setTokenState(null);
     // Redirect to landing page
     window.location.replace('/');
   }
