@@ -84,9 +84,9 @@ function App() {
     
     // Only pre-fill business name if settings are blank
     if (bizName) setSettings(prev => ({
-      ...prev,
-      businessName: prev.businessName || bizName,
-      ownerName: prev.ownerName || bizName,
+      ...(prev || {}),
+      businessName: prev?.businessName || bizName,
+      ownerName: prev?.ownerName || bizName,
     }));
     
     if (page === 'login' || page === 'register') {
