@@ -41,7 +41,9 @@ function App() {
 
   const [settings, setSettings] = useState(() => {
     const local = localStorage.getItem('recoverai_settings');
-    return local ? JSON.parse(local) : {
+    let parsed = null;
+    try { parsed = local ? JSON.parse(local) : null; } catch (e) {}
+    return parsed || {
       businessName: '', ownerName: '', phone: '', email: '', gstin: '', city: '',
       autoReminder: true, whatsappEnabled: true, emailEnabled: true,
       legalAtDays: 45, reminderDays: [7, 21, 35], commissionRate: 2, plan: 'Starter',
