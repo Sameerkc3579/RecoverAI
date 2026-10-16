@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 # ── Gemini model ────────────────────────────────────────────────────────────
 # Model cascade: fastest/newest → stable mid-tier → legacy stable
 MODEL           = "gemini-2.5-flash"    # primary — fast & cheap
-FALLBACK_MODEL  = "gemini-2.0-flash"    # second tier — different model family,
-                                         # genuinely independent of MODEL's quota
-LEGACY_MODEL    = "gemini-1.5-flash"    # last resort (stable, widely available)
+FALLBACK_MODEL  = "gemini-3.5-flash-lite"  # second tier — separate quota from MODEL
+                                         # (gemini-2.0-flash was retired by Google)
+LEGACY_MODEL    = "gemini-flash-latest"   # last resort: alias that tracks the current Flash
 
 # Retry backoff (kept short — serverless functions have tight wall-clock limits)
 _RETRY_DELAY_1 = 1   # seconds, before first retry of MODEL
@@ -91,8 +91,8 @@ async def generate_message(prompt: str, invoice_data: dict, tone: str) -> str:
     ────────
     1. Try MODEL (gemini-2.5-flash) immediately.
     2. On transient error: short wait, retry MODEL.
-    3. On second transient error: short wait, try FALLBACK_MODEL (gemini-2.0-flash).
-    4. On third transient error: try LEGACY_MODEL (gemini-1.5-flash) immediately.
+    3. On second transient error: short wait, try FALLBACK_MODEL (gemini-3.5-flash-lite).
+    4. On third transient error: try LEGACY_MODEL (gemini-flash-latest) immediately.
     5. Raise a user-friendly error if all attempts fail.
     """
     import json
