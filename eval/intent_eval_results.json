@@ -1,0 +1,580 @@
+{
+  "n": 80,
+  "per_label": {
+    "promise_to_pay": 20,
+    "dispute": 20,
+    "stall": 20,
+    "unknown": 20
+  },
+  "gemini_fallbacks": 3,
+  "gemini_pipeline": {
+    "accuracy": 0.9,
+    "macro_f1": 0.8961371961371962
+  },
+  "keyword_fallback": {
+    "accuracy": 0.5375,
+    "macro_f1": 0.48324915824915826
+  },
+  "records": [
+    {
+      "text": "Kal tak payment kar dunga sir, pakka",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "आज शाम तक UPI से भेज देता हूँ",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Sir 15 tareekh ko poora amount clear kar denge",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Payment process ho gaya hai, NEFT reference kal share karta hoon",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "ok ji, Monday ko cheque de dunga",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Haan bhai, aaj raat tak 50,000 transfer kar raha hoon",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Will pay by Friday, sorry for the delay",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "मैं इस हफ्ते के अंदर पूरा भुगतान कर दूँगा",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Accounts ko bol diya hai, kal subah RTGS ho jayega",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Sir ek do din mein payment ho jayegi, guarantee",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "abhi GPay kar raha hu, screenshot bhejta hu",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Thik hai, month end tak saara due clear kar dunga",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Aapka paisa kahin nahi jayega, 20 tarikh ko pakka mil jayega",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "हाँ जी, कल बैंक जाकर चेक जमा कर दूंगा",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Payment approved ho gaya hai finance se, Thursday ko credit ho jayega",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "I will transfer the remaining balance tomorrow morning",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Bas 2 ghante, IMPS kar deta hoon",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Sir, aaj hi aadha aur baaki agle hafte de dunga",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "जी, शुक्रवार तक राशि भेज दी जाएगी",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Done sir, kal tak aapke account mein aa jayega",
+      "label": "promise_to_pay",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Invoice galat hai, humne itna maal order hi nahi kiya tha",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "dispute",
+      "fallback": null
+    },
+    {
+      "text": "Maal damaged aaya tha, pehle replacement bhejo",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "आधा सामान अभी तक नहीं मिला, पूरा पैसा क्यों दें?",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Rate 120 tay hua tha, aapne 150 laga diya bill mein",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Quality bilkul kharab thi, saara maal return kar diya tha humne",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "dispute",
+      "fallback": null
+    },
+    {
+      "text": "We already paid this invoice last month, check your records",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "GST wrong lagaya hai, corrected invoice bhejiye",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Delivery 20 din late aayi, penalty kaatenge",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "ये बिल हमारे नाम का नहीं है",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Humne 3 carton wapas bheje the, uska credit note kahan hai?",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Amount mismatch hai, hamare ledger mein 40,000 hi baaki hai",
+      "label": "dispute",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": "heuristic_keyword"
+    },
+    {
+      "text": "The goods failed our quality inspection, we will not pay for them",
+      "label": "dispute",
+      "gemini": "promise_to_pay",
+      "keyword": "promise_to_pay",
+      "fallback": "heuristic_keyword"
+    },
+    {
+      "text": "Pehle defective piece badlo, phir payment ki baat karenge",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "मात्रा कम आई है, 100 की जगह 80 पीस मिले",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Interest kis baat ka? Agreement mein aisa kuch nahi tha",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Ye invoice duplicate hai, pehle wala already clear ho chuka hai",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Order cancel kar diya tha humne, phir bhi maal bhej diya",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Packing tooti hui thi, aadha maal kharab nikla",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Sir aapki company ne wrong model bheja, hum isko accept nahi karte",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "भुगतान पहले ही चेक से हो चुका है, आपका रिकॉर्ड गलत है",
+      "label": "dispute",
+      "gemini": "dispute",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Sahab abhi bahar gaye hain, aane par baat karenge",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Abhi bahut busy hoon, baad mein call karta hoon",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "stall",
+      "fallback": null
+    },
+    {
+      "text": "मालिक अभी शहर से बाहर हैं",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Thoda time dijiye, market bahut slow chal raha hai",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "stall",
+      "fallback": null
+    },
+    {
+      "text": "Accounts wale chutti pe hain, next week dekhte hain",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "stall",
+      "fallback": null
+    },
+    {
+      "text": "Kal baat karte hain is baare mein",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Abhi cash flow tight hai, kuch nahi keh sakta",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Diwali ke baad dekhenge",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "stall",
+      "fallback": null
+    },
+    {
+      "text": "I'm in a meeting, will get back to you",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "stall",
+      "fallback": "heuristic_keyword"
+    },
+    {
+      "text": "पेमेंट का अभी कुछ पता नहीं, देखते हैं",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Bhai abhi mat pucho, jab hoga tab bata dunga",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Party se paisa aane do, phir aapko denge",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Mail bhej do, CA se discuss karke batata hoon",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Abhi system down hai, baad mein check karenge",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Main hospital mein hoon, baad mein baat karte hain",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "stall",
+      "fallback": null
+    },
+    {
+      "text": "Owner se poochna padega, wo hi decide karenge",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Is mahine mushkil hai, agle mahine dekhte hain",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Sir please thoda ruk jaiye, abhi kuch arrangement nahi hai",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "हम बाद में संपर्क करेंगे",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Abhi nahi ho payega, baad mein dekhte hain",
+      "label": "stall",
+      "gemini": "stall",
+      "keyword": "stall",
+      "fallback": null
+    },
+    {
+      "text": "Kaun bol raha hai?",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Ok",
+      "label": "unknown",
+      "gemini": "stall",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "👍",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Hello?",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Ye kis cheez ka message hai?",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Wrong number",
+      "label": "unknown",
+      "gemini": "dispute",
+      "keyword": "dispute",
+      "fallback": null
+    },
+    {
+      "text": "आप कौन?",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Please send your company's GST number",
+      "label": "unknown",
+      "gemini": "stall",
+      "keyword": "promise_to_pay",
+      "fallback": null
+    },
+    {
+      "text": "Received",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Theek hai",
+      "label": "unknown",
+      "gemini": "stall",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Kya?",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Sir mera naam Ramesh hai, main naya accountant hoon",
+      "label": "unknown",
+      "gemini": "stall",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Is this an automated message?",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Haan ji boliye",
+      "label": "unknown",
+      "gemini": "promise_to_pay",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "नमस्ते",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Aapka office kahan hai?",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Hmm",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Ye number kahan se mila aapko?",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Good morning sir",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "unknown",
+      "fallback": null
+    },
+    {
+      "text": "Message samajh nahi aaya",
+      "label": "unknown",
+      "gemini": "unknown",
+      "keyword": "dispute",
+      "fallback": null
+    }
+  ]
+}

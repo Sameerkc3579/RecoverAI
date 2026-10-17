@@ -49,9 +49,10 @@ def _get_client():
     return _client
 
 
-# Use gemini-2.0-flash (GA / stable). Switch to gemini-2.5-flash once it
-# has fully ramped its capacity and is no longer returning 503 UNAVAILABLE.
-MODEL = "gemini-2.0-flash"
+# gemini-2.0-flash was retired by Google (404 NOT_FOUND), which silently sent
+# every reply to the keyword fallback. Flash-Lite: two calls per reply, and its
+# free-tier daily quota is far larger than gemini-2.5-flash (20 requests/day).
+MODEL = "gemini-3.5-flash-lite"
 
 # ── Valid intents ─────────────────────────────────────────────────────────────
 IntentType = Literal["promise_to_pay", "dispute", "stall", "unknown"]
