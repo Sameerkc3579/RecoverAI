@@ -59,6 +59,9 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 USERS_COLLECTION = "users"
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+# Valid bcrypt hash of a random throwaway string — verified against when the
+# email doesn't exist, so login timing doesn't reveal which emails are registered.
+_DUMMY_BCRYPT_HASH = "$2b$12$dE2ldfmREn00oMZbVmcKEu/veR2d1nXfIU1SSUmN55OoHVbZuJOUy"
 # Non-raising variant for endpoints that also accept the HttpOnly cookie
 optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
@@ -253,7 +256,9 @@ async def login(
     if not user:
         await rate_limit_check(client_ip)  # count the failure
         # SECURITY: Run dummy bcrypt even when user doesn't exist to prevent timing attack.
-        verify_password(form_data.password, "$2b$12$notarealhashjustpaddingtomatch..")
+        # Must be a well-formed bcrypt hash (same cost factor as real ones),
+        # otherwise passlib raises and unknown emails get a 500 instead of 401.
+        verify_password(form_data.password, _DUMMY_BCRYPT_HASH)
         raise AUTH_ERROR
 
     if not verify_password(form_data.password, user["hashed_password"]):
@@ -401,7 +406,9 @@ async def logout(
     The browser app authenticates with HttpOnly cookies (no Authorization
     header), so tokens are read from the header OR the cookies.
     """
-    token = header_token or request.cookies.get("access_token")
+    # Cookie first (same precedence as get_current_user): the landing app sends a
+    # placeholder bearer value, the real token lives only in the HttpOnly cookie.
+    token = request.cookies.get("access_token") or header_token
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -419,7 +426,7 @@ async def logout(
         jti = payload.get("jti")
         email = payload.get("sub", "unknown")
         if jti:
-            revoke_token(jti)
+            await revoke_token(jti, payload.get("exp"))
             logger.info("LOGOUT | email=%s | jti=%s", email, jti)
     except jwt.InvalidTokenError:
         pass  # Expired/invalid token — logout is a no-op, that's fine
@@ -438,7 +445,7 @@ async def logout(
             refresh_jti = refresh_payload.get("jti")
             refresh_exp = refresh_payload.get("exp")
             if refresh_jti:
-                revoke_token(refresh_jti, float(refresh_exp) if refresh_exp else None)
+                await revoke_token(refresh_jti, float(refresh_exp) if refresh_exp else None)
         except jwt.InvalidTokenError:
             pass  # Already expired — that's fine
 
@@ -525,7 +532,7 @@ async def refresh_access_token(request: Request, payload: Optional[RefreshReques
     new_refresh = create_refresh_token(data=token_data)
 
     # Revoke the old refresh token (token rotation — prevents token reuse)
-    revoke_token(jti)
+    await revoke_token(jti, decoded.get("exp"))
 
     logger.info("TOKEN_REFRESHED | email=%s", email)
 

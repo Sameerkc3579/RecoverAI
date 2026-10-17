@@ -13,7 +13,7 @@ import jwt
 
 from app.core.config import settings
 from app.core.database import get_collection
-from app.core.security import is_token_revoked, JWT_AUDIENCE, JWT_ISSUER
+from app.core.security import is_token_revoked_async, JWT_AUDIENCE, JWT_ISSUER
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ async def get_current_user(request: Request, token: str = Depends(oauth2_scheme)
             raise credentials_exception
 
         # Check if this specific token has been revoked (logout support)
-        if is_token_revoked(jti):
+        if await is_token_revoked_async(jti):
             logger.warning("REVOKED_TOKEN_USED | email=%s | jti=%s", email, jti)
             raise credentials_exception
 

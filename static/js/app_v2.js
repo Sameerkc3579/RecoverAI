@@ -66,6 +66,25 @@ function App() {
   };
   const tokenEmail = getEmailFromToken(token);
 
+  // The real token lives only in the HttpOnly cookie, so the session's identity
+  // comes from the server — once per session, replacing any cached details
+  // (which may belong to a previous account). The email stays in React state;
+  // only the display name is persisted.
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    authFetch('/api/users/me')
+      .then(r => (r.ok ? r.json() : null))
+      .then(me => {
+        if (cancelled || !me?.email) return;
+        const name = me.business_name || '';
+        localStorage.setItem('recoverai_user_details', JSON.stringify({ name, business_name: name }));
+        setUserDetails({ name, business_name: name, email: me.email });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [token]);
+
   // Sidebar user info — reactive state, updated immediately on login
   const sidebarUserName = userDetails?.business_name || userDetails?.name || settings.businessName || 'My Account';
   const sidebarUserRole = tokenEmail || userDetails?.email || settings.email || 'Logged in';
@@ -81,7 +100,8 @@ function App() {
     setTokenState('active');
     
     const userObj = { name: bizName, business_name: bizName, email: email };
-    localStorage.setItem('recoverai_user_details', JSON.stringify(userObj));
+    // Persist only the display name — the email stays in memory (PII)
+    localStorage.setItem('recoverai_user_details', JSON.stringify({ name: bizName, business_name: bizName }));
     setUserDetails(userObj); // reactive update so sidebar shows immediately
     
     // Only pre-fill business name if settings are blank
