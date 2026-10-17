@@ -25,6 +25,7 @@ Thumbs.db
 
 # Build & Tooling
 node_modules/
+.ci/
 .vite/
 
 # Local data & Backups
@@ -57,7 +58,7 @@ test_auth_output.txt
 repos.json
 
 # Dev/test scripts (should not ship to production)
-test_*.py
+/test_*.py
 demo_*.py
 fetch.py
 execute_nlp.py
