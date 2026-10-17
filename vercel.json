@@ -25,5 +25,11 @@
       "src": "/(.*)",
       "dest": "app/main.py"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/drips",
+      "schedule": "30 18 * * *"
+    }
   ]
 }

@@ -13,6 +13,11 @@ def _mask_phone(phone: str) -> str:
     return f"{phone[:2]}****{phone[-4:]}"
 
 
+def _normalize_phone(phone: str) -> str:
+    """Strip formatting (spaces, dashes, brackets, dots, leading +) — e.g. "+91 98765-43210" -> "919876543210"."""
+    return re.sub(r"[\s\-().+]", "", phone or "")
+
+
 def _validate_phone(phone: str) -> bool:
     """Basic phone number validation: digits only, 7-15 chars (E.164 without +)."""
     return bool(re.match(r"^\d{7,15}$", phone.strip()))
@@ -22,7 +27,8 @@ async def send_whatsapp_message(to_phone: str, message_text: str) -> bool:
     """
     Sends a WhatsApp message via the official Meta Cloud API.
     """
-    if not settings.WHATSAPP_API_TOKEN or not settings.WHATSAPP_PHONE_NUMBER_ID:
+    access_token = settings.whatsapp_access_token or settings.whatsapp_api_token
+    if not access_token or not settings.whatsapp_phone_number_id:
         logger.error("WhatsApp credentials are not configured in environment variables.")
         return False
 
@@ -30,10 +36,10 @@ async def send_whatsapp_message(to_phone: str, message_text: str) -> bool:
         logger.error(f"Invalid phone number format for recipient {_mask_phone(to_phone)}")
         return False
 
-    url = f"https://graph.facebook.com/v20.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
+    url = f"https://graph.facebook.com/v20.0/{settings.whatsapp_phone_number_id}/messages"
     
     headers = {
-        "Authorization": f"Bearer {settings.WHATSAPP_API_TOKEN}",
+        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json"
     }
     

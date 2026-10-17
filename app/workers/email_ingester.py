@@ -33,6 +33,7 @@ Execution
 ─────────
 Run directly:
     python -m app.workers.email_ingester
+    python -m app.workers.email_ingester --dry-run   # read-only: no flags changed, no inserts
 
 Or via the scheduled task (see run_email_ingester.ps1):
     Every 15 minutes via Windows Task Scheduler.
@@ -60,6 +61,7 @@ import os
 import re
 import ssl
 import sys
+import tempfile
 from datetime import datetime, timezone
 from email.header import decode_header, make_header
 from pathlib import Path
@@ -84,6 +86,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import settings
 from app.models.schemas import InvoiceCreate
 from app.services.customer_service import upsert_customer
+from app.core.database import connect_db, close_db
 
 # ── Logging ────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -112,6 +115,10 @@ MOVE_TO_FOLDER: bool = os.getenv("MOVE_TO_FOLDER", "false").lower() == "true"
 # default; set REQUIRE_SENDER_AUTH=false only if your IMAP provider does not
 # stamp Authentication-Results (Gmail always does).
 REQUIRE_SENDER_AUTH: bool = os.getenv("REQUIRE_SENDER_AUTH", "true").lower() == "true"
+
+# --dry-run: open the mailbox read-only, extract and report, but never mark/move
+# emails or write invoices — safe to run against a live inbox.
+DRY_RUN: bool = False
 
 # ── Zero-Trust Security Settings ──────────────────────────────────────────────
 SECURITY_LOG_FILE: str = os.getenv("SECURITY_LOG_FILE", "logs/security_audit.log")
@@ -225,7 +232,8 @@ class IMAPParserAgent:
         Only emails that have at least one PDF attachment are included.
         """
         conn = self._conn
-        conn.select(IMAP_MAILBOX)
+        # readonly (EXAMINE) also stops FETCH from implicitly marking mail as read
+        conn.select(IMAP_MAILBOX, readonly=DRY_RUN)
 
         # Search for UNSEEN messages only
         status, data = conn.uid("SEARCH", None, "UNSEEN")
@@ -267,7 +275,8 @@ class IMAPParserAgent:
                         uid.decode(), subject[:60],
                     )
                     # Mark as read so we don't re-check it forever
-                    conn.uid("STORE", uid, "+FLAGS", "\\Seen")
+                    if not DRY_RUN:
+                        conn.uid("STORE", uid, "+FLAGS", "\\Seen")
                     continue
 
                 results.append({
@@ -323,6 +332,9 @@ class IMAPParserAgent:
         Mark a single email as processed.
         Opens a fresh connection (worker processes one at a time to stay simple).
         """
+        if DRY_RUN:
+            logger.info("DRY RUN ▷ Would mark UID %s as READ", uid.decode())
+            return
         await asyncio.to_thread(self._connect)
         try:
             conn = self._conn
@@ -674,6 +686,10 @@ class EmailIngesterOrchestrator:
         self._mongo_client = AsyncIOMotorClient(settings.mongo_uri)
         db = self._mongo_client[settings.db_name]
         self._mongo_agent = MongoInsertionAgent(db)
+        # Shared app client: services used during insertion (upsert_customer)
+        # go through app.core.database, which the web app initialises at
+        # startup but this standalone worker must initialise itself.
+        await connect_db()
 
         # Ensure the ingestion log has a unique compound index for idempotency
         await db[INGESTION_LOG_COLLECTION].create_index(
@@ -688,6 +704,7 @@ class EmailIngesterOrchestrator:
         if self._mongo_client:
             self._mongo_client.close()
             self._mongo_client = None
+        await close_db()
 
     async def run(self) -> None:
         """Execute one full ingestion cycle."""
@@ -780,6 +797,13 @@ class EmailIngesterOrchestrator:
 
                     # ── Stage 5: MongoDB insertion ────────────────────────────
                     status = "success" if invoice else "failed"
+                    if DRY_RUN:
+                        logger.info(
+                            "DRY RUN ▷ Would insert (%s) for user %s: %s",
+                            status, owner_id, invoice.model_dump() if invoice else fields,
+                        )
+                        stats["processed" if invoice else "failed"] += 1
+                        continue
                     inserted_id = await self._mongo_agent.insert_invoice(
                         invoice, message_id, filename, email_from, subject, owner_id=owner_id, status=status
                     )
@@ -862,9 +886,53 @@ async def _async_main() -> None:
     await orchestrator.run()
 
 
+_LOCK_PATH = Path(tempfile.gettempdir()) / "recoverai_email_ingester.lock"
+
+
+def _acquire_run_lock():
+    """
+    Take an exclusive, non-blocking OS file lock so only one ingestion cycle
+    runs at a time (e.g. loop_email_ingester.ps1 and the scheduled task both
+    firing). Returns the open lock file, or None if another run holds it.
+    The OS releases the lock automatically if the process dies.
+    """
+    lock_file = open(_LOCK_PATH, "a+")
+    try:
+        if os.name == "nt":
+            import msvcrt
+            lock_file.seek(0)
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        lock_file.close()
+        return None
+    return lock_file
+
+
 def main() -> None:
     """Synchronous entry point — called by the scheduled task runner."""
-    asyncio.run(_async_main())
+    global DRY_RUN
+    DRY_RUN = "--dry-run" in sys.argv[1:]
+    if DRY_RUN:
+        logger.info("DRY RUN ▷ Mailbox opened read-only; nothing will be marked, moved or inserted.")
+    try:
+        lock_file = _acquire_run_lock()
+    except OSError as exc:
+        # Can't create the lock file at all — run unguarded rather than not at all.
+        logger.warning("Could not create run lock (%s) — continuing without it", exc)
+        lock_file = None
+    else:
+        if lock_file is None:
+            logger.info("Email Ingester ▷  Another cycle is already running. Skipping this one.")
+            return
+
+    try:
+        asyncio.run(_async_main())
+    finally:
+        if lock_file:
+            lock_file.close()
 
 
 if __name__ == "__main__":

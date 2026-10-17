@@ -296,9 +296,9 @@ async def get_user_details(user_id: str) -> dict:
         if "owner_id" in inv:
             inv["owner_id"] = str(inv["owner_id"])
 
-    total_value = sum(inv.get("amount", 0) for inv in invoices)
+    total_value = sum((inv.get("amount") or 0) for inv in invoices)
     recovered_value = sum(
-        inv.get("amount", 0) for inv in invoices
+        (inv.get("amount") or 0) for inv in invoices
         if inv.get("status") == "recovered" or inv.get("recovered")
     )
     active_count = sum(1 for inv in invoices if not inv.get("recovered"))
@@ -512,19 +512,25 @@ async def get_activity() -> list[dict]:
         {"company": 1, "amount": 1, "owner_id": 1, "issueDate": 1}
     ).sort("_id", -1).limit(25).to_list(25)
 
+    def _ts(value) -> str:
+        # Missing/None dates (e.g. invoices without issueDate) must still sort
+        if isinstance(value, datetime):
+            return value.isoformat()
+        return str(value) if value else ""
+
     activity = []
     for u in recent_users:
         activity.append({
             "type": "user_registered",
             "text": f"{u.get('business_name', u.get('email', 'Unknown'))} joined the platform",
-            "time": u.get("created_at", ""),
+            "time": _ts(u.get("created_at")),
             "icon": "👤",
         })
     for inv in recent_recovered:
         activity.append({
             "type": "invoice_recovered",
-            "text": f"₹{inv.get('amount', 0):,.0f} recovered from {inv.get('company', 'Unknown')}",
-            "time": inv.get("issueDate", ""),
+            "text": f"₹{float(inv.get('amount') or 0):,.0f} recovered from {inv.get('company') or 'Unknown'}",
+            "time": _ts(inv.get("issueDate")),
             "icon": "✅",
         })
 

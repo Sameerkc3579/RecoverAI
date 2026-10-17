@@ -83,7 +83,7 @@ class FirewallMiddleware:
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
-        # {ip: {"count": int, "window_start": float, "violations": int, "banned_until": float}}
+        # {ip: {"counts": {bucket: int}, "window_start": float, "violations": int, "banned_until": float}}
         self._rate_store: dict[str, dict] = {}
         self._last_cleanup = time.time()
 
@@ -100,7 +100,7 @@ class FirewallMiddleware:
         is selected using proper CIDR checks (not string prefixes, which wrongly
         classified all of 172.0.0.0/8 as private)."""
         direct = request.client.host if request.client else "127.0.0.1"
-        if not settings.trust_proxy_headers:
+        if not settings.proxy_headers_trusted:
             return direct
 
         forwarded = request.headers.get("x-forwarded-for", "")
@@ -137,7 +137,7 @@ class FirewallMiddleware:
 
         if ip not in self._rate_store:
             self._rate_store[ip] = {
-                "count": 0, "window_start": now,
+                "counts": {}, "window_start": now,
                 "violations": 0, "banned_until": 0,
             }
 
@@ -149,20 +149,23 @@ class FirewallMiddleware:
 
         # Reset window if expired
         if now - entry["window_start"] > RATE_WINDOW_SECONDS:
-            entry["count"] = 0
+            entry["counts"] = {}
             entry["window_start"] = now
 
-        entry["count"] += 1
-
-        # Determine limit based on path
+        # Determine limit based on path. Each tier has its own counter —
+        # otherwise ordinary page/API traffic would count against the much
+        # stricter auth limit and lock users out of login/refresh/logout.
         if path.startswith("/api/auth/"):
-            limit = AUTH_RATE_LIMIT
+            bucket, limit = "auth", AUTH_RATE_LIMIT
         elif path.startswith("/api/webhooks/"):
-            limit = WEBHOOK_RATE_LIMIT
+            bucket, limit = "webhook", WEBHOOK_RATE_LIMIT
         else:
-            limit = GENERAL_RATE_LIMIT
+            bucket, limit = "general", GENERAL_RATE_LIMIT
 
-        if entry["count"] > limit:
+        counts = entry.setdefault("counts", {})
+        counts[bucket] = counts.get(bucket, 0) + 1
+
+        if counts[bucket] > limit:
             entry["violations"] = entry.get("violations", 0) + 1
             if entry["violations"] >= BAN_THRESHOLD:
                 entry["banned_until"] = now + BAN_DURATION_SECONDS
@@ -220,7 +223,7 @@ class FirewallMiddleware:
                 now = time.time()
                 if ip not in self._rate_store:
                     self._rate_store[ip] = {
-                        "count": 0, "window_start": now,
+                        "counts": {}, "window_start": now,
                         "violations": 0, "banned_until": 0,
                     }
                 self._rate_store[ip]["banned_until"] = now + HONEYPOT_BAN_SECONDS
@@ -244,8 +247,9 @@ class FirewallMiddleware:
         query = str(request.url.query or "")
         user_agent = request.headers.get("user-agent", "")
 
-        # Skip firewall for static assets
-        if path.startswith(("/static/", "/uploads/")):
+        # Skip firewall for static assets (incl. the landing page's Vite /assets/)
+        # so page loads don't consume the visitor's rate-limit budget
+        if path.startswith(("/static/", "/uploads/", "/assets/")) or path == "/favicon.ico":
             await self.app(scope, receive, send)
             return
 

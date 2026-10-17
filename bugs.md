@@ -7,6 +7,39 @@ Legend: 🔴 Critical · 🟠 High · 🟡 Medium · 🟢 Low
 
 ---
 
+## Status (2026-10-17) — pre-push health check
+
+Verified with an end-to-end API suite (105 checks) and a headless-browser pass over every
+dashboard page, on both the local venv and a fresh install of `requirements.txt` (Python 3.12).
+
+- ✅ Fresh deploy broke password auth — `passlib 1.7.4` crashes with `bcrypt>=4.1`; pinned `bcrypt==4.0.1`.
+- ✅ Firewall shared one per-IP counter across all paths, so normal browsing tripped the 15/min
+  auth limit (429 on login/logout, then a 15-min IP ban) — each tier now has its own counter.
+- ✅ Login limiter counted every failure twice and registrations used the login budget —
+  pre-check is read-only; register has its own scope.
+- ✅ Logout ignored the HttpOnly cookie (header-only) so tokens were never revoked or cleared;
+  refresh-token revoke was missing `audience`/`issuer`. `/refresh` now also accepts the cookie.
+- ✅ `whatsapp_webhook` router was never mounted — Debtor Inbox `/api/whatsapp/{messages,status,send}`
+  and Meta's `/api/webhooks/whatsapp` returned 404.
+- ✅ WhatsApp send read only `WHATSAPP_ACCESS_TOKEN`; now falls back to `WHATSAPP_API_TOKEN`.
+- ✅ Upload-proof accepted any bytes when magic bytes were unrecognised — now rejected.
+- ✅ Admin activity feed 500'd on invoices without `issueDate` (None in sort).
+- ✅ Drip skipped every formatted phone ("+91 98765 43210"); prompt lacked the due date (AI wrote a placeholder).
+- ✅ Drip: atomic per-(invoice, step) claim + unique index (no duplicates across workers) and a
+  3-day grace window for missed midnights. Email ingester: single-run OS lock.
+- ✅ Google login "Rate limit exceeded" — landing `/assets/*` loads counted toward the (shared)
+  firewall budget; `/assets/` + favicon now exempt, and on Vercel the real client IP from
+  `X-Forwarded-For` is used (`settings.proxy_headers_trusted`) so visitors don't share one bucket.
+- ✅ Drip on Vercel — `GET /api/cron/drips` + `crons` in `vercel.json` (00:00 IST). Once-per-day
+  Mongo lock, optional `CRON_SECRET`, 50 s time budget, stale-claim recovery after 30 min.
+- ✅ Email ingester never initialised the shared DB client, so every emailed invoice was saved but
+  not linked to a customer, not idempotency-logged, and reported as failed. Added `--dry-run`
+  (read-only mailbox, no inserts) for safe testing against a live inbox.
+- Open: inbound WhatsApp needs `WHATSAPP_WEBHOOK_SECRET` (pending Meta approval); landing bundle
+  (`dist/assets/index-*.js`, source not in repo) still stores the access token in localStorage.
+
+---
+
 ## Status (2026-06-10)
 
 **Major bugs (Critical + High) — FIXED:**

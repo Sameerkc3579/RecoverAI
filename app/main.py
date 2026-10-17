@@ -45,7 +45,8 @@ from app.api.admin import router as admin_router
 from app.api.users import router as users_router
 from app.api.customers import router as customers_router
 from app.api.whatsapp import router as whatsapp_router
-from app.api.drip import router as drip_router
+from app.api.whatsapp_webhook import router as whatsapp_webhook_router
+from app.api.drip import router as drip_router, cron_router
 from app.api.deps import get_admin_user
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -205,7 +206,9 @@ app.include_router(admin_router)
 app.include_router(users_router)
 app.include_router(customers_router)
 app.include_router(whatsapp_router)
+app.include_router(whatsapp_webhook_router)
 app.include_router(drip_router)
+app.include_router(cron_router)
 
 
 # ── Static Files ──────────────────────────────────────────────────────────────
