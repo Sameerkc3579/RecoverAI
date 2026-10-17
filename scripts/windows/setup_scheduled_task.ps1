@@ -11,15 +11,16 @@
 #   3. The virtual environment at .venv must exist and have all dependencies.
 #
 # Run once:
-#   powershell -ExecutionPolicy Bypass -File setup_scheduled_task.ps1
+#   powershell -ExecutionPolicy Bypass -File scripts\windows\setup_scheduled_task.ps1
 #
 # To remove the task:
 #   Unregister-ScheduledTask -TaskName "RecoverAI-EmailIngester" -Confirm:$false
 # ===============================================================================
 
 $TaskName   = "RecoverAI-EmailIngester"
-$ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ScriptPath  = Join-Path $ProjectRoot "run_email_ingester.ps1"
+# Scripts live in scripts\windows\ — the project root is two levels up
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$ScriptPath  = Join-Path $PSScriptRoot "run_email_ingester.ps1"
 $LogPath     = Join-Path $ProjectRoot "logs\scheduled_task_setup.log"
 
 # -- Ensure log directory exists ------------------------------------------------

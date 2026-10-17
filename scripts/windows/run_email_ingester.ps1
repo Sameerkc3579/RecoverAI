@@ -5,11 +5,12 @@
 # It activates the project virtual environment and runs the email ingester.
 #
 # Usage (manual):
-#   powershell -ExecutionPolicy Bypass -File run_email_ingester.ps1
+#   powershell -ExecutionPolicy Bypass -File scripts\windows\run_email_ingester.ps1
 # ===============================================================================
 
 # -- Configuration -------------------------------------------------------------
-$ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Scripts live in scripts\windows\ — the project root is two levels up
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $LogDir      = Join-Path $ProjectRoot "logs"
 $LogFile     = Join-Path $LogDir "email_ingester_$(Get-Date -Format 'yyyy-MM-dd').log"
 $VenvPython  = Join-Path $ProjectRoot ".venv\Scripts\python.exe"

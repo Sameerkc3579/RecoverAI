@@ -260,14 +260,12 @@ _PORTAL_PATHS = [
 ]
 
 # ── App shell (SPA) HTML path candidates ──────────────────────────────────────
-# Prefer new modular dashboard.html, fallback to legacy RecoverAI_MVP.html
+# The modular dashboard shell (the legacy RecoverAI_MVP.html monolith was removed;
+# its URL below still serves this dashboard for old bookmarks)
 _CANDIDATE_PATHS = [
     BASE_DIR / "dashboard.html",
     Path("dashboard.html"),
     Path("/var/task/dashboard.html"),
-    BASE_DIR / "RecoverAI_MVP.html",
-    Path("RecoverAI_MVP.html"),
-    Path("/var/task/RecoverAI_MVP.html"),
 ]
 FRONTEND_HTML: Path | None = next((p for p in _CANDIDATE_PATHS if p.exists()), None)
 logger.info("📄  Frontend HTML resolved to: %s", FRONTEND_HTML)

@@ -5,7 +5,8 @@
 # Keep this PowerShell window open to ensure emails are ingested.
 # ===============================================================================
 
-$ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Scripts live in scripts\windows\ — the project root is two levels up
+$ProjectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $VenvPython  = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $IntervalMinutes = 15
 

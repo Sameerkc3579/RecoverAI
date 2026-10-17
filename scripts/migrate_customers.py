@@ -1,5 +1,11 @@
+"""One-off backfill: create customer records for existing invoices.  python scripts/migrate_customers.py"""
 import asyncio
 import logging
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # project root, for `app`
+
 from bson import ObjectId
 from app.core.database import connect_db, close_db, get_collection
 from app.services.customer_service import upsert_customer, recalculate_customer_stats

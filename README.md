@@ -1,110 +1,125 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Sameerkc3579/RecoverAI/main/uploads/logo.png" alt="RecoverAI Logo" width="120" style="border-radius: 12px; margin-bottom: 20px;" onerror="this.src='https://placehold.co/120x120/8B0000/FFFFFF?text=R&font=Montserrat'"/>
 
-  # 🤖 RecoverAI
-  **Autonomous Agentic System for MSME Debt Recovery**
-  
-  [![CI](https://github.com/Sameerkc3579/RecoverAI/actions/workflows/ci.yml/badge.svg)](https://github.com/Sameerkc3579/RecoverAI/actions/workflows/ci.yml)
-  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
-  [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
-  [![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-  [![Google Gemini](https://img.shields.io/badge/Google%20Gemini-8E75B2?style=for-the-badge&logo=googlebard&logoColor=white)](https://ai.google.dev/)
-  [![Security](https://img.shields.io/badge/Security-Hardened-success)](https://github.com/Sameerkc3579/RecoverAI)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+# 🤖 RecoverAI
 
-  <p align="center">
-    An intelligent, automated pipeline designed to bridge the gap in B2B collections. Powered by Google Gemini, RecoverAI negotiates, drafts legal notices, and manages multi-channel communications (WhatsApp & Email) to help MSMEs recover pending invoices efficiently and legally.
-  </p>
+**AI-assisted invoice recovery for Indian MSMEs**
+
+[![CI](https://github.com/Sameerkc3579/RecoverAI/actions/workflows/ci.yml/badge.svg)](https://github.com/Sameerkc3579/RecoverAI/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/demo-live-0EA5E9)](https://recover-ai-lyart.vercel.app)
+![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=fastapi)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white)
+![Gemini](https://img.shields.io/badge/Google%20Gemini-8E75B2?logo=googlegemini&logoColor=white)
+
+RecoverAI helps small businesses get paid. It tracks overdue invoices, drafts recovery messages and escalating reminders with Google Gemini, classifies debtor replies in Hindi, Hinglish and English, computes statutory interest under the MSMED Act, and generates legal notices — so the owner reviews and sends instead of chasing.
+
+**[Live demo →](https://recover-ai-lyart.vercel.app)**
+
+<img src="dist/assets/dashboard-main-CK7R4k0N.png" alt="RecoverAI dashboard: outstanding vs recovered, pipeline by stage, top debtors and recent activity" width="900"/>
+
 </div>
 
 ---
 
-## ✨ Key Features
+## ✨ Features
 
-- **🧠 Agentic AI Negotiation**: Employs Google Gemini 2.5 Flash to automatically interpret debtor intents (Promise to Pay, Stall, Dispute) and autonomously draft highly tailored, context-aware responses.
-- **🛡️ 3-Layer Active Firewall**: Enterprise-grade security featuring IP Rate Limiting, Signature-based attack blocking (SQLi, XSS, Path Traversal), and Honeypot Traps to instantly ban automated vulnerability scanners.
-- **📱 WhatsApp & Email Integration**: Full bidirectional support. Features a Meta-compliant webhook architecture for WhatsApp messaging and an automated IMAP background worker for digesting inbound email replies.
-- **⚖️ MSMED Act Compliance**: Hardcoded logic implementing Section 15 of the MSME Act, automatically computing compound interest with monthly rests at three times the RBI bank rate.
-- **🌐 Public Debtor Portal**: Standalone, magic-link protected public portal (`portal.html`) allowing debtors to securely view their specific invoices, ledgers, and overdue interest breakdowns without needing an account.
-- **📄 One-Click Legal Notices**: Generates formal, court-ready PDF Legal Notices using Indian numbering syntax, complete with dynamic financial breakdowns.
-- **🔐 Enterprise-Grade RBAC**: Secure multi-tenant architecture employing JWT Bearer tokens, Bcrypt password hashing, and a highly gated "God Mode" dashboard reserved exclusively for platform administrators.
-- **🔗 Google Identity Services**: Low-friction onboarding utilizing Google OAuth 2.0 Sign-In workflows.
+- **AI recovery messages** — Gemini drafts reminders in four tones (Friendly → Firm Warning → Final Notice → Legal Threat), singly or in bulk, with automatic model fallback when a model is overloaded.
+- **Debtor reply understanding** — replies are translated and classified as *promise to pay*, *dispute* or *stall* (Hindi/Hinglish/English), with a keyword fallback when the AI is unavailable. Evaluated on a hand-labelled test set in [`eval/`](eval/).
+- **Automated drip campaigns** — reminders are drafted at 7, 21, 35 and 45 days overdue, held for approval, never duplicated across workers, and caught up if a scheduled run is missed.
+- **MSMED Act compliance** — compound interest with monthly rests at three times the RBI bank rate (Section 15), shown per invoice and in the legal queue.
+- **One-click legal notices** — formal notices citing Sections 15–18, exported as PDF with amounts in Indian numbering and words.
+- **Zero-touch email ingestion** — a worker reads invoice PDFs from an inbox, extracts the fields with Gemini, verifies the sender (SPF/DKIM/DMARC) and files the invoice under the right account.
+- **WhatsApp Business** — Meta Cloud API webhook for inbound replies (HMAC-verified) and outbound messages to known debtors.
+- **Debtor portal** — magic-link page where a debtor can see their invoice and accrued interest without an account.
+- **Multi-tenant with an admin console** — every query is scoped to the owner; admins get platform-wide stats, user management and CSV export.
+- **Google Sign-In** alongside email/password accounts.
 
----
-
-## 🏗️ Architecture Stack
-
-### Backend (The Brain)
-- **Framework**: `FastAPI` (Python 3.10+) 
-- **Database**: `Motor` (Asynchronous MongoDB driver)
-- **AI Engine**: `google-genai` (Native Gemini SDK)
-- **Security**: `passlib[bcrypt]`, `PyJWT` (JSON Web Tokens), `google-auth`
-
-### Frontend (The Interface)
-- **Library**: `React 18` (via CDN for zero-build MVP deployment)
-- **Styling**: Vanilla CSS + `TailwindCSS` (Scoped JIT mode)
-- **Data Viz**: `Chart.js`
-- **PDF Engine**: `html2pdf.js`
+<p align="center">
+  <img src="dist/assets/invoices-list-BDEgvAXD.png" alt="All invoices: status, days overdue and channel per debtor" width="900"/>
+</p>
 
 ---
 
-## 🚀 Quickstart Guide
+## 🏗️ Architecture
 
-### 1. Prerequisites
-- Python 3.10+
-- MongoDB Cloud Cluster (Atlas)
-- Google AI Studio API Key (Gemini)
-- Google Cloud Platform OAuth2 Client ID
+```mermaid
+flowchart LR
+    subgraph Browser
+        L[Landing page<br/>React + Vite build]
+        D[Dashboard<br/>React 18 + Babel in-browser]
+    end
+    subgraph Vercel["FastAPI on Vercel (serverless)"]
+        F[Firewall middleware<br/>rate limits · attack patterns · honeypots]
+        A[API routers<br/>auth · invoices · customers · AI · admin · WhatsApp · drip]
+    end
+    M[(MongoDB Atlas)]
+    G[Google Gemini]
+    W[WhatsApp Cloud API]
+    C[Vercel Cron<br/>daily 00:00 IST]
+    I[Email ingester worker<br/>IMAP → Gemini → MongoDB]
 
-### 2. Installation
-Clone the repository and jump into the directory:
+    L -->|"HttpOnly cookie"| F
+    D -->|"HttpOnly cookie"| F
+    F --> A
+    A --> M
+    A --> G
+    A --> W
+    W -->|"signed webhook"| F
+    C -->|"/api/cron/drips"| F
+    I --> M
+    I --> G
+```
+
+| Layer | Stack |
+|---|---|
+| Backend | FastAPI, Motor (async MongoDB), Pydantic v2, PyJWT, passlib/bcrypt, APScheduler |
+| AI | `google-genai` — `gemini-2.5-flash` with tiered fallback; `gemini-3.5-flash-lite` for reply classification |
+| Frontend | React 18 (no build step, compiled in the browser), Chart.js, html2pdf.js; landing page built with Vite |
+| Data | MongoDB Atlas — TTL indexes for revoked tokens and login counters, unique indexes for idempotency |
+| Hosting | Vercel (serverless Python) with Vercel Cron |
+
+---
+
+## 🔒 Security
+
+- **Sessions in HttpOnly cookies** — short-lived access tokens (15 min) plus refresh tokens; JavaScript never sees a token.
+- **Logout and brute-force protection that hold across instances** — revoked tokens and failed-login counters live in MongoDB, so every serverless instance enforces them (5 failures → 15-minute lockout, no user enumeration).
+- **Firewall middleware** — per-tier rate limits (auth / webhook / general), SQLi/XSS/path-traversal pattern blocking and honeypot paths that ban scanners.
+- **Uploads** — extension and MIME allowlists, magic-byte content checks, size limit, random filenames.
+- **SSRF protection** for website enrichment, **NoSQL-injection** sanitising of update payloads, **signed webhooks** (WhatsApp HMAC), **sender authentication** for ingested email.
+- Full audit trail of findings and fixes: [`docs/bug-report.md`](docs/bug-report.md).
+
+---
+
+## 🚀 Getting started
+
+**Prerequisites:** Python 3.10+, a MongoDB database (Atlas works), a [Gemini API key](https://aistudio.google.com/app/apikey).
+
 ```bash
 git clone https://github.com/Sameerkc3579/RecoverAI.git
 cd RecoverAI
-```
-
-Create a virtual environment and load the dependencies:
-```bash
 python -m venv .venv
-source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-### 3. Environment Secrets
-Create a `.env` file in the root directory mapping the following parameters:
-```env
-# ── Server Config ──────────────────────
-DEBUG=true
-ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
-ADMIN_EMAILS=admin@example.com,backup-admin@example.com
-
-# ── Gemini ─────────────────────────────
-GEMINI_API_KEY=your_gemini_api_key_here
-
-# ── MongoDB ────────────────────────────
-MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net
-DB_NAME=recovery_agent
-
-# ── Google OAuth ───────────────────────
-GOOGLE_CLIENT_ID=your_google_cloud_client_id.apps.googleusercontent.com
-
-# ── JWT Security ───────────────────────
-SECRET_KEY=generate_a_cryptographically_secure_random_string_here
-ALGORITHM=HS256
-
-# ── Webhooks & Workers (Optional) ──────
-WHATSAPP_VERIFY_TOKEN=my_secure_token
-IMAP_HOST=imap.gmail.com
-IMAP_USER=your_email@gmail.com
-IMAP_PASSWORD=your_app_password
-```
-
-### 4. Ignition
-Launch the FastAPI uvicorn worker:
-```bash
+cp .env.example .env               # then fill in GEMINI_API_KEY, MONGO_URI, SECRET_KEY
 uvicorn app.main:app --reload --port 8000
 ```
-Browse to `http://localhost:8000` to access the main interface.
+
+Open <http://localhost:8000>. Every setting is documented in [`.env.example`](.env.example); for local HTTP keep `COOKIE_SECURE=false`.
+
+**Admin console:** add your email to `ADMIN_EMAILS` — the dashboard unlocks the admin view for those accounts.
+
+### Optional tools
+
+| Command | What it does |
+|---|---|
+| `python scripts/seed.py` | Loads realistic sample invoices |
+| `python -m app.workers.email_ingester` | Runs one email-ingestion cycle (`--dry-run` reads the inbox without marking or saving anything) |
+| `scripts/windows/setup_scheduled_task.ps1` | Registers the ingester as a 15-minute Windows scheduled task (run as Administrator) |
+| `python scripts/simulate_whatsapp.py` | Sends a fake inbound WhatsApp message to a local server |
+| `python scripts/start_ngrok_tunnel.py` | Exposes the local server for Meta webhook testing |
+| `python -m eval.run_intent_eval` | Scores the reply classifier on the labelled test set |
 
 ---
 
@@ -116,6 +131,7 @@ Browse to `http://localhost:8000` to access the main interface.
 - **Frontend** — every dashboard component is compiled with the exact Babel version the browser loads.
 
 Run the suite locally (needs a MongoDB you can write a throwaway database to; tests refuse any database name without `test` in it):
+
 ```bash
 pip install -r requirements-dev.txt
 TEST_MONGO_URI=mongodb://localhost:27017 pytest
@@ -123,28 +139,33 @@ TEST_MONGO_URI=mongodb://localhost:27017 pytest
 
 ---
 
-## 👁️ God Mode (Admin Architecture)
+## ☁️ Deployment (Vercel)
 
-The system features a hidden administration plane ("God Mode") that conducts data aggregation across the entire user base using optimized MongoDB `$facet` pipelines.
-
-**To access God Mode:**
-1. Ensure your authentication `.env` contains your specific administrative email under `ADMIN_EMAILS`.
-2. The core system statically verifies your identity token against this list.
-3. Upon identifying the master record, the React interface dynamically unlocks the God Mode GUI, exposing the master users table and platform-wide financial telemetry.
+1. Import the repository in Vercel — [`vercel.json`](vercel.json) routes all traffic to `app/main.py` and schedules the daily drip run (`/api/cron/drips`, 00:00 IST).
+2. Add the environment variables from [`.env.example`](.env.example) (`COOKIE_SECURE=true` in production). Optionally set `CRON_SECRET`; Vercel then authenticates its cron calls automatically.
+3. For inbound WhatsApp, set `WHATSAPP_WEBHOOK_SECRET` (your Meta App Secret) and point the Meta webhook at `/api/webhooks/whatsapp`.
 
 ---
 
-## ☁️ Deployment (Vercel)
+## 📁 Project structure
 
-This application is structurally prepared for instant Serverless deployment via Vercel.
-
-1. Import the GitHub repository into your Vercel Dashboard.
-2. Define the exact environmental variables mapped in the local `.env`.
-3. Vercel utilizes the predefined `vercel.json` routing matrix, funneling all traffic through `app/main.py`.
+```
+app/
+  api/            route handlers (auth, invoices, customers, chat, admin, whatsapp, drip, enrich)
+  core/           settings, database, security (tokens, limiter), firewall and middleware
+  services/       Gemini messaging, reply NLP, MSMED interest, customers, WhatsApp
+  workers/        drip scheduler, email ingester, WhatsApp reply drafting
+static/           dashboard React components and CSS
+dist/             pre-built landing page (Vite)
+tests/            pytest suite
+eval/             intent-classification evaluation
+scripts/          seed data, simulators, Windows scheduler scripts, frontend compile check
+docs/             bug report / security audit and project summary
+```
 
 ---
 
 <div align="center">
-  <b>Built with execution by Sameer Choudhary</b><br>
-  RecoverAI is engineering the financial baseline for Micro, Small and Medium Enterprises.
+  <b>Built by Sameer Choudhary</b><br/>
+  Helping Micro, Small and Medium Enterprises get paid on time.
 </div>
