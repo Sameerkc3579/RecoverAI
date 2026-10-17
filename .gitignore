@@ -25,6 +25,7 @@ Thumbs.db
 
 # Build & Tooling
 node_modules/
+.ci/
 .vite/
 
 # Local data & Backups

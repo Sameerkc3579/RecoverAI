@@ -4,6 +4,7 @@
   # 🤖 RecoverAI
   **Autonomous Agentic System for MSME Debt Recovery**
   
+  [![CI](https://github.com/Sameerkc3579/RecoverAI/actions/workflows/ci.yml/badge.svg)](https://github.com/Sameerkc3579/RecoverAI/actions/workflows/ci.yml)
   [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
   [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
   [![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
@@ -104,6 +105,21 @@ Launch the FastAPI uvicorn worker:
 uvicorn app.main:app --reload --port 8000
 ```
 Browse to `http://localhost:8000` to access the main interface.
+
+---
+
+## 🧪 Testing & CI
+
+Every push and pull request runs [GitHub Actions](.github/workflows/ci.yml):
+
+- **Backend** — 79 pytest tests on Python 3.10 and 3.12 against a real MongoDB 7 service container: auth and session revocation, brute-force lockouts shared across instances, firewall rate limiting, tenant isolation, upload validation, the drip engine and its cron endpoint, admin, WhatsApp and the email ingester. Gemini is mocked, so CI needs no API keys.
+- **Frontend** — every dashboard component is compiled with the exact Babel version the browser loads.
+
+Run the suite locally (needs a MongoDB you can write a throwaway database to; tests refuse any database name without `test` in it):
+```bash
+pip install -r requirements-dev.txt
+TEST_MONGO_URI=mongodb://localhost:27017 pytest
+```
 
 ---
 
