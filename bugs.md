@@ -35,8 +35,20 @@ dashboard page, on both the local venv and a fresh install of `requirements.txt`
 - ✅ Email ingester never initialised the shared DB client, so every emailed invoice was saved but
   not linked to a customer, not idempotency-logged, and reported as failed. Added `--dry-run`
   (read-only mailbox, no inserts) for safe testing against a live inbox.
-- Open: inbound WhatsApp needs `WHATSAPP_WEBHOOK_SECRET` (pending Meta approval); landing bundle
-  (`dist/assets/index-*.js`, source not in repo) still stores the access token in localStorage.
+- ✅ Security state now shared across instances (was bug #14): logout blacklist and login/register
+  limiter use Redis if reachable, else MongoDB (`revoked_tokens`, `auth_rate_limits`, TTL-indexed),
+  else memory. `deps.py` now checks the shared blacklist (it only checked local memory). An
+  unreachable Redis is disabled after one failure; a localhost `REDIS_URL` is ignored on Vercel.
+  The firewall's general throttle stays per-instance by design (per-request DB hits; Vercel has
+  platform DDoS protection).
+- ✅ Login with an unknown email returned 500 (malformed dummy bcrypt hash) — also leaked which
+  emails exist. Replaced with a valid hash; now a uniform 401.
+- ✅ Landing bundle stored the access + refresh tokens in localStorage. Patched the built bundle
+  (source not in repo) to store only an `"active"` flag; renamed to `index-Ave8lZIs.js` for
+  cache-busting. Auth uses the HttpOnly cookie; logout reads the cookie first; the dashboard
+  fetches the email from `/api/users/me` instead of decoding a stored JWT.
+- Open (external): inbound WhatsApp needs `WHATSAPP_WEBHOOK_SECRET` once Meta approves the app —
+  the webhook fails closed until then.
 
 ---
 

@@ -66,6 +66,26 @@ function App() {
   };
   const tokenEmail = getEmailFromToken(token);
 
+  // The real token lives only in the HttpOnly cookie, so when the email isn't
+  // known locally (e.g. after logging in on the landing page), ask the server.
+  useEffect(() => {
+    if (!token || tokenEmail || userDetails?.email) return;
+    let cancelled = false;
+    authFetch('/api/users/me')
+      .then(r => (r.ok ? r.json() : null))
+      .then(me => {
+        if (cancelled || !me?.email) return;
+        setUserDetails(prev => {
+          const next = { ...(prev || {}), email: me.email,
+            business_name: prev?.business_name || me.business_name, name: prev?.name || me.business_name };
+          localStorage.setItem('recoverai_user_details', JSON.stringify(next));
+          return next;
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [token]);
+
   // Sidebar user info — reactive state, updated immediately on login
   const sidebarUserName = userDetails?.business_name || userDetails?.name || settings.businessName || 'My Account';
   const sidebarUserRole = tokenEmail || userDetails?.email || settings.email || 'Logged in';

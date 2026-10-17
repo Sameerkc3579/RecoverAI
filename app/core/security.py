@@ -5,11 +5,10 @@ Provides:
   - Password hashing (bcrypt)
   - Password strength validation
   - JWT access + refresh token creation (with jti claim for revocation)
-  - Token revocation blacklist:
-      * Redis-backed when REDIS_URL is configured (multi-worker safe)
-      * In-memory fallback when Redis is unavailable (single-worker only)
-  - Redis-backed rate limiter with in-memory fallback
+  - Token revocation blacklist and login/register attempt limiter, shared
+    across workers/instances (Redis if reachable, else MongoDB, else memory)
 """
+import os
 import uuid
 import re
 import time
@@ -75,26 +74,38 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     return True, ""
 
 
-# ── Redis Connection (optional, lazy) ────────────────────────────────────────
-# If REDIS_URL is set in .env, all rate limiting and token blacklist operations
-# use Redis (multi-worker safe). Otherwise falls back to in-memory (single-worker).
+# ── Shared security store ─────────────────────────────────────────────────────
+# Logout revocations and login/register attempt counters must be shared by every
+# worker / serverless instance, or they silently stop working (a token revoked on
+# one instance stays valid on the others). Backends, in order:
+#   1. Redis    — if REDIS_URL is set AND reachable (disabled after first failure)
+#   2. MongoDB  — always available in this app; entries auto-expire via TTL indexes
+#   3. Memory   — last-resort fallback if the database is unreachable
+# The in-memory blacklist is also kept as a fast local cache.
+
+_REVOKED_COLLECTION = "revoked_tokens"
+_RATE_LIMIT_COLLECTION = "auth_rate_limits"
 
 _redis_client = None
 _redis_checked = False
+_mongo_indexes_ready = False
 
 
 def _get_redis():
-    """Return a Redis client or None if not configured."""
+    """Return a Redis client, or None if not configured / previously failed."""
     global _redis_client, _redis_checked
     if _redis_checked:
         return _redis_client
     _redis_checked = True
 
     if not settings.redis_url:
-        logger.info(
-            "REDIS_URL not set — using in-memory token blacklist and rate limiter "
-            "(safe for single-worker deployments only)."
-        )
+        return None
+
+    # A serverless instance never has a local Redis — skip the doomed connect
+    # (and its timeout on every cold start) if REDIS_URL points at loopback.
+    from urllib.parse import urlparse
+    if os.environ.get("VERCEL") and urlparse(settings.redis_url).hostname in ("localhost", "127.0.0.1", "::1"):
+        logger.warning("REDIS_URL points to localhost on Vercel — ignoring it; using MongoDB security store.")
         return None
 
     try:
@@ -105,17 +116,46 @@ def _get_redis():
             decode_responses=True,
             socket_connect_timeout=2,
         )
-        logger.info("Redis connected — using Redis-backed security store.")
     except Exception as exc:
-        logger.warning("Redis connection failed (%s) — falling back to in-memory store.", exc)
+        logger.warning("Redis unavailable (%s) — using MongoDB security store.", exc)
         _redis_client = None
 
     return _redis_client
 
 
+def _disable_redis(exc: Exception) -> None:
+    """Stop using an unreachable Redis so requests don't keep paying the timeout."""
+    global _redis_client
+    if _redis_client is not None:
+        logger.warning("Redis error (%s) — switching to MongoDB security store.", exc)
+    _redis_client = None
+
+
+async def _get_mongo_collection(name: str):
+    """Return a MongoDB collection for the security store, or None if the DB is down."""
+    global _mongo_indexes_ready
+    try:
+        from app.core.database import get_collection
+        col = get_collection(name)
+        if not _mongo_indexes_ready:
+            # TTL indexes: MongoDB deletes entries once `expires_at` has passed
+            await get_collection(_REVOKED_COLLECTION).create_index("expires_at", expireAfterSeconds=0)
+            await get_collection(_RATE_LIMIT_COLLECTION).create_index("expires_at", expireAfterSeconds=0)
+            _mongo_indexes_ready = True
+        return col
+    except Exception as exc:
+        logger.warning("MongoDB security store unavailable (%s) — memory fallback.", exc)
+        return None
+
+
+def _as_utc(dt: datetime) -> datetime:
+    """MongoDB returns naive UTC datetimes — make them timezone-aware."""
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
 # ── Token Revocation Blacklist ────────────────────────────────────────────────
 
-_REVOKED_TOKENS: dict[str, float] = {}  # jti -> unix expiry timestamp (memory fallback)
+_REVOKED_TOKENS: dict[str, float] = {}  # jti -> unix expiry timestamp (local cache / fallback)
 _REVOKED_LOCK = Lock()
 
 
@@ -128,10 +168,8 @@ def _prune_revoked_tokens() -> None:
             del _REVOKED_TOKENS[jti]
 
 
-def revoke_token(jti: str, expires_at: float | None = None) -> None:
-    """Add a JWT ID to the revocation blacklist.
-
-    Uses Redis SETEX if available, otherwise in-memory dict.
+async def revoke_token(jti: str, expires_at: float | None = None) -> None:
+    """Add a JWT ID to the shared revocation blacklist.
 
     Args:
         jti: The JWT ID to revoke.
@@ -140,59 +178,65 @@ def revoke_token(jti: str, expires_at: float | None = None) -> None:
     """
     if expires_at is None:
         expires_at = time.time() + 30 * 24 * 3600
+    with _REVOKED_LOCK:
+        _REVOKED_TOKENS[jti] = expires_at
 
     redis = _get_redis()
     if redis is not None:
-        import asyncio
-        ttl = max(1, int(expires_at - time.time()))
-
-        async def _do_revoke():
-            try:
-                await redis.setex(f"blacklist:{jti}", ttl, "1")
-            except Exception as exc:
-                logger.warning("Redis revoke_token failed (%s) — memory fallback.", exc)
-                with _REVOKED_LOCK:
-                    _REVOKED_TOKENS[jti] = expires_at
-
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                asyncio.ensure_future(_do_revoke())
-            else:
-                loop.run_until_complete(_do_revoke())
-        except RuntimeError:
-            with _REVOKED_LOCK:
-                _REVOKED_TOKENS[jti] = expires_at
-    else:
-        with _REVOKED_LOCK:
-            _REVOKED_TOKENS[jti] = expires_at
+            await redis.setex(f"blacklist:{jti}", max(1, int(expires_at - time.time())), "1")
+            return
+        except Exception as exc:
+            _disable_redis(exc)
 
-
-def is_token_revoked(jti: str) -> bool:
-    """Sync check — falls back to memory if Redis unavailable."""
-    _prune_revoked_tokens()
-    return jti in _REVOKED_TOKENS
+    col = await _get_mongo_collection(_REVOKED_COLLECTION)
+    if col is not None:
+        try:
+            await col.update_one(
+                {"_id": jti},
+                {"$set": {"expires_at": datetime.fromtimestamp(expires_at, tz=timezone.utc)}},
+                upsert=True,
+            )
+        except Exception as exc:
+            logger.warning("revoke_token: MongoDB write failed (%s) — revoked locally only.", exc)
 
 
 async def is_token_revoked_async(jti: str) -> bool:
-    """Async check — uses Redis if available, otherwise memory."""
+    """True if the token was revoked on ANY instance (local cache, then shared store)."""
+    _prune_revoked_tokens()
+    if jti in _REVOKED_TOKENS:
+        return True
+
     redis = _get_redis()
     if redis is not None:
         try:
-            result = await redis.get(f"blacklist:{jti}")
-            return result is not None
+            return await redis.get(f"blacklist:{jti}") is not None
         except Exception as exc:
-            logger.warning("Redis is_token_revoked_async failed (%s) — memory fallback.", exc)
-    _prune_revoked_tokens()
-    return jti in _REVOKED_TOKENS
+            _disable_redis(exc)
+
+    col = await _get_mongo_collection(_REVOKED_COLLECTION)
+    if col is not None:
+        try:
+            doc = await col.find_one({"_id": jti})
+            # TTL cleanup runs periodically, so also check expiry explicitly
+            return bool(doc) and _as_utc(doc["expires_at"]) > datetime.now(timezone.utc)
+        except Exception as exc:
+            logger.warning("is_token_revoked_async: MongoDB read failed (%s).", exc)
+    return False
 
 
-# ── Redis Rate Limiter ────────────────────────────────────────────────────────
+# ── Login / Register Attempt Limiter ──────────────────────────────────────────
 
 _RATE_LIMIT_WINDOW_SECONDS = 900  # 15 minutes
 _MAX_ATTEMPTS = 5
 _rate_limit_store: dict[str, dict] = defaultdict(lambda: {"count": 0, "window_start": 0.0})
 _rate_limit_lock = Lock()
+
+
+def _limit_reached(count: int, record: bool) -> bool:
+    # After recording, the attempt that pushes past the limit is blocked; a
+    # read-only pre-check blocks once the limit has been used up.
+    return count > _MAX_ATTEMPTS if record else count >= _MAX_ATTEMPTS
 
 
 async def rate_limit_check(ip: str, *, scope: str = "login", record: bool = True) -> tuple[bool, int]:
@@ -204,10 +248,10 @@ async def rate_limit_check(ip: str, *, scope: str = "login", record: bool = True
     is counted once, not twice). Each scope (e.g. "login", "register") has its
     own counter so registrations don't use up the login budget.
     """
-    redis = _get_redis()
     now = time.time()
     store_key = ip if scope == "login" else f"{scope}:{ip}"
 
+    redis = _get_redis()
     if redis is not None:
         try:
             key = f"ratelimit:{store_key}"
@@ -217,12 +261,40 @@ async def rate_limit_check(ip: str, *, scope: str = "login", record: bool = True
                     await redis.expire(key, _RATE_LIMIT_WINDOW_SECONDS)
             else:
                 count = int(await redis.get(key) or 0)
-            if count > _MAX_ATTEMPTS or (not record and count >= _MAX_ATTEMPTS):
-                ttl = await redis.ttl(key)
-                return True, max(0, ttl)
+            if _limit_reached(count, record):
+                return True, max(0, await redis.ttl(key))
             return False, 0
         except Exception as exc:
-            logger.warning("Redis rate_limit_check failed (%s) — memory fallback.", exc)
+            _disable_redis(exc)
+
+    col = await _get_mongo_collection(_RATE_LIMIT_COLLECTION)
+    if col is not None:
+        try:
+            from pymongo import ReturnDocument
+            now_dt = datetime.now(timezone.utc)
+            doc_id = f"{scope}:{ip}"
+            if record:
+                # One atomic update: increment inside the current window, or
+                # start a new window if there is none / it has expired.
+                active = {"$gt": ["$expires_at", now_dt]}
+                doc = await col.find_one_and_update(
+                    {"_id": doc_id},
+                    [{"$set": {
+                        "count": {"$cond": [active, {"$add": ["$count", 1]}, 1]},
+                        "expires_at": {"$cond": [active, "$expires_at",
+                                                 now_dt + timedelta(seconds=_RATE_LIMIT_WINDOW_SECONDS)]},
+                    }}],
+                    upsert=True,
+                    return_document=ReturnDocument.AFTER,
+                )
+            else:
+                doc = await col.find_one({"_id": doc_id, "expires_at": {"$gt": now_dt}})
+            count = doc["count"] if doc else 0
+            if _limit_reached(count, record):
+                return True, max(0, int((_as_utc(doc["expires_at"]) - now_dt).total_seconds()))
+            return False, 0
+        except Exception as exc:
+            logger.warning("rate_limit_check: MongoDB failed (%s) — memory fallback.", exc)
 
     with _rate_limit_lock:
         record_ = _rate_limit_store[store_key]
@@ -231,23 +303,31 @@ async def rate_limit_check(ip: str, *, scope: str = "login", record: bool = True
             record_["window_start"] = now
         if record:
             record_["count"] += 1
-        if record_["count"] > _MAX_ATTEMPTS or (not record and record_["count"] >= _MAX_ATTEMPTS):
+        if _limit_reached(record_["count"], record):
             retry_after = int(_RATE_LIMIT_WINDOW_SECONDS - (now - record_["window_start"]))
             return True, max(0, retry_after)
         return False, 0
 
 
 async def rate_limit_clear(ip: str) -> None:
-    """Reset rate limit counter for IP after successful login."""
+    """Reset the login attempt counter for IP after a successful login."""
+    with _rate_limit_lock:
+        _rate_limit_store.pop(ip, None)
+
     redis = _get_redis()
     if redis is not None:
         try:
             await redis.delete(f"ratelimit:{ip}")
             return
         except Exception as exc:
-            logger.warning("Redis rate_limit_clear failed (%s) — memory fallback.", exc)
-    with _rate_limit_lock:
-        _rate_limit_store.pop(ip, None)
+            _disable_redis(exc)
+
+    col = await _get_mongo_collection(_RATE_LIMIT_COLLECTION)
+    if col is not None:
+        try:
+            await col.delete_one({"_id": f"login:{ip}"})
+        except Exception as exc:
+            logger.warning("rate_limit_clear: MongoDB failed (%s).", exc)
 
 
 # ── JWT Token Creation ────────────────────────────────────────────────────────
