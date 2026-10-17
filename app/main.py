@@ -106,18 +106,14 @@ async def startup_event():
     scheduler.start()
     logger.info("✅  Drip Campaign Scheduler started (Midnight IST)")
 
-    # SECURITY/RELIABILITY NOTE (bug #14): the JWT revocation blacklist,
-    # login rate limiter, and firewall ban store are all in-memory, per-process
-    # dicts. On serverless platforms (Vercel) — or any multi-worker deployment —
-    # each instance/worker has its own copy, so logout revocation, brute-force
-    # lockouts, and IP bans do NOT work consistently across instances.
-    # Recommended fix: back these stores with Redis (or another shared store).
+    # NOTE (bug #14): the JWT revocation blacklist and login/register limiter are
+    # shared across instances via MongoDB (Redis if configured) — see
+    # app/core/security.py. Only the firewall's general request throttle and IP
+    # bans are per-process, by design (no DB round-trip on every request).
     if os.environ.get("VERCEL") or (os.environ.get("WEB_CONCURRENCY", "1") != "1"):
-        logger.warning(
-            "⚠️   In-memory security state (JWT blacklist, login rate limiter, "
-            "firewall bans) is per-process and NOT shared across serverless "
-            "instances/workers — these protections are largely ineffective "
-            "in this deployment. Use Redis for shared state."
+        logger.info(
+            "🔒  Logout revocation and login lockouts are shared across instances; "
+            "the firewall request throttle is per-instance."
         )
 
 
