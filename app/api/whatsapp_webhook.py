@@ -44,6 +44,7 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.database import get_collection
 from app.services.nlp_service import process_debtor_reply
+from app.services.whatsapp_service import _normalize_phone
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,24 @@ def _normalise_phone(raw: str) -> list[str]:
     return candidates
 
 
+def _phone_regex(number: str) -> str:
+    """
+    Anchored regex matching exactly this phone number however the stored value is
+    formatted ("98765 43210", "+91-98765-43210", "09876543210"). For Indian
+    numbers the 91 country code / 0 trunk prefix is optional, mirroring
+    _normalize_phone; every other number must match in full — a matching
+    10-digit suffix from another country is not the same recipient.
+    Built only from digits, so it is safe to use as a $regex.
+    """
+    digits = _normalize_phone(number)
+    if not digits.isdigit():
+        return r"(?!)"  # matches nothing
+    sep = r"\D*"
+    if len(digits) == 12 and digits.startswith("91"):
+        return rf"^\D*(?:9{sep}1|0)?{sep}" + sep.join(digits[2:]) + r"\D*$"
+    return r"^\D*" + sep.join(digits) + r"\D*$"
+
+
 async def _find_invoice_by_phone(phone_candidates: list[str]) -> dict | None:
     """
     Find the most-recent non-recovered invoice whose phone matches any candidate.
@@ -117,11 +136,11 @@ async def _find_invoice_by_phone(phone_candidates: list[str]) -> dict | None:
         digits_only = "".join(c for c in candidate if c.isdigit())
         if len(digits_only) < 7:
             continue
-        # Match the last 10 digits of the stored phone
-        pattern = digits_only[-10:]
+        # Match the complete number, ignoring the stored phone's formatting
+        pattern = _phone_regex(digits_only)
         doc = await col.find_one(
             {
-                "phone": {"$regex": pattern, "$options": "i"},
+                "phone": {"$regex": pattern},
                 "recovered": {"$ne": True},
             },
             sort=[("_id", -1)],
@@ -435,16 +454,12 @@ async def send_whatsapp_message(
     if not payload.to_number.strip() or not payload.message.strip():
         raise HTTPException(status_code=400, detail="to_number and message are required.")
 
-    # Sanitise number — digits only
-    clean_number = "".join(c for c in payload.to_number if c.isdigit() or c == "+")
+    # International format with country code (WhatsApp can't deliver without one)
+    clean_number = _normalize_phone(payload.to_number)
 
-    # Verify phone belongs to user's invoices.
-    # Build the regex from digits-only (last 10 digits), same as
-    # _find_invoice_by_phone, and escape it before use as a $regex.
-    digits_only = "".join(c for c in payload.to_number if c.isdigit())
-    last10 = digits_only[-10:]
+    # Verify the exact number belongs to one of the user's invoices
     inv_col = get_collection(INVOICES_COLLECTION)
-    owner_query = {"phone": {"$regex": re.escape(last10), "$options": "i"}}
+    owner_query = {"phone": {"$regex": _phone_regex(clean_number)}}
     if current_user.get("email") not in settings.admin_emails_list:
         owner_query["owner_id"] = current_user.get("_id")
     matching_inv = await inv_col.find_one(owner_query)

@@ -14,6 +14,7 @@ so MSME debtors who communicate in regional dialects receive culturally
 appropriate responses.
 """
 import logging
+import re
 
 from google import genai
 from google.genai import types
@@ -49,9 +50,61 @@ def _get_client():
 
 # ── Prompt templates ──────────────────────────────────────────────────────────
 _SYSTEM_INSTRUCTION = """\
-You are an elite debt recovery agent. Draft a complete, full-length [WhatsApp/Email/Legal] message. Tone: {tone}. If the invoice is 45+ days overdue, strictly use the MSMED Act 2006 penalties as leverage.
-IMPORTANT: You MUST generate the entire message. This includes the Subject Line, greeting, the complete body explaining the situation and consequences, and a professional sign-off. DO NOT stop after generating the subject line.
+You are RecoverAI's debt-recovery agent for Indian MSME businesses. Draft the message the user asks for. Tone: {tone}.
+{channel_rules}
+Always:
+- Include the invoice number, amount and due date.
+- If the invoice is 45+ days overdue, cite the MSMED Act 2006 interest penalty as leverage.
+- Offer a payment arrangement path; never use abusive or threatening language beyond the requested tone.
+- Output only the message itself — no labels such as "Channel:", "Tone:" or "Message:", and no commentary.
+- Write the complete message through to the sign-off; never stop after an opening line.
 """
+
+_CHANNEL_RULES = {
+    "whatsapp": "Channel: WhatsApp. Write a short conversational chat message (3-6 lines), warm but firm; "
+                "\"ji\" and \"sir/madam\" are fine. Do NOT include a subject line or email formatting.",
+    "email": "Channel: Email. Start with a single \"Subject:\" line, then greeting, body and signature.",
+    "legal": "Channel: Legal notice. Formal letter citing MSMED Act 2006 Sections 15-17 with a 15-day "
+             "ultimatum. Start with a \"Subject:\" line.",
+}
+_DEFAULT_CHANNEL_RULES = ("Use the format of the channel named in the request: WhatsApp messages are short "
+                          "and have no subject line; emails and legal notices start with a \"Subject:\" line.")
+
+# Lines models sometimes prepend despite instructions — removed from WhatsApp drafts
+_META_LINE = re.compile(r"^\s*(\*\*)?\s*(subject|channel|tone|message type)\s*:.*$", re.IGNORECASE)
+
+
+_CHANNEL_KEYWORDS = {
+    "whatsapp": ("whatsapp",),
+    "email": ("email", "e-mail"),
+    "legal": ("legal notice", "letter before action"),
+}
+
+
+def _infer_channel(prompt: str) -> str | None:
+    """
+    Infer the requested format from the request text. Requests name their format
+    first ("WhatsApp message for…", "Professional email to…", "Draft a formal
+    Legal Notice…"), so the earliest mention wins — "an email about the legal
+    notice" is an email, not a legal notice.
+    """
+    text = (prompt or "").lower()
+    positions = {
+        channel: min((i for i in (text.find(k) for k in keywords) if i >= 0), default=-1)
+        for channel, keywords in _CHANNEL_KEYWORDS.items()
+    }
+    found = {c: i for c, i in positions.items() if i >= 0}
+    return min(found, key=found.get) if found else None
+
+
+def _clean_for_channel(text: str, channel: str | None) -> str:
+    """WhatsApp drafts must start with the message itself, not Subject/Channel lines."""
+    if channel != "whatsapp":
+        return text
+    lines = text.strip().splitlines()
+    while lines and (not lines[0].strip() or _META_LINE.match(lines[0])):
+        lines.pop(0)
+    return "\n".join(lines).strip()
 
 # ── Transient error check ────────────────────────────────────────────────────
 _TRANSIENT_SIGNALS = ("429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE", "overloaded", "empty response")
@@ -60,10 +113,11 @@ def _is_transient(err: str) -> bool:
     return any(sig in err for sig in _TRANSIENT_SIGNALS)
 
 
-def _build_config(tone: str) -> types.GenerateContentConfig:
+def _build_config(tone: str, channel: str | None = None) -> types.GenerateContentConfig:
     """Shared GenerateContentConfig to avoid repetition."""
     return types.GenerateContentConfig(
-        system_instruction=_SYSTEM_INSTRUCTION.format(tone=tone),
+        system_instruction=_SYSTEM_INSTRUCTION.format(
+            tone=tone, channel_rules=_CHANNEL_RULES.get(channel, _DEFAULT_CHANNEL_RULES)),
         temperature=0.7,
         max_output_tokens=8192,
         safety_settings=[
@@ -83,7 +137,7 @@ def _build_config(tone: str) -> types.GenerateContentConfig:
     )
 
 
-async def generate_message(prompt: str, invoice_data: dict, tone: str) -> str:
+async def generate_message(prompt: str, invoice_data: dict, tone: str, channel: str | None = None) -> str:
     """
     Call Gemini and return the generated recovery message text.
 
@@ -98,13 +152,13 @@ async def generate_message(prompt: str, invoice_data: dict, tone: str) -> str:
     import json
     import asyncio
 
-    logger.info("Calling Gemini %s | tone: %s", MODEL, tone)
+    channel = channel or _infer_channel(prompt)
+    logger.info("Calling Gemini %s | tone: %s | channel: %s", MODEL, tone, channel)
 
     context_prompt = (
         f"INVOICE CONTEXT:\n{json.dumps(invoice_data, indent=2)}\n\n"
         f"REQUESTED MESSAGE DRAFT:\n{prompt}\n\n"
-        "CRITICAL: Output the entire complete letter/email from start to finish. "
-        "Include the full body and sign-off."
+        "Output the complete message from start to finish, including the sign-off."
     )
 
     async def _call(model: str) -> str:
@@ -112,7 +166,7 @@ async def generate_message(prompt: str, invoice_data: dict, tone: str) -> str:
         response = await client.aio.models.generate_content(
             model=model,
             contents=context_prompt,
-            config=_build_config(tone),
+            config=_build_config(tone, channel),
         )
         text = response.text
         if not text:
@@ -120,7 +174,7 @@ async def generate_message(prompt: str, invoice_data: dict, tone: str) -> str:
             # (e.g. a safety block) — treat as a transient failure so the
             # caller retries/falls back instead of returning null to the client.
             raise RuntimeError(f"Gemini ({model}) returned an empty response (possible safety block).")
-        return text
+        return _clean_for_channel(text, channel)
 
     # ── Attempt 1: primary model ──────────────────────────────────────────────
     try:

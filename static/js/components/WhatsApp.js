@@ -81,7 +81,7 @@ function WhatsAppIntegration({ invoices, settings, token }) {
     }
 
     const inv = invoices.find(i => i.id === selectedInvoice);
-    const toPhone = (inv?.phone || "").replace(/\D/g, '');
+    const toPhone = toWhatsAppNumber(inv?.phone);
 
     if (!toPhone) {
       alert(`The selected debtor (${inv?.company}) does not have a valid phone number recorded.`);

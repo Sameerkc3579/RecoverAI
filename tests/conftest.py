@@ -78,7 +78,7 @@ async def db():
 @pytest.fixture(autouse=True)
 def no_external_ai(monkeypatch):
     """Mock every AI entry point; make the real Gemini clients unusable."""
-    async def fake_generate(prompt, invoice_data, tone):
+    async def fake_generate(prompt, invoice_data, tone, channel=None):
         return f"[{tone}] Reminder for {invoice_data.get('company', 'customer')}"
 
     async def fake_reply(text):

@@ -38,7 +38,8 @@ async def generate_message(
     Requires a valid JWT — unauthenticated callers receive HTTP 401.
     """
     try:
-        text = await ai_generate_message(payload.prompt, payload.invoice_data or {}, payload.tone)
+        text = await ai_generate_message(payload.prompt, payload.invoice_data or {}, payload.tone,
+                                         channel=payload.channel)
     except Exception as exc:
         logger.error("AI generation failed: %s", exc)
         raise HTTPException(status_code=502, detail="AI service temporarily unavailable. Please try again.")
@@ -63,7 +64,8 @@ async def bulk_generate_messages(
 
     async def process_one(payload: PromptRequest) -> dict:
         try:
-            return {"message": await ai_generate_message(payload.prompt, payload.invoice_data or {}, payload.tone)}
+            return {"message": await ai_generate_message(payload.prompt, payload.invoice_data or {}, payload.tone,
+                                                         channel=payload.channel)}
         except Exception as exc:
             logger.error("AI generation failed: %s", exc)
             return {"error": "AI generation failed for this item.", "message": None}
