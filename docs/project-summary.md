@@ -6,11 +6,11 @@ This document serves as a complete record of the architecture, features, securit
 A comprehensive security audit of the FastAPI backend was conducted, resulting in several critical patches to ensure production-grade security.
 
 ### A. Authentication & Access Control (`app/api/auth.py`)
-*   **Brute Force Protection:** IP-based limiter that locks out an IP after 5 failed login attempts within a 15-minute window. Counters live in MongoDB (Redis if configured), so the lockout holds across every serverless instance.
+*   **Brute Force Protection:** IP-based limiter that locks out an IP after 5 failed login attempts within a 15-minute window. Counters are stored in MongoDB (Redis if configured), so the lockout holds across serverless instances; only if the database is unreachable does the limiter fall back to per-instance memory.
 *   **IP Spoofing Prevention:** Hardened the client IP extraction logic to safely parse the `X-Forwarded-For` header by resolving the rightmost public IP, mitigating proxy IP spoofing.
 *   **No User Enumeration:** Standardized authentication error messages to prevent attackers from determining if an email exists in the system.
 *   **Strong Password Policy:** Enforced strict password strength requirements (min 8 chars, uppercase, lowercase, numbers, special characters) via `app/core/security.py`.
-*   **Secure Logout & Token Revocation:** JWT ID (`jti`) blacklist stored in MongoDB with a TTL index, so a logged-out token is rejected by every instance immediately.
+*   **Secure Logout & Token Revocation:** JWT IDs (`jti`) are cached locally and persisted to MongoDB with a TTL index; once that write succeeds, every instance rejects the logged-out token.
 *   **Endpoint Protection:** Secured previously open AI and Webhook endpoints (`/api/generate-message`, `/api/bulk-generate`, `/api/debtor-reply`) by enforcing strict JWT authentication (`get_current_user`).
 
 ### B. NoSQL Injection Prevention (`app/api/invoices.py`, `app/api/admin.py`)

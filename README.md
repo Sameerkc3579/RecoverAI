@@ -83,7 +83,7 @@ flowchart LR
 ## 🔒 Security
 
 - **Sessions in HttpOnly cookies** — short-lived access tokens (15 min) plus refresh tokens; JavaScript never sees a token.
-- **Logout and brute-force protection that hold across instances** — revoked tokens and failed-login counters live in MongoDB, so every serverless instance enforces them (5 failures → 15-minute lockout, no user enumeration).
+- **Logout and brute-force protection that hold across instances** — revoked tokens and failed-login counters are stored in MongoDB, so every serverless instance enforces them (5 failures → 15-minute lockout, no user enumeration); per-instance memory is only a fallback if the database is unreachable.
 - **Firewall middleware** — per-tier rate limits (auth / webhook / general), SQLi/XSS/path-traversal pattern blocking and honeypot paths that ban scanners.
 - **Uploads** — extension and MIME allowlists, magic-byte content checks, size limit, random filenames.
 - **SSRF protection** for website enrichment, **NoSQL-injection** sanitising of update payloads, **signed webhooks** (WhatsApp HMAC), **sender authentication** for ingested email.
