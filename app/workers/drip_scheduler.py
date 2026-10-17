@@ -264,6 +264,7 @@ async def run_daily_drips(time_budget_seconds: Optional[float] = None) -> dict:
     users = [user async for user in cursor]
 
     drafted = 0
+    failed_users = 0
     stopped_early = False
     # Run 5 users concurrently to be safe
     chunk_size = 5
@@ -275,9 +276,15 @@ async def run_daily_drips(time_budget_seconds: Optional[float] = None) -> dict:
         results = await asyncio.gather(
             *(process_drip_for_user(u, deadline) for u in chunk), return_exceptions=True
         )
-        drafted += sum(r for r in results if isinstance(r, int))
+        for user, r in zip(chunk, results):
+            if isinstance(r, BaseException):
+                failed_users += 1
+                logger.error(f"Drip run failed for user {user.get('_id')}: {r!r}")
+            else:
+                drafted += r
     if deadline is not None and time.monotonic() > deadline:
         stopped_early = True
 
     logger.info("Completed midnight Drip Campaign Engine run.")
-    return {"users": len(users), "drafted": drafted, "stopped_early": stopped_early}
+    return {"users": len(users), "drafted": drafted, "failed_users": failed_users,
+            "stopped_early": stopped_early}

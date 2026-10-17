@@ -64,6 +64,9 @@ async def test_inbound_reply_matches_formatted_stored_phone(db):
     ("WhatsApp message for Ravi at Acme", "whatsapp"),
     ("Professional follow-up email to Ravi", "email"),
     ("Draft a complete formal MSME Legal Notice / Letter Before Action", "legal"),
+    ("Draft a formal Legal Notice for: ... Email: owner@acme.test", "legal"),
+    ("Professional email to Ravi about the pending legal notice", "email"),  # format named first wins
+    ("WhatsApp message for Ravi. Notice: payment overdue", "whatsapp"),
     ("Payment reminder", None),
 ])
 def test_ai_channel_inferred_from_request(prompt, channel):
@@ -100,6 +103,49 @@ async def test_generate_message_strips_meta_lines_for_whatsapp(monkeypatch):
 
     email = await ai.generate_message("Professional follow-up email to Ravi", {}, "Friendly")
     assert email.startswith("Subject: Overdue invoice")
+
+
+async def test_explicit_channel_overrides_inference(user_client, monkeypatch):
+    import app.api.chat as chat
+    seen = []
+
+    async def capture(prompt, invoice_data, tone, channel=None):
+        seen.append(channel)
+        return "ok"
+
+    monkeypatch.setattr(chat, "ai_generate_message", capture)
+    r = await user_client.post("/api/generate-message", json={"prompt": "Legal notice summary", "channel": "email"})
+    assert r.status_code == 200 and seen == ["email"]
+    bad = await user_client.post("/api/generate-message", json={"prompt": "x", "channel": "sms"})
+    assert bad.status_code == 422
+
+
+async def test_send_blocked_for_same_suffix_in_another_country(user_client, monkeypatch):
+    """A +44 number ending in the same 10 digits is a different recipient."""
+    from app.api import whatsapp_webhook
+
+    async def fake_send(to_number, text):
+        return True
+
+    monkeypatch.setattr(whatsapp_webhook, "_send_whatsapp_reply", fake_send)
+    await user_client.post("/api/invoices", json={**INVOICE, "phone": "+44 71234-56789"})
+    other = await user_client.post("/api/whatsapp/send", json={"to_number": "+91 7123456789", "message": "hi"})
+    assert other.status_code == 403
+    same = await user_client.post("/api/whatsapp/send", json={"to_number": "+44 7123456789", "message": "hi"})
+    assert same.status_code == 200
+
+
+async def test_send_blocked_for_indian_suffix_from_abroad(user_client, monkeypatch):
+    """The reverse direction: an Indian debtor's 10 digits under +44 is someone else."""
+    from app.api import whatsapp_webhook
+
+    async def fake_send(to_number, text):
+        return True
+
+    monkeypatch.setattr(whatsapp_webhook, "_send_whatsapp_reply", fake_send)
+    await user_client.post("/api/invoices", json={**INVOICE, "phone": "+91 70000 12345"})
+    assert (await user_client.post("/api/whatsapp/send", json={"to_number": "+44 7000012345", "message": "hi"})).status_code == 403
+    assert (await user_client.post("/api/whatsapp/send", json={"to_number": "7000012345", "message": "hi"})).status_code == 200
 
 
 async def test_whatsapp_token_falls_back_to_legacy_name(monkeypatch):

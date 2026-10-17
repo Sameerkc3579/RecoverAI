@@ -9,7 +9,7 @@ SECURITY RULES:
 """
 import os
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -80,7 +80,7 @@ class Settings(BaseSettings):
     cron_secret: str = ""
     # Seconds of work per cron run before it stops starting new reminders; keep it
     # below the function's max duration (Vercel → Settings → Functions).
-    cron_time_budget_seconds: int = 50
+    cron_time_budget_seconds: int = Field(default=50, gt=0)
 
     # ── Redis (optional — for multi-worker rate limiting & token blacklist) ──────
     # Leave blank to use the safe in-memory fallback (single-worker only).

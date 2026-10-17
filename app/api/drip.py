@@ -1,5 +1,6 @@
 import hmac
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -109,8 +110,11 @@ async def cron_run_drips(request: Request):
     # Clear a lock left by a run that was killed before finishing
     await runs_col.delete_one({"_id": run_id, "finished_at": {"$exists": False},
                                "started_at": {"$lt": now - _STALE_RUN_AFTER}})
+    # Ownership token: if this run is ever reclaimed as stale, it must not
+    # delete or complete the lock that now belongs to the newer run.
+    owner = {"_id": run_id, "token": uuid.uuid4().hex}
     try:
-        await runs_col.insert_one({"_id": run_id, "started_at": now})
+        await runs_col.insert_one({**owner, "started_at": now})
     except DuplicateKeyError:
         return {"status": "skipped", "reason": "already ran today"}
 
@@ -118,11 +122,17 @@ async def cron_run_drips(request: Request):
         result = await run_daily_drips(time_budget_seconds=settings.cron_time_budget_seconds)
     except Exception:
         logger.exception("CRON_DRIPS_FAILED | %s — releasing the lock so it can be retried", run_id)
-        await runs_col.delete_one({"_id": run_id})
+        await runs_col.delete_one(owner)
         raise HTTPException(status_code=500, detail="Drip run failed")
 
+    if result.get("failed_users"):
+        # Per-step idempotency makes a retry safe; keep the day retryable
+        logger.error("CRON_DRIPS_PARTIAL | %s | %s — releasing the lock so it can be retried", run_id, result)
+        await runs_col.delete_one(owner)
+        return {"status": "partial", **result}
+
     await runs_col.update_one(
-        {"_id": run_id},
+        owner,
         {"$set": {"finished_at": datetime.now(timezone.utc), **result}},
     )
     logger.info("CRON_DRIPS | %s | %s", run_id, result)

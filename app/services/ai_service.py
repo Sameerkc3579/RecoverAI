@@ -74,16 +74,27 @@ _DEFAULT_CHANNEL_RULES = ("Use the format of the channel named in the request: W
 _META_LINE = re.compile(r"^\s*(\*\*)?\s*(subject|channel|tone|message type)\s*:.*$", re.IGNORECASE)
 
 
+_CHANNEL_KEYWORDS = {
+    "whatsapp": ("whatsapp",),
+    "email": ("email", "e-mail"),
+    "legal": ("legal notice", "letter before action"),
+}
+
+
 def _infer_channel(prompt: str) -> str | None:
-    """Infer the channel from the request text ("WhatsApp message for…", "Professional email…")."""
+    """
+    Infer the requested format from the request text. Requests name their format
+    first ("WhatsApp message for…", "Professional email to…", "Draft a formal
+    Legal Notice…"), so the earliest mention wins — "an email about the legal
+    notice" is an email, not a legal notice.
+    """
     text = (prompt or "").lower()
-    if "legal notice" in text or "letter before action" in text:
-        return "legal"
-    if "whatsapp" in text:
-        return "whatsapp"
-    if "email" in text or "e-mail" in text:
-        return "email"
-    return None
+    positions = {
+        channel: min((i for i in (text.find(k) for k in keywords) if i >= 0), default=-1)
+        for channel, keywords in _CHANNEL_KEYWORDS.items()
+    }
+    found = {c: i for c, i in positions.items() if i >= 0}
+    return min(found, key=found.get) if found else None
 
 
 def _clean_for_channel(text: str, channel: str | None) -> str:

@@ -179,6 +179,46 @@ async def test_crashed_cron_run_releases_the_day(db, drip_user, new_client, cron
     assert (await c.get("/api/cron/drips", headers=CRON_AUTH)).json()["status"] == "ok"
 
 
+async def test_failed_users_keep_the_day_retryable(db, drip_user, new_client, cron_secret, monkeypatch):
+    """A user whose whole run fails must not let the day be marked finished."""
+    async def user_fails(user, deadline=None):
+        raise RuntimeError("cursor died")
+
+    monkeypatch.setattr(drip, "process_drip_for_user", user_fails)
+    c = new_client()
+    first = (await c.get("/api/cron/drips", headers=CRON_AUTH)).json()
+    assert first["status"] == "partial" and first["failed_users"] >= 1
+    monkeypatch.undo()
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "cron_secret", "s3cret-value")
+    assert (await c.get("/api/cron/drips", headers=CRON_AUTH)).json()["status"] == "ok"
+
+
+async def test_reclaimed_run_cannot_touch_the_new_lock(db, drip_user, new_client, cron_secret, monkeypatch):
+    """If a slow run is reclaimed, finishing it must not complete the newer run's lock."""
+    import app.api.drip as drip_api
+    from app.api.drip import _IST
+    runs = db.get_collection("cron_runs")
+    run_id = f"drips:{datetime.now(_IST).date().isoformat()}"
+
+    async def slow_run_that_gets_reclaimed(**_kw):
+        await runs.replace_one({"_id": run_id}, {"_id": run_id, "token": "newer-run",
+                                                 "started_at": datetime.now(timezone.utc)})
+        return {"users": 0, "drafted": 0, "failed_users": 0, "stopped_early": False}
+
+    monkeypatch.setattr(drip_api, "run_daily_drips", slow_run_that_gets_reclaimed)
+    await new_client().get("/api/cron/drips", headers=CRON_AUTH)
+    lock = await runs.find_one({"_id": run_id})
+    assert lock["token"] == "newer-run" and "finished_at" not in lock
+
+
+def test_cron_time_budget_must_be_positive():
+    from pydantic import ValidationError
+    from app.core.config import Settings
+    with pytest.raises(ValidationError):
+        Settings(cron_time_budget_seconds=0)
+
+
 async def test_killed_cron_run_can_be_retried(db, drip_user, new_client, cron_secret):
     """A run killed by the platform timeout never finishes; after 15 min it may run again."""
     from app.api.drip import _IST
