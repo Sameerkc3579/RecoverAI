@@ -77,28 +77,32 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
 # ── Shared security store ─────────────────────────────────────────────────────
 # Logout revocations and login/register attempt counters must be shared by every
 # worker / serverless instance, or they silently stop working (a token revoked on
-# one instance stays valid on the others). Backends, in order:
-#   1. Redis    — if REDIS_URL is set AND reachable (disabled after first failure)
-#   2. MongoDB  — always available in this app; entries auto-expire via TTL indexes
-#   3. Memory   — last-resort fallback if the database is unreachable
-# The in-memory blacklist is also kept as a fast local cache.
+# one instance stays valid on the others).
+#   • Revocations: MongoDB is the single source of truth (TTL-indexed), so every
+#     instance always sees every revocation; memory is only a local cache.
+#   • Attempt limiter: Redis if REDIS_URL is set and reachable, else MongoDB,
+#     else memory. A failing Redis is retried with backoff, never dropped for good.
 
 _REVOKED_COLLECTION = "revoked_tokens"
 _RATE_LIMIT_COLLECTION = "auth_rate_limits"
 
 _redis_client = None
-_redis_checked = False
+_redis_unusable = False        # permanently off: not configured / not installed
+_redis_retry_at = 0.0          # temporarily off after an error, until this time
+_redis_backoff = 30.0          # seconds; doubles per consecutive failure (max 10 min)
 _mongo_indexes_ready = False
 
 
 def _get_redis():
-    """Return a Redis client, or None if not configured / previously failed."""
-    global _redis_client, _redis_checked
-    if _redis_checked:
+    """Return a Redis client, or None if not configured or cooling down after an error."""
+    global _redis_client, _redis_unusable
+    if _redis_client is not None:
         return _redis_client
-    _redis_checked = True
+    if _redis_unusable or time.time() < _redis_retry_at:
+        return None
 
     if not settings.redis_url:
+        _redis_unusable = True
         return None
 
     # A serverless instance never has a local Redis — skip the doomed connect
@@ -106,6 +110,7 @@ def _get_redis():
     from urllib.parse import urlparse
     if os.environ.get("VERCEL") and urlparse(settings.redis_url).hostname in ("localhost", "127.0.0.1", "::1"):
         logger.warning("REDIS_URL points to localhost on Vercel — ignoring it; using MongoDB security store.")
+        _redis_unusable = True
         return None
 
     try:
@@ -119,16 +124,24 @@ def _get_redis():
     except Exception as exc:
         logger.warning("Redis unavailable (%s) — using MongoDB security store.", exc)
         _redis_client = None
+        _redis_unusable = True
 
     return _redis_client
 
 
 def _disable_redis(exc: Exception) -> None:
-    """Stop using an unreachable Redis so requests don't keep paying the timeout."""
-    global _redis_client
-    if _redis_client is not None:
-        logger.warning("Redis error (%s) — switching to MongoDB security store.", exc)
+    """Pause an erroring Redis (backoff) so requests don't keep paying the timeout."""
+    global _redis_client, _redis_retry_at, _redis_backoff
+    logger.warning("Redis error (%s) — using MongoDB for %ds, then retrying Redis.", exc, _redis_backoff)
     _redis_client = None
+    _redis_retry_at = time.time() + _redis_backoff
+    _redis_backoff = min(_redis_backoff * 2, 600.0)
+
+
+def _redis_ok() -> None:
+    """Reset the backoff after a successful Redis call."""
+    global _redis_backoff
+    _redis_backoff = 30.0
 
 
 async def _get_mongo_collection(name: str):
@@ -181,14 +194,6 @@ async def revoke_token(jti: str, expires_at: float | None = None) -> None:
     with _REVOKED_LOCK:
         _REVOKED_TOKENS[jti] = expires_at
 
-    redis = _get_redis()
-    if redis is not None:
-        try:
-            await redis.setex(f"blacklist:{jti}", max(1, int(expires_at - time.time())), "1")
-            return
-        except Exception as exc:
-            _disable_redis(exc)
-
     col = await _get_mongo_collection(_REVOKED_COLLECTION)
     if col is not None:
         try:
@@ -202,17 +207,10 @@ async def revoke_token(jti: str, expires_at: float | None = None) -> None:
 
 
 async def is_token_revoked_async(jti: str) -> bool:
-    """True if the token was revoked on ANY instance (local cache, then shared store)."""
+    """True if the token was revoked on ANY instance (local cache, then MongoDB)."""
     _prune_revoked_tokens()
     if jti in _REVOKED_TOKENS:
         return True
-
-    redis = _get_redis()
-    if redis is not None:
-        try:
-            return await redis.get(f"blacklist:{jti}") is not None
-        except Exception as exc:
-            _disable_redis(exc)
 
     col = await _get_mongo_collection(_REVOKED_COLLECTION)
     if col is not None:
@@ -261,9 +259,10 @@ async def rate_limit_check(ip: str, *, scope: str = "login", record: bool = True
                     await redis.expire(key, _RATE_LIMIT_WINDOW_SECONDS)
             else:
                 count = int(await redis.get(key) or 0)
-            if _limit_reached(count, record):
-                return True, max(0, await redis.ttl(key))
-            return False, 0
+            reached = _limit_reached(count, record)
+            ttl = await redis.ttl(key) if reached else 0
+            _redis_ok()
+            return (True, max(0, ttl)) if reached else (False, 0)
         except Exception as exc:
             _disable_redis(exc)
 
@@ -318,6 +317,7 @@ async def rate_limit_clear(ip: str) -> None:
     if redis is not None:
         try:
             await redis.delete(f"ratelimit:{ip}")
+            _redis_ok()
             return
         except Exception as exc:
             _disable_redis(exc)
