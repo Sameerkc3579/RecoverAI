@@ -17,8 +17,9 @@ router = APIRouter(prefix="/api/drip-settings", tags=["Drip Campaigns"])
 cron_router = APIRouter(tags=["Cron"])
 
 _IST = timezone(timedelta(hours=5, minutes=30))
-# Serverless functions have a hard timeout — leave headroom below it
-_CRON_TIME_BUDGET_SECONDS = 50
+# A run whose lock is older than this without finishing was killed (e.g. by the
+# serverless timeout) and may be retried
+_STALE_RUN_AFTER = timedelta(minutes=15)
 
 # Only these day keys are valid — prevents NoSQL injection via arbitrary string keys
 ALLOWED_DRIP_DAYS = {"7", "21", "35", "45"}
@@ -87,22 +88,39 @@ async def cron_run_drips(request: Request):
     Daily drip run for serverless hosting (Vercel Cron — see vercel.json), where
     the in-process APScheduler never fires because no process stays alive.
 
-    Runs at most once per IST day (a MongoDB lock), so extra calls are harmless.
-    If CRON_SECRET is configured, the Vercel-sent bearer token is required.
+    Requires CRON_SECRET: Vercel sends "Authorization: Bearer <CRON_SECRET>" on
+    every cron call once the variable is set in the project. Without it the
+    endpoint is disabled rather than left open.
+
+    Runs at most once per IST day (a MongoDB lock). A run that raises releases the
+    lock so it can be retried; a run killed mid-way (no finished_at after 15 min)
+    is treated as crashed and may run again.
     """
-    if settings.cron_secret:
-        auth = request.headers.get("authorization", "")
-        if not hmac.compare_digest(auth.encode(), f"Bearer {settings.cron_secret}".encode()):
-            raise HTTPException(status_code=401, detail="Unauthorized")
+    if not settings.cron_secret:
+        logger.error("CRON_DRIPS_DISABLED | CRON_SECRET is not set — refusing /api/cron/drips")
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    auth = request.headers.get("authorization", "")
+    if not hmac.compare_digest(auth.encode(), f"Bearer {settings.cron_secret}".encode()):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
     runs_col = get_collection("cron_runs")
     run_id = f"drips:{datetime.now(_IST).date().isoformat()}"
+    now = datetime.now(timezone.utc)
+    # Clear a lock left by a run that was killed before finishing
+    await runs_col.delete_one({"_id": run_id, "finished_at": {"$exists": False},
+                               "started_at": {"$lt": now - _STALE_RUN_AFTER}})
     try:
-        await runs_col.insert_one({"_id": run_id, "started_at": datetime.now(timezone.utc)})
+        await runs_col.insert_one({"_id": run_id, "started_at": now})
     except DuplicateKeyError:
         return {"status": "skipped", "reason": "already ran today"}
 
-    result = await run_daily_drips(time_budget_seconds=_CRON_TIME_BUDGET_SECONDS)
+    try:
+        result = await run_daily_drips(time_budget_seconds=settings.cron_time_budget_seconds)
+    except Exception:
+        logger.exception("CRON_DRIPS_FAILED | %s — releasing the lock so it can be retried", run_id)
+        await runs_col.delete_one({"_id": run_id})
+        raise HTTPException(status_code=500, detail="Drip run failed")
+
     await runs_col.update_one(
         {"_id": run_id},
         {"$set": {"finished_at": datetime.now(timezone.utc), **result}},

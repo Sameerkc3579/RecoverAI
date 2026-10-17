@@ -1,7 +1,7 @@
 """
 Intent-classification eval for the debtor-reply NLP pipeline.
 
-Scores two classifiers on eval/intent_testset.jsonl (80 hand-labelled
+Scores two classifiers on eval/intent_testset.jsonl (80 labelled
 Hindi / Hinglish / English replies, 20 per intent):
   1. the Gemini pipeline (translate -> classify), via process_debtor_reply
   2. the keyword fallback alone, via _heuristic_classify on the raw text

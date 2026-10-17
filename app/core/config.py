@@ -74,9 +74,13 @@ class Settings(BaseSettings):
     webhook_secret: str = ""   # HMAC secret for verifying external webhook calls
 
     # ── Scheduled jobs (Vercel Cron) ──────────────────────────────────────────
-    # Optional. When set, GET /api/cron/drips requires "Authorization: Bearer <CRON_SECRET>"
-    # (Vercel Cron sends this automatically when CRON_SECRET is defined in the project).
+    # Required for GET /api/cron/drips: Vercel Cron sends "Authorization: Bearer
+    # <CRON_SECRET>" automatically once CRON_SECRET is defined in the project.
+    # Unset = the endpoint refuses every call.
     cron_secret: str = ""
+    # Seconds of work per cron run before it stops starting new reminders; keep it
+    # below the function's max duration (Vercel → Settings → Functions).
+    cron_time_budget_seconds: int = 50
 
     # ── Redis (optional — for multi-worker rate limiting & token blacklist) ──────
     # Leave blank to use the safe in-memory fallback (single-worker only).

@@ -24,7 +24,7 @@ RecoverAI helps small businesses get paid. It tracks overdue invoices, drafts re
 ## ✨ Features
 
 - **AI recovery messages** — Gemini drafts reminders in four tones (Friendly → Firm Warning → Final Notice → Legal Threat), singly or in bulk, with automatic model fallback when a model is overloaded.
-- **Debtor reply understanding** — replies are translated and classified as *promise to pay*, *dispute* or *stall* (Hindi/Hinglish/English), with a keyword fallback when the AI is unavailable. Evaluated on a hand-labelled test set in [`eval/`](eval/).
+- **Debtor reply understanding** — replies are translated and classified as *promise to pay*, *dispute* or *stall* (Hindi/Hinglish/English), with a keyword fallback when the AI is unavailable. Evaluated on a labelled test set in [`eval/`](eval/).
 - **Automated drip campaigns** — reminders are drafted at 7, 21, 35 and 45 days overdue, held for approval, never duplicated across workers, and caught up if a scheduled run is missed.
 - **MSMED Act compliance** — compound interest with monthly rests at three times the RBI bank rate (Section 15), shown per invoice and in the legal queue.
 - **One-click legal notices** — formal notices citing Sections 15–18, exported as PDF with amounts in Indian numbering and words.
@@ -142,7 +142,7 @@ TEST_MONGO_URI=mongodb://localhost:27017 pytest
 ## ☁️ Deployment (Vercel)
 
 1. Import the repository in Vercel — [`vercel.json`](vercel.json) routes all traffic to `app/main.py` and schedules the daily drip run (`/api/cron/drips`, 00:00 IST).
-2. Add the environment variables from [`.env.example`](.env.example) (`COOKIE_SECURE=true` in production). Optionally set `CRON_SECRET`; Vercel then authenticates its cron calls automatically.
+2. Add the environment variables from [`.env.example`](.env.example) (`COOKIE_SECURE=true` in production). Set `CRON_SECRET` (any long random string) — Vercel sends it with every cron call, and the drip endpoint refuses all calls without it. Keep `CRON_TIME_BUDGET_SECONDS` below the function's max duration.
 3. For inbound WhatsApp, set `WHATSAPP_WEBHOOK_SECRET` (your Meta App Secret) and point the Meta webhook at `/api/webhooks/whatsapp`.
 
 ---

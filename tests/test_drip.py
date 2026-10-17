@@ -13,17 +13,23 @@ def test_due_step_with_grace_window(days, step):
     assert drip._due_step(days) == step
 
 
-@pytest.mark.parametrize("raw, ok", [
-    ("+91 98765 43210", True), ("+91-98765-43210", True), ("(022) 2345 6789", True),
-    ("919876543210", True), ("abc", False), ("", False),
+@pytest.mark.parametrize("raw, expected", [
+    ("+91 98765 43210", "919876543210"), ("+91-98765-43210", "919876543210"),
+    ("9876543210", "919876543210"),       # bare 10 digits: WhatsApp needs the 91
+    ("09876543210", "919876543210"),      # trunk-prefixed
+    ("919876543210", "919876543210"), ("+1 (415) 555-0100", "14155550100"),
+    ("abc", None), ("", None),
 ])
-def test_formatted_phones_normalise(raw, ok):
-    """Regression: '+91 98765 43210' (the UI's own placeholder) used to be rejected."""
-    assert _validate_phone(_normalize_phone(raw)) is ok
+def test_phones_normalise_to_international_format(raw, expected):
+    """Regressions: formatted numbers were rejected; 10-digit numbers lacked the country code."""
+    normalised = _normalize_phone(raw)
+    assert _validate_phone(normalised) is (expected is not None)
+    if expected:
+        assert normalised == expected
 
 
 def _due(days):
-    return (datetime.now(timezone.utc).date() - timedelta(days=days)).strftime("%Y-%m-%d")
+    return (datetime.now(drip.IST).date() - timedelta(days=days)).strftime("%Y-%m-%d")
 
 
 @pytest.fixture
@@ -66,15 +72,37 @@ async def test_concurrent_runs_never_double_draft(db, drip_user):
 async def test_prompt_includes_due_date(db, drip_user, monkeypatch):
     seen = []
 
-    async def capture(prompt, invoice_data, tone):
-        seen.append((prompt, invoice_data, tone))
+    async def capture(prompt, invoice_data, tone, channel=None):
+        seen.append((prompt, invoice_data, tone, channel))
         return "msg"
 
     monkeypatch.setattr(drip, "generate_message", capture)
     await _invoice(db, drip_user, "Dated", 21)
     await drip.run_daily_drips()
-    prompt, ctx, tone = seen[0]
+    prompt, ctx, tone, channel = seen[0]
     assert ctx["due_date"] == _due(21) and _due(21) in prompt and tone == "Firm Warning"
+    assert channel == "whatsapp"
+
+
+async def test_days_overdue_counted_on_ist_date(db, drip_user, monkeypatch):
+    """Regression: at 00:15 IST (18:45 UTC the day before) steps fired a day late."""
+    real_now = datetime.now(drip.IST)
+    fixed = real_now.replace(hour=0, minute=15, second=0, microsecond=0)  # 00:15 IST
+
+    class FrozenDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fixed.astimezone(tz) if tz else fixed.replace(tzinfo=None)
+
+    monkeypatch.setattr(drip, "datetime", FrozenDatetime)
+    due = (fixed.date() - timedelta(days=7)).strftime("%Y-%m-%d")  # 7 days overdue in IST, 6 in UTC
+    await db.get_collection("invoices").insert_one({
+        "owner_id": drip_user, "company": "Midnight", "amount": 1000, "invoice_no": "M1",
+        "phone": "9876500002", "recovered": False, "due_date": due})
+    await drip.run_daily_drips()
+    drafts = await _drafts(db, drip_user)
+    assert [d["drip_day"] for d in drafts] == [7]
+    assert drafts[0]["contact_phone"] == "919876500002"  # country code added
 
 
 async def test_failed_generation_releases_claim(db, drip_user, monkeypatch):
@@ -106,21 +134,62 @@ async def test_time_budget_stops_new_work(db, drip_user):
     assert result["stopped_early"] and result["drafted"] == 0
 
 
-async def test_cron_endpoint_runs_once_per_day(db, drip_user, new_client):
+CRON_AUTH = {"Authorization": "Bearer s3cret-value"}
+
+
+@pytest.fixture
+def cron_secret(monkeypatch):
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "cron_secret", "s3cret-value")
+
+
+async def test_cron_endpoint_runs_once_per_day(db, drip_user, new_client, cron_secret):
     await _invoice(db, drip_user, "Cron", 7)
     c = new_client()
-    first = (await c.get("/api/cron/drips")).json()
-    second = (await c.get("/api/cron/drips")).json()
+    first = (await c.get("/api/cron/drips", headers=CRON_AUTH)).json()
+    second = (await c.get("/api/cron/drips", headers=CRON_AUTH)).json()
     assert first["status"] == "ok" and first["drafted"] == 1
     assert second == {"status": "skipped", "reason": "already ran today"}
 
 
-async def test_cron_secret_enforced_when_set(db, new_client, monkeypatch):
-    from app.core.config import settings
-    monkeypatch.setattr(settings, "cron_secret", "s3cret-value")
+async def test_cron_requires_the_secret(db, new_client, cron_secret):
     c = new_client()
     assert (await c.get("/api/cron/drips")).status_code == 401
     assert (await c.get("/api/cron/drips", headers={"Authorization": "Bearer wrong"})).status_code == 401
+
+
+async def test_cron_disabled_without_a_configured_secret(db, new_client, monkeypatch):
+    """Regression: with CRON_SECRET unset the endpoint used to be open to anyone."""
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "cron_secret", "")
+    assert (await new_client().get("/api/cron/drips")).status_code == 401
+
+
+async def test_crashed_cron_run_releases_the_day(db, drip_user, new_client, cron_secret, monkeypatch):
+    """Regression: an exception left the daily lock in place, losing the whole day."""
+    import app.api.drip as drip_api
+
+    async def boom(**_kw):
+        raise RuntimeError("database hiccup")
+
+    monkeypatch.setattr(drip_api, "run_daily_drips", boom)
+    c = new_client()
+    assert (await c.get("/api/cron/drips", headers=CRON_AUTH)).status_code == 500
+    monkeypatch.setattr(drip_api, "run_daily_drips", drip.run_daily_drips)
+    assert (await c.get("/api/cron/drips", headers=CRON_AUTH)).json()["status"] == "ok"
+
+
+async def test_killed_cron_run_can_be_retried(db, drip_user, new_client, cron_secret):
+    """A run killed by the platform timeout never finishes; after 15 min it may run again."""
+    from app.api.drip import _IST
+    run_id = f"drips:{datetime.now(_IST).date().isoformat()}"
+    runs = db.get_collection("cron_runs")
+    await runs.insert_one({"_id": run_id, "started_at": datetime.now(timezone.utc) - timedelta(hours=1)})
+    assert (await new_client().get("/api/cron/drips", headers=CRON_AUTH)).json()["status"] == "ok"
+    await runs.update_one({"_id": run_id}, {"$unset": {"finished_at": ""},
+                                            "$set": {"started_at": datetime.now(timezone.utc)}})
+    # a fresh, still-running lock is respected
+    assert (await new_client().get("/api/cron/drips", headers=CRON_AUTH)).json()["status"] == "skipped"
 
 
 async def test_drip_settings_api_rejects_injection(user_client):

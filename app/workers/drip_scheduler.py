@@ -19,6 +19,10 @@ DRIP_STEP_DAYS = (7, 21, 35, 45)
 # Steps are >= 10 days apart, so at most one step can match on a given day.
 DRIP_GRACE_DAYS = 3
 
+# Due dates are Indian calendar dates and the cron fires at 00:00 IST (18:30 UTC
+# the previous day) — days overdue must be counted on the IST date.
+IST = timezone(timedelta(hours=5, minutes=30))
+
 # A "processing" claim older than this belongs to a run that died mid-draft
 # (e.g. a serverless timeout) and may be reclaimed.
 STALE_CLAIM_AFTER = timedelta(minutes=30)
@@ -52,7 +56,7 @@ async def process_drip_for_user(user: dict, deadline: Optional[float] = None) ->
         "due_date": {"$exists": True, "$nin": [None, ""]}
     })
     
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(IST).date()
     
     sent_count = 0
     
@@ -176,7 +180,8 @@ async def process_drip_for_user(user: dict, deadline: Optional[float] = None) ->
             message_body = await generate_message(
                 prompt=prompt,
                 invoice_data=inv_ctx,
-                tone=tone
+                tone=tone,
+                channel="whatsapp",
             )
             
             if not message_body:
