@@ -35,7 +35,7 @@ Run directly:
     python -m app.workers.email_ingester
     python -m app.workers.email_ingester --dry-run   # read-only: no flags changed, no inserts
 
-Or via the scheduled task (see run_email_ingester.ps1):
+Or via the scheduled task (see scripts/windows/run_email_ingester.ps1):
     Every 15 minutes via Windows Task Scheduler.
 
 Environment variables (add to .env):
@@ -892,7 +892,7 @@ _LOCK_PATH = Path(tempfile.gettempdir()) / "recoverai_email_ingester.lock"
 def _acquire_run_lock():
     """
     Take an exclusive, non-blocking OS file lock so only one ingestion cycle
-    runs at a time (e.g. loop_email_ingester.ps1 and the scheduled task both
+    runs at a time (e.g. scripts/windows/loop_email_ingester.ps1 and the scheduled task both
     firing). Returns the open lock file, or None if another run holds it.
     The OS releases the lock automatically if the process dies.
     """

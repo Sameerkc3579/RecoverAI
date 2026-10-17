@@ -42,7 +42,6 @@ temp_settings.json
 /postcss.config.mjs
 /src/
 /public/
-.env.example
 
 # Local test files & logs
 logs/
@@ -57,11 +56,6 @@ test_auth_results.txt
 test_auth_output.txt
 repos.json
 
-# Dev/test scripts (should not ship to production)
+# Ad-hoc scratch scripts in the repo root (real tests live in tests/, tools in scripts/)
 /test_*.py
-demo_*.py
-fetch.py
-execute_nlp.py
-simulate_*.py
-start_ngrok_tunnel.py
-migrate_customers.py
+/demo_*.py

@@ -6,11 +6,11 @@ This document serves as a complete record of the architecture, features, securit
 A comprehensive security audit of the FastAPI backend was conducted, resulting in several critical patches to ensure production-grade security.
 
 ### A. Authentication & Access Control (`app/api/auth.py`)
-*   **Brute Force Protection:** Built an in-memory IP rate limiter that locks out IPs after 5 failed login attempts within a 15-minute window.
+*   **Brute Force Protection:** IP-based limiter that locks out an IP after 5 failed login attempts within a 15-minute window. Counters are stored in MongoDB (Redis if configured), so the lockout holds across serverless instances; only if the database is unreachable does the limiter fall back to per-instance memory.
 *   **IP Spoofing Prevention:** Hardened the client IP extraction logic to safely parse the `X-Forwarded-For` header by resolving the rightmost public IP, mitigating proxy IP spoofing.
 *   **No User Enumeration:** Standardized authentication error messages to prevent attackers from determining if an email exists in the system.
 *   **Strong Password Policy:** Enforced strict password strength requirements (min 8 chars, uppercase, lowercase, numbers, special characters) via `app/core/security.py`.
-*   **Secure Logout & Token Revocation:** Implemented an in-memory JWT ID (`jti`) blacklist to immediately invalidate access tokens upon logout.
+*   **Secure Logout & Token Revocation:** JWT IDs (`jti`) are cached locally and persisted to MongoDB with a TTL index; once that write succeeds, every instance rejects the logged-out token.
 *   **Endpoint Protection:** Secured previously open AI and Webhook endpoints (`/api/generate-message`, `/api/bulk-generate`, `/api/debtor-reply`) by enforcing strict JWT authentication (`get_current_user`).
 
 ### B. NoSQL Injection Prevention (`app/api/invoices.py`, `app/api/admin.py`)
@@ -43,7 +43,7 @@ The platform utilizes Google Gemini models for automated intent analysis and res
     2.  **Intent Classification:** Categorizes debtor responses into `promise_to_pay`, `dispute`, `stall`, or `unknown`.
     3.  **Action Suggestion:** Recommends precise follow-up actions based on intent.
 *   **Resilience & Heuristic Fallback:** Engineered a keyword-based fallback classifier. If the Gemini API hits a quota limit (HTTP 429) or overloads (HTTP 503), the system gracefully falls back to local Hindi/Hinglish keyword matching (e.g., "kal", "payment", "galat", "baad mein"), ensuring zero downtime.
-*   **Model Cascading:** Implemented an AI service strategy that attempts `gemini-2.0-flash`, retries on failure, cascades to `gemini-2.5-flash`, and finally to `gemini-1.5-flash` as a last resort.
+*   **Model Cascading:** The AI service tries `gemini-2.5-flash`, retries once on transient errors, cascades to `gemini-3.5-flash-lite`, and finally to the `gemini-flash-latest` alias as a last resort.
 *   **Bulk Generation:** Added features to concurrently draft context-aware WhatsApp messages for multiple invoices.
 
 ---

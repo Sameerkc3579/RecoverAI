@@ -9,7 +9,6 @@
         "includeFiles": [
           "dashboard.html",
           "static/**",
-          "RecoverAI_MVP.html",
           "landing-preview.html",
           "portal.html",
           "dist/index.html",
