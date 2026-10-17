@@ -245,6 +245,21 @@ async def test_duplicate_drip_draft_is_rejected(db, drip_user):
     result = await drip.run_daily_drips()
     drafts = await _drafts(db, drip_user)
     assert len(drafts) == 1 and drafts[0]["draft_reply"] == "first" and result["failed_invoices"] == 0
+    log = await db.get_collection("drip_log").find_one({"invoice_id": inv})
+    assert log["status"] == "drafted"  # not left 'processing' to be reclaimed and re-generated
+
+
+async def test_ai_call_limited_to_remaining_budget(db, drip_user, monkeypatch):
+    """One AI call must not run 90 s past the budget (the platform would kill the function)."""
+    async def hangs(*_a, **_k):
+        await asyncio.sleep(10)
+
+    monkeypatch.setattr(drip, "generate_message", hangs)
+    await _invoice(db, drip_user, "Budget", 7)
+    started = time.monotonic()
+    result = await drip.run_daily_drips(time_budget_seconds=1.5)
+    assert time.monotonic() - started < 5, "AI call ran past the time budget"
+    assert result["stopped_early"] and result["drafted"] == 0
 
 
 async def test_hung_ai_call_times_out_and_releases_claim(db, drip_user, monkeypatch):

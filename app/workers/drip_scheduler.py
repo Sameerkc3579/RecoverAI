@@ -183,9 +183,13 @@ async def process_drip_for_user(user: dict, deadline: Optional[float] = None) ->
             """
             
             # Bounded, so a hung AI call can't outlive its claim (STALE_CLAIM_AFTER)
+            # or run past the time budget the platform's timeout is sized for
+            ai_timeout = DRIP_AI_TIMEOUT_SECONDS
+            if deadline is not None:
+                ai_timeout = max(1.0, min(ai_timeout, deadline - time.monotonic()))
             message_body = await asyncio.wait_for(
                 generate_message(prompt=prompt, invoice_data=inv_ctx, tone=tone, channel="whatsapp"),
-                timeout=DRIP_AI_TIMEOUT_SECONDS,
+                timeout=ai_timeout,
             )
 
             if not message_body:
@@ -212,6 +216,8 @@ async def process_drip_for_user(user: dict, deadline: Optional[float] = None) ->
             except DuplicateKeyError:
                 logger.info(f"Day {step_day} draft for invoice {invoice_id} already exists — skipping")
                 claimed = False
+                # Mark the step done so no later run reclaims it and calls the AI again
+                await drip_log_col.update_one(log_filter, {"$set": {"status": "drafted"}})
                 continue
             claimed = False  # the draft exists — never release the claim now
 
