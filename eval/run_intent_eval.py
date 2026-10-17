@@ -11,7 +11,6 @@ Run from the project root:  python -m eval.run_intent_eval
 import asyncio
 import json
 import logging
-import time
 from collections import Counter
 from pathlib import Path
 
@@ -60,7 +59,7 @@ async def main():
         records.append({**r, "gemini": out["intent"], "keyword": heur[i],
                         "fallback": out.get("fallback_mode")})
         print(f"[{i + 1:2d}/{len(rows)}] gold={r['label']:15s} gemini={out['intent']:15s} keyword={heur[i]}")
-        time.sleep(DELAY_S)
+        await asyncio.sleep(DELAY_S)
 
     print(f"\nGemini calls that fell back to keywords: {fell_back}/{len(rows)}")
     summary = {

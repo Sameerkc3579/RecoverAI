@@ -298,10 +298,9 @@ async def upload_proof(
         )
 
     # Validate file magic bytes
-    file_header = await file.read(8)
+    file_header = await file.read(1024)
     await file.seek(0)
     MAGIC_BYTES = {
-        b'%PDF': 'application/pdf',
         b'\xff\xd8\xff': 'image/jpeg',
         b'\x89PNG': 'image/png',
     }
@@ -310,6 +309,12 @@ async def upload_proof(
         if file_header.startswith(magic):
             detected_type = mime
             break
+    # PDF spec allows the %PDF header anywhere in the first 1024 bytes
+    if detected_type is None and b'%PDF' in file_header:
+        detected_type = 'application/pdf'
+    if detected_type is None:
+        # Content isn't a real PDF/PNG/JPEG — never store unknown bytes
+        raise HTTPException(status_code=400, detail="File content does not match declared type.")
     # Normalize image/jpg <-> image/jpeg before comparing — magic bytes always
     # map JPEGs to "image/jpeg", but browsers/clients may declare "image/jpg".
     _JPEG_ALIASES = {"image/jpeg", "image/jpg"}

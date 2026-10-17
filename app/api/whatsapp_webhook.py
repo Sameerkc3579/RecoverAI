@@ -54,6 +54,11 @@ WA_MESSAGES_COLLECTION = "whatsapp_messages"
 INVOICES_COLLECTION = "invoices"
 
 
+def _wa_access_token() -> str:
+    """Meta access token — WHATSAPP_ACCESS_TOKEN, or the legacy WHATSAPP_API_TOKEN."""
+    return settings.whatsapp_access_token or settings.whatsapp_api_token
+
+
 # ── HMAC Verification ─────────────────────────────────────────────────────────
 
 def _verify_whatsapp_signature(raw_body: bytes, signature_header: str) -> bool:
@@ -135,7 +140,7 @@ async def _send_whatsapp_reply(to_number: str, text: str) -> bool:
     Silently skips if WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN missing.
     """
     phone_number_id = settings.whatsapp_phone_number_id
-    access_token = settings.whatsapp_access_token
+    access_token = _wa_access_token()
 
     if not phone_number_id or not access_token:
         logger.info("WA send skipped — WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_ACCESS_TOKEN not configured")
@@ -325,7 +330,7 @@ async def whatsapp_receive(request: Request):
                     auto_replies = {
                         "promise_to_pay": (
                             f"Thank you for confirming! We have noted your commitment to pay "
-                            f"₹{int(matched_invoice.get('amount', 0)):,} for invoice "
+                            f"₹{int(matched_invoice.get('amount') or 0):,} for invoice "
                             f"{matched_invoice.get('invoiceNo', '')}. "
                             f"We will follow up in 48 hours. — RecoverAI Collections"
                         ),
@@ -402,13 +407,13 @@ async def whatsapp_status(
         "verify_token_set": bool(settings.whatsapp_verify_token),
         "webhook_secret_set": bool(settings.whatsapp_webhook_secret),
         "phone_number_id_set": bool(settings.whatsapp_phone_number_id),
-        "access_token_set": bool(settings.whatsapp_access_token),
+        "access_token_set": bool(_wa_access_token()),
         "auto_reply_enabled": settings.whatsapp_auto_reply,
         "webhook_url_path": "/api/webhooks/whatsapp",
         "fully_configured": all([
             settings.whatsapp_verify_token,
             settings.whatsapp_phone_number_id,
-            settings.whatsapp_access_token,
+            _wa_access_token(),
         ]),
     }
 

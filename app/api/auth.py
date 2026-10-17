@@ -59,6 +59,8 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 USERS_COLLECTION = "users"
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+# Non-raising variant for endpoints that also accept the HttpOnly cookie
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def _get_client_ip(request: Request) -> str:
@@ -80,7 +82,7 @@ def _get_client_ip(request: Request) -> str:
     # Only honour X-Forwarded-For behind a trusted proxy. Without one, the header
     # is attacker-controlled: spoofing it would let an attacker bypass the login
     # brute-force limiter or frame a victim's IP. Fall back to the socket peer.
-    if not settings.trust_proxy_headers:
+    if not settings.proxy_headers_trusted:
         return request.client.host if request.client else "unknown"
 
     forwarded = request.headers.get("x-forwarded-for", "")
@@ -162,7 +164,7 @@ class AuthConfigResponse(BaseModel):
 async def register(payload: RegisterRequest, request: Request) -> RegisterResponse:
     """Create a new user account with enforced strong password policy."""
     client_ip = _get_client_ip(request)
-    exceeded, retry_after = await rate_limit_check(client_ip)
+    exceeded, retry_after = await rate_limit_check(client_ip, scope="register")
     if exceeded:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -225,8 +227,9 @@ async def login(
     """
     client_ip = _get_client_ip(request)
 
-    # Enforce rate limit BEFORE DB lookup (prevents timing-based enumeration too)
-    exceeded, retry_after = await rate_limit_check(client_ip)
+    # Enforce rate limit BEFORE DB lookup (prevents timing-based enumeration too).
+    # Read-only check — only failed attempts below are counted.
+    exceeded, retry_after = await rate_limit_check(client_ip, record=False)
     if exceeded:
         logger.warning(
             "RATE_LIMIT_TRIGGERED | ip=%s | retry_after=%ds", client_ip, retry_after
@@ -385,15 +388,26 @@ class LogoutBody(BaseModel):
     summary="Revoke current access token (logout)",
 )
 async def logout(
-    token: str = Depends(oauth2_scheme),
-    body: LogoutBody = LogoutBody(),
+    request: Request,
+    header_token: Optional[str] = Depends(optional_oauth2_scheme),
+    body: Optional[LogoutBody] = None,
 ) -> LogoutResponse:
     """
     Revokes the current JWT by adding its jti to the blacklist.
 
     After calling this endpoint, the token is immediately invalid —
     no attacker can reuse a stolen token after the user logs out.
+
+    The browser app authenticates with HttpOnly cookies (no Authorization
+    header), so tokens are read from the header OR the cookies.
     """
+    token = header_token or request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     try:
         payload = jwt.decode(
             token,
@@ -411,11 +425,15 @@ async def logout(
         pass  # Expired/invalid token — logout is a no-op, that's fine
 
     # Also revoke the refresh token if provided
-    body_refresh = getattr(body, 'refresh_token', None)
+    body_refresh = getattr(body, 'refresh_token', None) or request.cookies.get("refresh_token")
     if body_refresh:
         try:
             refresh_payload = jwt.decode(
-                body_refresh, settings.secret_key, algorithms=[settings.algorithm]
+                body_refresh,
+                settings.secret_key,
+                algorithms=[settings.algorithm],
+                audience=JWT_AUDIENCE,
+                issuer=JWT_ISSUER,
             )
             refresh_jti = refresh_payload.get("jti")
             refresh_exp = refresh_payload.get("exp")
@@ -450,7 +468,7 @@ def _set_auth_cookies(response: Response, access_token: str, refresh_token: str)
     response_model=TokenResponse,
     summary="Exchange refresh token for new access token",
 )
-async def refresh_access_token(payload: RefreshRequest) -> TokenResponse:
+async def refresh_access_token(request: Request, payload: Optional[RefreshRequest] = None) -> TokenResponse:
     """
     Issues a new access token given a valid, non-revoked refresh token.
 
@@ -467,9 +485,14 @@ async def refresh_access_token(payload: RefreshRequest) -> TokenResponse:
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+    # Body token (API clients) or the HttpOnly cookie (browser app)
+    refresh_token = payload.refresh_token if payload else request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise credentials_exception
+
     try:
         decoded = jwt.decode(
-            payload.refresh_token,
+            refresh_token,
             settings.secret_key,
             algorithms=[settings.algorithm],
             audience=JWT_AUDIENCE,

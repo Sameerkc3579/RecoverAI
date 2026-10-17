@@ -7,6 +7,8 @@ SECURITY RULES:
   - admin_emails loaded from env, not hardcoded in source
   - debug mode defaults to False (safe default)
 """
+import os
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -71,6 +73,11 @@ class Settings(BaseSettings):
     # ── Webhook Security ──────────────────────────────────────────────────────
     webhook_secret: str = ""   # HMAC secret for verifying external webhook calls
 
+    # ── Scheduled jobs (Vercel Cron) ──────────────────────────────────────────
+    # Optional. When set, GET /api/cron/drips requires "Authorization: Bearer <CRON_SECRET>"
+    # (Vercel Cron sends this automatically when CRON_SECRET is defined in the project).
+    cron_secret: str = ""
+
     # ── Redis (optional — for multi-worker rate limiting & token blacklist) ──────
     # Leave blank to use the safe in-memory fallback (single-worker only).
     # Example: REDIS_URL=redis://localhost:6379
@@ -101,6 +108,16 @@ class Settings(BaseSettings):
     def admin_emails_list(self) -> list[str]:
         """Return ADMIN_EMAILS as a parsed lowercase list."""
         return [e.strip().lower() for e in self.admin_emails.split(",") if e.strip()]
+
+    @property
+    def proxy_headers_trusted(self) -> bool:
+        """
+        Whether X-Forwarded-For carries the real client IP. True when
+        TRUST_PROXY_HEADERS is set, or automatically on Vercel: Vercel overwrites
+        X-Forwarded-For with the real client IP (no spoofed hops), and without it
+        every visitor appears as the proxy and shares one rate-limit bucket.
+        """
+        return self.trust_proxy_headers or bool(os.environ.get("VERCEL"))
 
     @property
     def is_production(self) -> bool:

@@ -27,12 +27,26 @@ function LoginScreen({ onLogin }) {
       } finally { setLoading(false); }
     };
 
+    // Poll until the Google script and container are ready, but give up after
+    // ~15s (e.g. script blocked) and stop when the component unmounts/tab changes.
+    let cancelled = false;
+    let retryTimer = null;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 50;
     const renderGoogleBtn = async () => {
+      if (cancelled) return;
       const container = document.getElementById('google-signin-btn-container');
-      if (!window.google || !container) { setTimeout(renderGoogleBtn, 300); return; }
+      if (!window.google || !container) {
+        if (++attempts < MAX_ATTEMPTS) { retryTimer = setTimeout(renderGoogleBtn, 300); }
+        else if (container) {
+          container.innerHTML = `<button type="button" class="btn btn-outline btn-lg" style="width:100%;justify-content:center" onclick="alert('Google Sign-In could not be loaded. Please refresh the page or use email login.')">Sign in with Google</button>`;
+        }
+        return;
+      }
       try {
         const configRes = await fetch('/api/auth/config');
         const config = await configRes.json();
+        if (cancelled) return;
         const clientId = config.google_client_id;
         container.innerHTML = '';
         if (clientId) {
@@ -44,6 +58,7 @@ function LoginScreen({ onLogin }) {
       } catch (e) { console.error('Failed to load auth config', e); }
     };
     if (tab === 'login') renderGoogleBtn();
+    return () => { cancelled = true; clearTimeout(retryTimer); };
   }, [tab]);
 
   async function handleLogin(e) {

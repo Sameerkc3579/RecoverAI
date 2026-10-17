@@ -195,18 +195,29 @@ _rate_limit_store: dict[str, dict] = defaultdict(lambda: {"count": 0, "window_st
 _rate_limit_lock = Lock()
 
 
-async def rate_limit_check(ip: str) -> tuple[bool, int]:
-    """Check if IP exceeded failed-login limit. Returns (exceeded, retry_after_seconds)."""
+async def rate_limit_check(ip: str, *, scope: str = "login", record: bool = True) -> tuple[bool, int]:
+    """
+    Check if IP exceeded the attempt limit. Returns (exceeded, retry_after_seconds).
+
+    record=True counts this call as an attempt; record=False only checks the
+    current count (used for the pre-check before a login, so one failed login
+    is counted once, not twice). Each scope (e.g. "login", "register") has its
+    own counter so registrations don't use up the login budget.
+    """
     redis = _get_redis()
     now = time.time()
+    store_key = ip if scope == "login" else f"{scope}:{ip}"
 
     if redis is not None:
         try:
-            key = f"ratelimit:{ip}"
-            count = await redis.incr(key)
-            if count == 1:
-                await redis.expire(key, _RATE_LIMIT_WINDOW_SECONDS)
-            if count > _MAX_ATTEMPTS:
+            key = f"ratelimit:{store_key}"
+            if record:
+                count = await redis.incr(key)
+                if count == 1:
+                    await redis.expire(key, _RATE_LIMIT_WINDOW_SECONDS)
+            else:
+                count = int(await redis.get(key) or 0)
+            if count > _MAX_ATTEMPTS or (not record and count >= _MAX_ATTEMPTS):
                 ttl = await redis.ttl(key)
                 return True, max(0, ttl)
             return False, 0
@@ -214,13 +225,14 @@ async def rate_limit_check(ip: str) -> tuple[bool, int]:
             logger.warning("Redis rate_limit_check failed (%s) — memory fallback.", exc)
 
     with _rate_limit_lock:
-        record = _rate_limit_store[ip]
-        if now - record["window_start"] > _RATE_LIMIT_WINDOW_SECONDS:
-            record["count"] = 0
-            record["window_start"] = now
-        record["count"] += 1
-        if record["count"] > _MAX_ATTEMPTS:
-            retry_after = int(_RATE_LIMIT_WINDOW_SECONDS - (now - record["window_start"]))
+        record_ = _rate_limit_store[store_key]
+        if now - record_["window_start"] > _RATE_LIMIT_WINDOW_SECONDS:
+            record_["count"] = 0
+            record_["window_start"] = now
+        if record:
+            record_["count"] += 1
+        if record_["count"] > _MAX_ATTEMPTS or (not record and record_["count"] >= _MAX_ATTEMPTS):
+            retry_after = int(_RATE_LIMIT_WINDOW_SECONDS - (now - record_["window_start"]))
             return True, max(0, retry_after)
         return False, 0
 

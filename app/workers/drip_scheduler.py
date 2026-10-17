@@ -1,20 +1,46 @@
 import logging
 import asyncio
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 from app.core.database import get_collection
 from app.services.ai_service import generate_message
-from app.services.whatsapp_service import _validate_phone, _mask_phone
+from app.services.whatsapp_service import _normalize_phone, _validate_phone, _mask_phone
 from bson import ObjectId
+from pymongo.errors import DuplicateKeyError
 
 logger = logging.getLogger(__name__)
 
-async def process_drip_for_user(user: dict):
-    """Process drip campaigns for a single user."""
+# Drip step days (must match ALLOWED_DRIP_DAYS in app/api/drip.py).
+DRIP_STEP_DAYS = (7, 21, 35, 45)
+
+# If the midnight job is missed (server down/restarted), a step is still sent
+# on any of the next GRACE_DAYS - 1 days instead of being skipped forever.
+# Steps are >= 10 days apart, so at most one step can match on a given day.
+DRIP_GRACE_DAYS = 3
+
+# A "processing" claim older than this belongs to a run that died mid-draft
+# (e.g. a serverless timeout) and may be reclaimed.
+STALE_CLAIM_AFTER = timedelta(minutes=30)
+
+
+def _due_step(days_overdue: int) -> Optional[int]:
+    """Return the drip step day due for this many days overdue, if any."""
+    for step_day in DRIP_STEP_DAYS:
+        if step_day <= days_overdue < step_day + DRIP_GRACE_DAYS:
+            return step_day
+    return None
+
+async def process_drip_for_user(user: dict, deadline: Optional[float] = None) -> int:
+    """
+    Process drip campaigns for a single user. Returns the number of drafts created.
+    Stops starting new invoices once `deadline` (time.monotonic()) has passed.
+    """
     owner_id = user["_id"]
     drip_settings = user.get("drip_settings", {})
     
     if not drip_settings:
-        return
+        return 0
         
     invoices_col = get_collection("invoices")
     drip_log_col = get_collection("drip_log")
@@ -31,6 +57,11 @@ async def process_drip_for_user(user: dict):
     sent_count = 0
     
     async for invoice in cursor:
+        if deadline is not None and time.monotonic() > deadline:
+            logger.warning(f"Drip time budget reached for user {owner_id} — remaining invoices run next time")
+            break
+        claimed = False
+        log_filter = None
         try:
             # Parse due date (format: YYYY-MM-DD)
             due_date_str = invoice["due_date"]
@@ -48,31 +79,44 @@ async def process_drip_for_user(user: dict):
             if days_overdue <= 0:
                 continue
                 
-            # Convert to string to match settings keys
-            day_key = str(days_overdue)
-            
-            # Check if this exact day is configured as a drip step
-            if day_key not in ["7", "21", "35", "45"]:
+            # Find the drip step due today (exact day, or within the grace window)
+            step_day = _due_step(days_overdue)
+            if step_day is None:
                 continue
+
+            # Convert to string to match settings keys
+            day_key = str(step_day)
                 
             step = drip_settings.get(day_key)
             if not step or not step.get("enabled"):
                 continue
                 
             invoice_id = invoice["_id"]
-            
-            # 2. Check idempotency (did we already send this specific day's drip?)
+
+            # 2. Cheap idempotency pre-check (did we already handle this step?)
+            # The log keys on the step day, which is what older entries stored too.
             already_sent = await drip_log_col.find_one({
                 "invoice_id": invoice_id,
-                "days_overdue": days_overdue,
-                "status": "drafted"
+                "days_overdue": step_day,
             })
-            
+
             if already_sent:
-                continue
-                
-            # We need to send a message.
-            contact_phone = invoice.get("phone")
+                claimed_at = already_sent.get("claimed_at")
+                if claimed_at and claimed_at.tzinfo is None:
+                    claimed_at = claimed_at.replace(tzinfo=timezone.utc)  # Mongo returns naive UTC
+                stale = (
+                    already_sent.get("status") == "processing"
+                    and claimed_at is not None
+                    and datetime.now(timezone.utc) - claimed_at > STALE_CLAIM_AFTER
+                )
+                if not stale:
+                    continue
+                # Left behind by a run that died mid-draft — release and retry
+                await drip_log_col.delete_one({"_id": already_sent["_id"], "status": "processing"})
+
+            # We need to send a message. Phones are often entered formatted
+            # ("+91 98765 43210") — normalise to digits before validating.
+            contact_phone = _normalize_phone(invoice.get("phone"))
             if not contact_phone:
                 logger.warning(f"Skipping drip for invoice {invoice_id} (no phone number)")
                 continue
@@ -82,6 +126,26 @@ async def process_drip_for_user(user: dict):
                 logger.warning(f"Skipping drip for invoice {invoice_id} (invalid phone format: {_mask_phone(contact_phone)})")
                 continue
                 
+            # Atomically claim this (invoice, step) so concurrent runs — multiple
+            # workers each running the scheduler — can't draft it twice.
+            log_filter = {"invoice_id": invoice_id, "days_overdue": step_day}
+            try:
+                claim = await drip_log_col.update_one(
+                    log_filter,
+                    {"$setOnInsert": {
+                        "owner_id": owner_id,
+                        "channel": "whatsapp",
+                        "status": "processing",
+                        "claimed_at": datetime.now(timezone.utc),
+                    }},
+                    upsert=True,
+                )
+            except DuplicateKeyError:
+                continue  # another run inserted the claim first
+            if claim.upserted_id is None:
+                continue  # already claimed or drafted by another run
+            claimed = True
+
             # 3. Determine Tone
             tone_map = {
                 "7": "Friendly",
@@ -98,12 +162,13 @@ async def process_drip_for_user(user: dict):
                 "phone": contact_phone,
                 "amount": invoice.get("amount"),
                 "invoice_no": invoice.get("invoice_no", ""),
+                "due_date": due_date_str,
                 "status": invoice.get("status", "pending")
             }
             
             prompt = f"""
             You are an AI recovery agent representing our company.
-            The debtor ({inv_ctx['company']}) is {days_overdue} days overdue on Invoice {inv_ctx['invoice_no']} (Amount: {inv_ctx['amount']}).
+            The debtor ({inv_ctx['company']}) is {days_overdue} days overdue on Invoice {inv_ctx['invoice_no']} (Amount: {inv_ctx['amount']}, due on {due_date_str}).
             Draft a short, professional, and {tone.lower()} WhatsApp reminder message.
             Return ONLY the drafted WhatsApp message, no extra conversational text.
             """
@@ -116,6 +181,7 @@ async def process_drip_for_user(user: dict):
             
             if not message_body:
                 logger.error(f"Failed to generate AI message for invoice {invoice_id}")
+                await drip_log_col.delete_one({**log_filter, "status": "processing"})
                 continue
                 
             # 5. Draft Mode: Save to whatsapp_drafts collection
@@ -128,18 +194,19 @@ async def process_drip_for_user(user: dict):
                 "draft_reply": message_body,
                 "status": "pending_approval",
                 "created_at": datetime.now(timezone.utc),
-                "drip_day": days_overdue
+                "drip_day": step_day
             })
-            
+            claimed = False  # the draft exists — never release the claim now
+
             # 6. Log success and increment reminder count
-            await drip_log_col.insert_one({
-                "owner_id": owner_id,
-                "invoice_id": invoice_id,
-                "days_overdue": days_overdue,
-                "channel": "whatsapp",
-                "sent_at": datetime.now(timezone.utc),
-                "status": "drafted"
-            })
+            await drip_log_col.update_one(
+                log_filter,
+                {"$set": {
+                    "status": "drafted",
+                    "sent_at": datetime.now(timezone.utc),
+                    "actual_days_overdue": days_overdue,
+                }},
+            )
             
             await invoices_col.update_one(
                 {"_id": invoice_id},
@@ -150,30 +217,62 @@ async def process_drip_for_user(user: dict):
                 
         except Exception as e:
             logger.error(f"Error processing invoice {invoice.get('_id')} for drip: {e}", exc_info=True)
+            # Release our claim so the step can be retried on the next run
+            if claimed and log_filter:
+                try:
+                    await drip_log_col.delete_one({**log_filter, "status": "processing"})
+                except Exception:
+                    logger.warning(f"Could not release drip claim for invoice {invoice.get('_id')}", exc_info=True)
             
     if sent_count > 0:
         logger.info(f"Finished drip processing for user {owner_id} - sent {sent_count} reminders")
+    return sent_count
 
 
-async def run_daily_drips():
+async def run_daily_drips(time_budget_seconds: Optional[float] = None) -> dict:
     """
     Main job that runs daily at midnight.
     Loops through all users and runs their drip campaigns.
+
+    time_budget_seconds: stop starting new work after this long (serverless
+    functions have a hard timeout). Unfinished steps are picked up on the next
+    run thanks to the grace window and per-step idempotency.
     """
+    deadline = time.monotonic() + time_budget_seconds if time_budget_seconds else None
     logger.info("Starting midnight Drip Campaign Engine...")
     
+    # Unique (invoice, step) index makes the per-step claim race-safe.
+    # Best effort: if legacy duplicate log rows exist the index can't be
+    # built, and the claim falls back to the plain upsert check.
+    try:
+        await get_collection("drip_log").create_index(
+            [("invoice_id", 1), ("days_overdue", 1)],
+            unique=True,
+            name="unique_drip_step",
+        )
+    except Exception as e:
+        logger.warning(f"Could not ensure unique drip_log index: {e}")
+
     users_col = get_collection("users")
     cursor = users_col.find({"drip_settings": {"$exists": True}})
     
-    tasks = []
-    async for user in cursor:
-        tasks.append(process_drip_for_user(user))
-        
-    if tasks:
-        # Run 5 users concurrently to be safe
-        chunk_size = 5
-        for i in range(0, len(tasks), chunk_size):
-            chunk = tasks[i:i + chunk_size]
-            await asyncio.gather(*chunk, return_exceptions=True)
-            
+    users = [user async for user in cursor]
+
+    drafted = 0
+    stopped_early = False
+    # Run 5 users concurrently to be safe
+    chunk_size = 5
+    for i in range(0, len(users), chunk_size):
+        if deadline is not None and time.monotonic() > deadline:
+            stopped_early = True
+            break
+        chunk = users[i:i + chunk_size]
+        results = await asyncio.gather(
+            *(process_drip_for_user(u, deadline) for u in chunk), return_exceptions=True
+        )
+        drafted += sum(r for r in results if isinstance(r, int))
+    if deadline is not None and time.monotonic() > deadline:
+        stopped_early = True
+
     logger.info("Completed midnight Drip Campaign Engine run.")
+    return {"users": len(users), "drafted": drafted, "stopped_early": stopped_early}

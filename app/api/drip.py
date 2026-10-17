@@ -1,11 +1,24 @@
+import hmac
+import logging
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Literal
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
+from pymongo.errors import DuplicateKeyError
 
+from app.core.config import settings
 from app.core.database import get_collection
 from app.api.deps import get_current_user
+from app.workers.drip_scheduler import run_daily_drips
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/drip-settings", tags=["Drip Campaigns"])
+cron_router = APIRouter(tags=["Cron"])
+
+_IST = timezone(timedelta(hours=5, minutes=30))
+# Serverless functions have a hard timeout — leave headroom below it
+_CRON_TIME_BUDGET_SECONDS = 50
 
 # Only these day keys are valid — prevents NoSQL injection via arbitrary string keys
 ALLOWED_DRIP_DAYS = {"7", "21", "35", "45"}
@@ -66,3 +79,33 @@ async def update_drip_settings(
         raise HTTPException(status_code=404, detail="User not found")
         
     return {"status": "success", "drip_settings": settings_dict}
+
+
+@cron_router.get("/api/cron/drips", include_in_schema=False)
+async def cron_run_drips(request: Request):
+    """
+    Daily drip run for serverless hosting (Vercel Cron — see vercel.json), where
+    the in-process APScheduler never fires because no process stays alive.
+
+    Runs at most once per IST day (a MongoDB lock), so extra calls are harmless.
+    If CRON_SECRET is configured, the Vercel-sent bearer token is required.
+    """
+    if settings.cron_secret:
+        auth = request.headers.get("authorization", "")
+        if not hmac.compare_digest(auth.encode(), f"Bearer {settings.cron_secret}".encode()):
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+    runs_col = get_collection("cron_runs")
+    run_id = f"drips:{datetime.now(_IST).date().isoformat()}"
+    try:
+        await runs_col.insert_one({"_id": run_id, "started_at": datetime.now(timezone.utc)})
+    except DuplicateKeyError:
+        return {"status": "skipped", "reason": "already ran today"}
+
+    result = await run_daily_drips(time_budget_seconds=_CRON_TIME_BUDGET_SECONDS)
+    await runs_col.update_one(
+        {"_id": run_id},
+        {"$set": {"finished_at": datetime.now(timezone.utc), **result}},
+    )
+    logger.info("CRON_DRIPS | %s | %s", run_id, result)
+    return {"status": "ok", **result}
