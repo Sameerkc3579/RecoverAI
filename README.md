@@ -110,7 +110,7 @@ Browse to `http://localhost:8000` to access the main interface.
 
 ## 🧪 Testing & CI
 
-Every push and pull request runs [GitHub Actions](.github/workflows/ci.yml):
+[GitHub Actions](.github/workflows/ci.yml) runs on every pull request and on every push to `main`:
 
 - **Backend** — 79 pytest tests on Python 3.10 and 3.12 against a real MongoDB 7 service container: auth and session revocation, brute-force lockouts shared across instances, firewall rate limiting, tenant isolation, upload validation, the drip engine and its cron endpoint, admin, WhatsApp and the email ingester. Gemini is mocked, so CI needs no API keys.
 - **Frontend** — every dashboard component is compiled with the exact Babel version the browser loads.

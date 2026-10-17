@@ -11,6 +11,7 @@ Local run (needs a MongoDB you can write a throwaway database to):
 """
 import itertools
 import os
+import uuid
 
 # ── Isolated settings — must be set before anything imports `app` ────────────
 # Every setting the app reads is pinned here so values from a developer's
@@ -125,10 +126,14 @@ def new_client(db):
     yield make
 
 
+_email_counter = itertools.count(1)
+_RUN_ID = uuid.uuid4().hex[:8]
+
+
 @pytest.fixture
 def unique_email():
-    counter = itertools.count(1)
-    return lambda prefix="user": f"{prefix}.{os.getpid()}.{next(counter)}.{id(counter)}@recoverai-test.com"
+    """Emails unique across the whole session (a run id guards against leftover data)."""
+    return lambda prefix="user": f"{prefix}.{_RUN_ID}.{next(_email_counter)}@recoverai-test.com"
 
 
 async def register_and_login(client: httpx.AsyncClient, email: str, password: str = PASSWORD,
