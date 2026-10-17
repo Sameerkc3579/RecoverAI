@@ -125,8 +125,9 @@ async def cron_run_drips(request: Request):
         await runs_col.delete_one(owner)
         raise HTTPException(status_code=500, detail="Drip run failed")
 
-    if result.get("failed_users"):
-        # Per-step idempotency makes a retry safe; keep the day retryable
+    if result.get("failed_users") or result.get("failed_invoices") or result.get("stopped_early"):
+        # Work was left undone — per-step idempotency makes a retry safe, so keep
+        # the day retryable instead of marking it finished
         logger.error("CRON_DRIPS_PARTIAL | %s | %s — releasing the lock so it can be retried", run_id, result)
         await runs_col.delete_one(owner)
         return {"status": "partial", **result}

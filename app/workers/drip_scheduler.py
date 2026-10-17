@@ -27,6 +27,10 @@ IST = timezone(timedelta(hours=5, minutes=30))
 # (e.g. a serverless timeout) and may be reclaimed.
 STALE_CLAIM_AFTER = timedelta(minutes=30)
 
+# Upper bound for one AI draft (including its internal retries) — far below
+# STALE_CLAIM_AFTER, so a claim is never reclaimed while its owner still works.
+DRIP_AI_TIMEOUT_SECONDS = 90
+
 
 def _due_step(days_overdue: int) -> Optional[int]:
     """Return the drip step day due for this many days overdue, if any."""
@@ -35,16 +39,16 @@ def _due_step(days_overdue: int) -> Optional[int]:
             return step_day
     return None
 
-async def process_drip_for_user(user: dict, deadline: Optional[float] = None) -> int:
+async def process_drip_for_user(user: dict, deadline: Optional[float] = None) -> tuple[int, int]:
     """
-    Process drip campaigns for a single user. Returns the number of drafts created.
+    Process drip campaigns for a single user. Returns (drafts created, invoices that failed).
     Stops starting new invoices once `deadline` (time.monotonic()) has passed.
     """
     owner_id = user["_id"]
     drip_settings = user.get("drip_settings", {})
     
     if not drip_settings:
-        return 0
+        return 0, 0
         
     invoices_col = get_collection("invoices")
     drip_log_col = get_collection("drip_log")
@@ -59,6 +63,7 @@ async def process_drip_for_user(user: dict, deadline: Optional[float] = None) ->
     today = datetime.now(IST).date()
     
     sent_count = 0
+    failed_count = 0  # invoices whose step was due but could not be drafted
     
     async for invoice in cursor:
         if deadline is not None and time.monotonic() > deadline:
@@ -177,30 +182,37 @@ async def process_drip_for_user(user: dict, deadline: Optional[float] = None) ->
             Return ONLY the drafted WhatsApp message, no extra conversational text.
             """
             
-            message_body = await generate_message(
-                prompt=prompt,
-                invoice_data=inv_ctx,
-                tone=tone,
-                channel="whatsapp",
+            # Bounded, so a hung AI call can't outlive its claim (STALE_CLAIM_AFTER)
+            message_body = await asyncio.wait_for(
+                generate_message(prompt=prompt, invoice_data=inv_ctx, tone=tone, channel="whatsapp"),
+                timeout=DRIP_AI_TIMEOUT_SECONDS,
             )
-            
+
             if not message_body:
                 logger.error(f"Failed to generate AI message for invoice {invoice_id}")
                 await drip_log_col.delete_one({**log_filter, "status": "processing"})
+                failed_count += 1
                 continue
-                
-            # 5. Draft Mode: Save to whatsapp_drafts collection
+
+            # 5. Draft Mode: Save to whatsapp_drafts collection. The unique
+            # (invoice_id, drip_day) index fences this write: if another worker
+            # already drafted this step, ours is rejected instead of duplicated.
             drafts_col = get_collection("whatsapp_drafts")
-            await drafts_col.insert_one({
-                "owner_id": owner_id,
-                "invoice_id": invoice_id,
-                "contact_phone": contact_phone,
-                "incoming_message": "SYSTEM_DRIP_CAMPAIGN",
-                "draft_reply": message_body,
-                "status": "pending_approval",
-                "created_at": datetime.now(timezone.utc),
-                "drip_day": step_day
-            })
+            try:
+                await drafts_col.insert_one({
+                    "owner_id": owner_id,
+                    "invoice_id": invoice_id,
+                    "contact_phone": contact_phone,
+                    "incoming_message": "SYSTEM_DRIP_CAMPAIGN",
+                    "draft_reply": message_body,
+                    "status": "pending_approval",
+                    "created_at": datetime.now(timezone.utc),
+                    "drip_day": step_day
+                })
+            except DuplicateKeyError:
+                logger.info(f"Day {step_day} draft for invoice {invoice_id} already exists — skipping")
+                claimed = False
+                continue
             claimed = False  # the draft exists — never release the claim now
 
             # 6. Log success and increment reminder count
@@ -222,6 +234,7 @@ async def process_drip_for_user(user: dict, deadline: Optional[float] = None) ->
                 
         except Exception as e:
             logger.error(f"Error processing invoice {invoice.get('_id')} for drip: {e}", exc_info=True)
+            failed_count += 1
             # Release our claim so the step can be retried on the next run
             if claimed and log_filter:
                 try:
@@ -231,7 +244,7 @@ async def process_drip_for_user(user: dict, deadline: Optional[float] = None) ->
             
     if sent_count > 0:
         logger.info(f"Finished drip processing for user {owner_id} - sent {sent_count} reminders")
-    return sent_count
+    return sent_count, failed_count
 
 
 async def run_daily_drips(time_budget_seconds: Optional[float] = None) -> dict:
@@ -257,6 +270,16 @@ async def run_daily_drips(time_budget_seconds: Optional[float] = None) -> dict:
         )
     except Exception as e:
         logger.warning(f"Could not ensure unique drip_log index: {e}")
+    # One drip draft per (invoice, step) — only drip drafts carry drip_day
+    try:
+        await get_collection("whatsapp_drafts").create_index(
+            [("invoice_id", 1), ("drip_day", 1)],
+            unique=True,
+            partialFilterExpression={"drip_day": {"$exists": True}},
+            name="unique_drip_draft",
+        )
+    except Exception as e:
+        logger.warning(f"Could not ensure unique whatsapp_drafts index: {e}")
 
     users_col = get_collection("users")
     cursor = users_col.find({"drip_settings": {"$exists": True}})
@@ -265,6 +288,7 @@ async def run_daily_drips(time_budget_seconds: Optional[float] = None) -> dict:
 
     drafted = 0
     failed_users = 0
+    failed_invoices = 0
     stopped_early = False
     # Run 5 users concurrently to be safe
     chunk_size = 5
@@ -281,10 +305,11 @@ async def run_daily_drips(time_budget_seconds: Optional[float] = None) -> dict:
                 failed_users += 1
                 logger.error(f"Drip run failed for user {user.get('_id')}: {r!r}")
             else:
-                drafted += r
+                drafted += r[0]
+                failed_invoices += r[1]
     if deadline is not None and time.monotonic() > deadline:
         stopped_early = True
 
     logger.info("Completed midnight Drip Campaign Engine run.")
     return {"users": len(users), "drafted": drafted, "failed_users": failed_users,
-            "stopped_early": stopped_early}
+            "failed_invoices": failed_invoices, "stopped_early": stopped_early}

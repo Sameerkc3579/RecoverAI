@@ -1,5 +1,6 @@
 """Drip campaign engine and the Vercel Cron endpoint."""
 import asyncio
+import time
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -210,6 +211,54 @@ async def test_reclaimed_run_cannot_touch_the_new_lock(db, drip_user, new_client
     await new_client().get("/api/cron/drips", headers=CRON_AUTH)
     lock = await runs.find_one({"_id": run_id})
     assert lock["token"] == "newer-run" and "finished_at" not in lock
+
+
+async def test_time_budgeted_run_stays_retryable(db, drip_user, new_client, cron_secret, monkeypatch):
+    """A run that hit its time budget left work undone — it must not mark the day finished."""
+    import app.api.drip as drip_api
+
+    async def stopped_early(**_kw):
+        return {"users": 3, "drafted": 1, "failed_users": 0, "failed_invoices": 0, "stopped_early": True}
+
+    monkeypatch.setattr(drip_api, "run_daily_drips", stopped_early)
+    c = new_client()
+    assert (await c.get("/api/cron/drips", headers=CRON_AUTH)).json()["status"] == "partial"
+    monkeypatch.setattr(drip_api, "run_daily_drips", drip.run_daily_drips)
+    assert (await c.get("/api/cron/drips", headers=CRON_AUTH)).json()["status"] == "ok"
+
+
+async def test_invoice_failures_make_the_run_partial(db, drip_user, new_client, cron_secret, monkeypatch):
+    async def ai_down(*_a, **_k):
+        raise RuntimeError("AI down")
+
+    monkeypatch.setattr(drip, "generate_message", ai_down)
+    await _invoice(db, drip_user, "AIDown", 7)
+    body = (await new_client().get("/api/cron/drips", headers=CRON_AUTH)).json()
+    assert body["status"] == "partial" and body["failed_invoices"] == 1
+
+
+async def test_duplicate_drip_draft_is_rejected(db, drip_user):
+    """A second worker drafting the same (invoice, step) is fenced by the unique index."""
+    inv = await _invoice(db, drip_user, "Dup", 7)
+    await db.get_collection("whatsapp_drafts").insert_one(
+        {"owner_id": drip_user, "invoice_id": inv, "drip_day": 7, "draft_reply": "first"})
+    result = await drip.run_daily_drips()
+    drafts = await _drafts(db, drip_user)
+    assert len(drafts) == 1 and drafts[0]["draft_reply"] == "first" and result["failed_invoices"] == 0
+
+
+async def test_hung_ai_call_times_out_and_releases_claim(db, drip_user, monkeypatch):
+    async def hangs(*_a, **_k):
+        await asyncio.sleep(5)
+
+    monkeypatch.setattr(drip, "generate_message", hangs)
+    monkeypatch.setattr(drip, "DRIP_AI_TIMEOUT_SECONDS", 0.05)
+    inv = await _invoice(db, drip_user, "Hang", 7)
+    started = time.monotonic()
+    result = await drip.run_daily_drips()
+    assert time.monotonic() - started < 2, "AI call was not bounded by the timeout"
+    assert result["failed_invoices"] == 1
+    assert await db.get_collection("drip_log").find_one({"invoice_id": inv}) is None
 
 
 def test_cron_time_budget_must_be_positive():
