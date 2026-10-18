@@ -10,6 +10,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=fastapi)
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Google%20Gemini-8E75B2?logo=googlegemini&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 RecoverAI helps small businesses get paid. It tracks overdue invoices, drafts recovery messages and escalating reminders with Google Gemini, classifies debtor replies in Hindi, Hinglish and English, computes statutory interest under the MSMED Act, and generates legal notices — so the owner reviews and sends instead of chasing.
 
@@ -162,6 +163,10 @@ eval/             intent-classification evaluation
 scripts/          seed data, simulators, Windows scheduler scripts, frontend compile check
 docs/             bug report / security audit and project summary
 ```
+
+## 📄 License
+
+Released under the [MIT License](LICENSE).
 
 ---
 
