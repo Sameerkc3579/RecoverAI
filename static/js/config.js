@@ -93,8 +93,17 @@ async function callAI(systemPrompt, prompt, invoiceData, tone) {
 }
 
 /* ── WhatsApp Deep Link ──────────────────────────────────── */
+// WhatsApp needs the country code: add India's 91 to bare 10-digit numbers and
+// to 0-prefixed trunk numbers (mirrors _normalize_phone on the server).
+function toWhatsAppNumber(phone) {
+  const digits = (phone || '').replace(/\D/g, '');
+  if (digits.length === 10) return '91' + digits;
+  if (digits.length === 11 && digits.startsWith('0')) return '91' + digits.slice(1);
+  return digits;
+}
+
 function sendViaWhatsApp(phone, messageText) {
-  const cleanPhone = (phone || '').replace(/\D/g, '');
+  const cleanPhone = toWhatsAppNumber(phone);
   const encoded = encodeURIComponent(messageText || '');
   const url = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
   window.open(url, '_blank');

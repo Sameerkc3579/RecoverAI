@@ -312,7 +312,7 @@ function Invoices({ invoices, openDetail, onAdd }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                       <div style={{ fontWeight: 600, fontSize: 13 }}>{inv.company}</div>
                       <button className="btn btn-sm btn-success"
-                        onClick={() => window.open(`https://wa.me/${(inv.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank')}>
+                        onClick={() => window.open(`https://wa.me/${toWhatsAppNumber(inv.phone)}?text=${encodeURIComponent(msg)}`, '_blank')}>
                         Send to {inv.contact} ↗
                       </button>
                     </div>

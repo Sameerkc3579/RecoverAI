@@ -355,7 +355,7 @@ End: "— RecoverAI Collections"`
                               </button>
                             ) : (
                               <button className="btn btn-sm btn-success"
-                                onClick={() => window.open(`https://wa.me/${(msg.inv.phone||'').replace(/\D/g,'')}?text=${encodeURIComponent(sr.reply)}`, '_blank')}>
+                                onClick={() => window.open(`https://wa.me/${toWhatsAppNumber(msg.inv.phone)}?text=${encodeURIComponent(sr.reply)}`, '_blank')}>
                                 💬 Send via WA Link ↗
                               </button>
                             )}

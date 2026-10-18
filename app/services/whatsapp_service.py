@@ -14,8 +14,20 @@ def _mask_phone(phone: str) -> str:
 
 
 def _normalize_phone(phone: str) -> str:
-    """Strip formatting (spaces, dashes, brackets, dots, leading +) — e.g. "+91 98765-43210" -> "919876543210"."""
-    return re.sub(r"[\s\-().+]", "", phone or "")
+    """
+    Normalise to WhatsApp's international format (digits, with country code).
+    Strips formatting, then adds India's 91 to bare 10-digit numbers and to
+    0-prefixed trunk numbers — WhatsApp cannot deliver without a country code.
+      "+91 98765-43210" -> "919876543210"   "9876543210" -> "919876543210"
+      "09876543210"     -> "919876543210"   "+1 (415) 555-0100" -> "14155550100"
+    """
+    digits = re.sub(r"[\s\-().+]", "", phone or "")
+    if digits.isdigit():
+        if len(digits) == 10:
+            return "91" + digits
+        if len(digits) == 11 and digits.startswith("0"):
+            return "91" + digits[1:]
+    return digits
 
 
 def _validate_phone(phone: str) -> bool:
@@ -32,6 +44,7 @@ async def send_whatsapp_message(to_phone: str, message_text: str) -> bool:
         logger.error("WhatsApp credentials are not configured in environment variables.")
         return False
 
+    to_phone = _normalize_phone(to_phone)
     if not _validate_phone(to_phone):
         logger.error(f"Invalid phone number format for recipient {_mask_phone(to_phone)}")
         return False

@@ -77,6 +77,10 @@ class PromptRequest(BaseModel):
         pattern=r"^(Friendly|Firm Warning|Final Notice|Legal Threat)$",
         description="The tone for the AI generation"
     )
+    channel: Literal["whatsapp", "email", "legal"] | None = Field(
+        default=None,
+        description="Message format; inferred from the prompt when omitted",
+    )
 
 # ── Customers ─────────────────────────────────────────────────────────────────
 
